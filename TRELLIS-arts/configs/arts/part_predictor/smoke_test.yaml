@@ -1,0 +1,24 @@
+# Part Predictor Smoke Test 配置
+# 5 步训练验证全流程，不追求收敛
+# 只用 K=2 对象，排除高 K 对象避免 OOM
+
+_base_: base.yaml
+
+data:
+  data_root: "data/smoke_test"
+  recon_subdir: "reconstruction"
+  # Smoke 数据 (/sda1/AAAI2027/smoke_test) 仅 100023 有 dinov2_tokens
+  test_obj_ids: ["100023"]
+  num_angles: 4
+
+training:
+  batch_size: 4
+  max_steps: 5
+  checkpoint_every: 999999
+  eval_every: 999999
+  log_every: 1
+  output_dir: "output/part_predictor_smoke"
+  fp16: false
+
+wandb:
+  enabled: false

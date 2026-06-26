@@ -1,0 +1,107 @@
+_base_: part_ss_latent_flow.yaml
+
+stage: part_ss_latent_flow_mask16
+
+model:
+  # Keep the 0526 architecture defaults unless explicitly overridden here.
+  mask16_condition:
+    enabled: true
+    binary_threshold: null
+  use_checkpoint: false
+
+data:
+  data_root: /robot/data-lab/jzh/art-gen/data/PhysX-Mobility-full-4view-0511/PhysX-Mobility-full-4view-0511
+  recon_subdir: reconstruction
+  mask_subdir: renders
+  manifest_path: manifests/part_completion/arts_mllm_physx-mobility.train.jsonl
+  num_views: 4
+  part_mask16_source: pred
+  pred_mask16_root: /robot/data-lab/jzh/art-gen-output/debug/stage1_2dmask_to_mask16_16obj_v1/export_pred_mask16
+  pred_mask16_kind: bin
+  include_obj_ids:
+    - "100283"
+    - "101253"
+    - "101943"
+    - "102701"
+    - "101049"
+    - "101106"
+    - "102505"
+    - "103252"
+    - "102890"
+    - "103046"
+    - "103064"
+    - "102528"
+    - "101924"
+    - "102411"
+    - "101564"
+    - "103369"
+  include_object_angles:
+    - object_id: "100283"
+      angle_idx: 0
+    - object_id: "101253"
+      angle_idx: 9
+    - object_id: "101943"
+      angle_idx: 0
+    - object_id: "102701"
+      angle_idx: 0
+    - object_id: "101049"
+      angle_idx: 5
+    - object_id: "101106"
+      angle_idx: 0
+    - object_id: "102505"
+      angle_idx: 0
+    - object_id: "103252"
+      angle_idx: 0
+    - object_id: "102890"
+      angle_idx: 0
+    - object_id: "103046"
+      angle_idx: 0
+    - object_id: "103064"
+      angle_idx: 0
+    - object_id: "102528"
+      angle_idx: 0
+    - object_id: "101924"
+      angle_idx: 2
+    - object_id: "102411"
+      angle_idx: 0
+    - object_id: "101564"
+      angle_idx: 2
+    - object_id: "103369"
+      angle_idx: 6
+
+flow:
+  num_steps: 20
+  t_schedule: uniform
+  latent_norm_mode: scalar
+  latent_mean: null
+  latent_std: null
+
+loss:
+  part_shuffle: false
+  velocity_contrastive_weight: 0.0
+  identity_contrastive_weight: 0.05
+  relative_endpoint_weight: 0.25
+  foreground_weight:
+    enabled: true
+    bg_weight: 0.1
+    dilate: 0
+
+eval:
+  fixed_every: 0
+  all_every: 0
+  decode_every: 0
+  decode_max_samples: 16
+  inspection_root: /robot/data-lab/jzh/art-gen-output/debug/part_ss_latent_flow_mask16_16obj/inspections
+
+training:
+  seed: 123
+  batch_size: 1
+  max_steps: 2000
+  lr: 1.0e-5
+  warmup_steps: 50
+  fp16: true
+  num_workers: 0
+  log_every: 20
+  checkpoint_every: 500
+  output_dir: /robot/data-lab/jzh/art-gen-output/debug/part_ss_latent_flow_mask16_16obj
+  init_weights: /robot/data-lab/jzh/art-gen-output/part-ss-latent-flow-4view-0526/ckpts/step_600000.pt

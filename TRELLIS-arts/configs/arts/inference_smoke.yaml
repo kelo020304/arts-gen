@@ -1,0 +1,20 @@
+# Smoke inference config for 09-10 phase gate end-to-end test.
+# Uses 100013/angle_0 from /sda1/AAAI2027/smoke_test/test_data (12 real RGB views)
+# + TRELLIS pretrained ckpts (downloaded from microsoft/TRELLIS-image-large).
+# Step 02 uses part_ss_latent_flow. The checkpoint must be trained separately;
+# this smoke config documents IO shape rather than shipping a meaningful ckpt.
+object_id: 100013
+images_dir: data/smoke_test/test_data/renders/100013/angle_0/rgb
+output_root: outputs
+cond_tokens: data/smoke_test/1/reconstruction/dinov2_tokens/100075/angle_0/tokens.npz
+mask_token_labels: data/smoke_test/1/reconstruction/dinov2_tokens/100075/angle_0/mask_token_labels.npy
+target_part_names: ["wheel_0", "wheel_1"]
+target_slots: [1, 2]
+ckpts:
+  ss_flow:      pretrained/ckpts/ss_flow_img_dit_L_16l8_fp16.safetensors
+  ss_decoder:   pretrained/ckpts/ss_dec_conv3d_16l8_fp16.safetensors
+  part_ss_latent_flow: runs/part_ss_latent_flow/ckpts/step_3000.pt
+  slat_flow:    pretrained/ckpts/slat_flow_img_dit_L_64l8p2_fp16.safetensors
+  slat_decoder: pretrained/ckpts/slat_dec_gs_swin8_B_64l8gs32_fp16.safetensors
+num_steps: 5             # smoke: minimize compute
+threshold: 0.0

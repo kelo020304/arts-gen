@@ -1,0 +1,29 @@
+# SS Flow (paper Stage 2) Scheme A / hybrid LoRA 配置
+# Launcher 对应: MODE=lora_ext
+# 模式语义:
+# - attention 层仍走 LoRA (`target_modules=all_attn`)
+# - 同时把 `keep_trainable` 命中的少量层恢复成全量训练
+# - SS Flow 默认只解冻 `input_layer` / `out_layer`
+#   因为 SparseStructureFlowModel 没有 SLat Flow 那种 `input_blocks` / `out_blocks`
+# - 这是 LoRA 和 full 之间的折中：比纯 LoRA 更能适配域偏移，但比 full 更省显存
+_base_: mv_4view.yaml
+
+lora:
+  enabled: true
+  rank: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: all_attn   # attention 仍是 LoRA
+  keep_trainable:
+    - input_layer           # 8 -> 1024 输入投影，全量训练
+    - out_layer             # 1024 -> 8 输出投影，全量训练
+
+training:
+  output_dir: output/ss_flow_art_mv_4view_lora_ext
+
+wandb:
+  name: ss-flow-art-mv4view-lora-ext
+  tags:
+    - ss_flow_art
+    - mv4view
+    - mode=lora_ext

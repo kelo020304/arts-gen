@@ -1,0 +1,75 @@
+stage: part_mmdit
+
+model:
+  resolution: 16
+  latent_channels: 8
+  model_channels: 1024
+  cond_dim: 1024
+  num_blocks: 12
+  num_heads: 16
+  patch_size: 2
+  num_views: 4
+  max_parts: 20
+  cross_part_layers: [3, 6, 9]
+  clip_name_dim: 768
+  use_fp16: false
+  use_checkpoint: true
+
+data:
+  data_root: /robot/data-lab/jzh/art-gen/data/PhysX-Mobility-full-4view-0511/PhysX-Mobility-full-4view-0511
+  recon_subdir: reconstruction
+  mask_subdir: renders
+  manifest_path: manifests/part_completion/arts_mllm_physx-mobility.train.jsonl
+  num_views: 4
+  include_obj_ids:
+    - "102276"
+
+flow:
+  type: rectified
+  latent_scale: 8.0
+  t_schedule: logit_normal
+  t_logit_normal_mean: 0.0
+  t_logit_normal_std: 1.0
+  num_steps: 20
+  solver: euler
+  s_name: 4.0
+  s_anchor: 4.0
+
+loss:
+  part_weight_mode: raw_voxel_count
+  part_weight_ref_mode: median
+  part_weight_alpha: 0.5
+  part_weight_min: 0.5
+  part_weight_max: 3.0
+  normalize_part_weights_per_object: true
+  object_balanced: true
+  object_weight_mode: none
+  object_weight_k_ref: null
+  object_weight_min: 0.75
+  object_weight_max: 2.0
+  cfg_dropout_name: 0.1
+  cfg_dropout_anchor: 0.1
+
+eval:
+  fixed_every: 100
+  decode: false
+  max_samples: 1
+  train_max_samples: 1
+  metrics_markdown_path: code_update/code_update_part_mmdit.md
+
+training:
+  seed: 42
+  batch_size: 1
+  max_steps: 2000
+  lr: 2.0e-4
+  warmup_steps: 100
+  weight_decay: 0.01
+  grad_clip: 1.0
+  fp16: true
+  num_workers: 0
+  log_every: 20
+  checkpoint_every: 500
+  output_dir: /robot/data-lab/jzh/art-gen/outputs/part_mmdit_overfit_102276_logit_normal_cos
+
+wandb:
+  enabled: false

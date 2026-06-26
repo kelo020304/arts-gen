@@ -1,0 +1,1156 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>四种概率/分布相关 Flow 的直觉对比</title>
+
+    <!-- KaTeX (CDN, defer + onload auto-render) -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+    />
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+    ></script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+      onload="renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$',  right: '$',  display: false},
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        throwOnError: false
+      });"
+    ></script>
+
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: radial-gradient(circle at top left, #fff9ee 0%, #f7f2e8 48%, #efe7d7 100%);
+        color: #1f1b16;
+        font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+      .wrap {
+        max-width: 1360px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .panel {
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid #ddd2bf;
+        border-radius: 28px;
+        padding: 28px;
+        box-shadow: 0 12px 30px rgba(80, 60, 30, 0.06);
+      }
+
+      /* ---------- Hero ---------- */
+      .hero {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 22px;
+        align-items: start;
+      }
+      .title {
+        font-size: 32px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        line-height: 1.2;
+      }
+      .subtitle {
+        margin-top: 12px;
+        font-size: 15.5px;
+        line-height: 1.85;
+        color: #5d554b;
+      }
+      .note {
+        background: #faf3e3;
+        border: 1px solid #e7dac3;
+        border-radius: 18px;
+        padding: 16px 18px;
+      }
+      .note-title {
+        font-size: 14.5px;
+        font-weight: 800;
+        margin-bottom: 6px;
+      }
+      .note-text {
+        font-size: 13px;
+        line-height: 1.85;
+        color: #5a5145;
+      }
+
+      /* ---------- Intuition row ---------- */
+      .intuition {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 22px;
+      }
+      .intuition-cell {
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid #ead9bd;
+        border-radius: 14px;
+        padding: 12px 14px;
+        font-size: 13.5px;
+        line-height: 1.7;
+        color: #4e463c;
+      }
+      .intuition-cell .tag {
+        display: inline-block;
+        font-size: 11.5px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        padding: 2px 8px;
+        border-radius: 999px;
+        margin-bottom: 8px;
+      }
+      .tag-gaussian  { background: #dde6f5; color: #365b92; }
+      .tag-dirichlet { background: #f6e2c7; color: #8c541f; }
+      .tag-fisher    { background: #d6ece7; color: #156260; }
+      .tag-gumbel    { background: #f5d8cb; color: #a24d2e; }
+
+      /* ---------- Method cards (illustration row) ---------- */
+      .grid4 {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 18px;
+      }
+      .card {
+        border-radius: 18px;
+        padding: 16px;
+        display: grid;
+        gap: 10px;
+      }
+      .card.gaussian  { background: #f3f6fc; border: 1px solid #c8d6ef; }
+      .card.dirichlet { background: #fdf5ea; border: 1px solid #ebc79f; }
+      .card.fisher    { background: #edf9f6; border: 1px solid #bfe3da; }
+      .card.gumbel    { background: #fdf1ed; border: 1px solid #e8c2b4; }
+
+      .card-title    { font-size: 20px; font-weight: 800; }
+      .card-subtitle { margin-top: 2px; font-size: 13px; line-height: 1.6; color: #5d554b; }
+
+      .figure-box {
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid #eadfce;
+        border-radius: 14px;
+        padding: 12px;
+        min-height: 230px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      svg { width: 100%; height: auto; display: block; }
+
+      /* ---------- Section heads ---------- */
+      .section-title {
+        margin-top: 34px;
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .section-subtitle {
+        margin-top: 8px;
+        font-size: 14.5px;
+        line-height: 1.8;
+        color: #5d554b;
+      }
+
+      /* ---------- Formula cards ---------- */
+      .formula-card {
+        border-radius: 18px;
+        padding: 16px;
+        display: grid;
+        gap: 12px;
+      }
+      .formula-card.gaussian  { background: #f3f6fc; border: 1px solid #c8d6ef; }
+      .formula-card.dirichlet { background: #fdf5ea; border: 1px solid #ebc79f; }
+      .formula-card.fisher    { background: #edf9f6; border: 1px solid #bfe3da; }
+      .formula-card.gumbel    { background: #fdf1ed; border: 1px solid #e8c2b4; }
+
+      .subhead {
+        font-size: 12.5px;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        margin-bottom: 6px;
+        color: #3f3a34;
+        text-transform: uppercase;
+      }
+      .formula-box {
+        background: #fffdf8;
+        border: 1px solid #e8dece;
+        border-radius: 12px;
+        padding: 14px 16px;
+        font-size: 14px;
+        line-height: 1.8;
+        color: #2f2a25;
+      }
+      .formula-box.alt {
+        background: #faf3e3;
+        border-color: #e5d5bc;
+      }
+      .formula-box .row { margin: 4px 0; }
+      .diff {
+        font-size: 13.5px;
+        line-height: 1.75;
+        color: #4e473f;
+      }
+      .diff strong.warn {
+        color: #a24d2e;
+      }
+
+      /* ---------- Comparison table ---------- */
+      .comparison-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin-top: 14px;
+        font-size: 14px;
+        background: #fffdf8;
+        border: 1px solid #e7dac3;
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      .comparison-table thead th {
+        background: #f3e7cd;
+        color: #3f3a34;
+        font-weight: 800;
+        text-align: left;
+        padding: 12px 14px;
+        border-bottom: 1px solid #e7dac3;
+        font-size: 13.5px;
+      }
+      .comparison-table tbody td {
+        padding: 12px 14px;
+        border-bottom: 1px solid #efe5d0;
+        line-height: 1.7;
+        vertical-align: top;
+      }
+      .comparison-table tbody tr:nth-child(even) td { background: #fffaee; }
+      .comparison-table tbody tr:nth-child(odd)  td { background: #fffdf8; }
+      .comparison-table tbody tr:last-child td { border-bottom: none; }
+      .comparison-table .method-cell { font-weight: 800; }
+      .ok    { color: #156260; font-weight: 700; }
+      .nope  { color: #a24d2e; font-weight: 700; }
+
+      /* ---------- Audit callout ---------- */
+      .audit-callout {
+        margin-top: 22px;
+        background: #fdf6e3;
+        border: 1px solid #ecdcb5;
+        border-left: 4px solid #cb7a35;
+        border-radius: 12px;
+        padding: 16px 18px;
+        font-size: 14px;
+        line-height: 1.75;
+        color: #3f3a34;
+      }
+      .audit-callout .audit-title {
+        font-size: 15px;
+        font-weight: 800;
+        margin-bottom: 8px;
+        color: #8c541f;
+      }
+      .audit-callout ul {
+        margin: 6px 0 0 0;
+        padding-left: 4px;
+        list-style: none;
+      }
+      .audit-callout li {
+        padding: 3px 0;
+      }
+      .audit-callout .check {
+        color: #156260;
+        font-weight: 800;
+        margin-right: 6px;
+      }
+      .audit-callout .warn {
+        color: #a24d2e;
+        font-weight: 800;
+        margin-right: 6px;
+      }
+
+      @media (max-width: 1120px) {
+        .hero, .grid4, .intuition { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="panel">
+
+        <!-- ============== HERO ============== -->
+        <div class="hero">
+          <div>
+            <div class="title">四种概率/分布相关 Flow 的直觉对比</div>
+            <div class="subtitle">
+              先看上方插图建立直觉，再看中间的公式做核对，最后看底部对比表做归类。
+              四种方法都和「概率分布」有关。注意 Gumbel-Softmax 有两个同名但不同的方法：
+              <strong>2016 vanilla 版（Jang/Maddison）</strong>是 categorical reparameterization 技巧、
+              不是 flow；<strong>2025 Flow Matching 版（Tang et al. arXiv:2503.17361）</strong>
+              把同一个 softmax interpolant 配上时间相关的温度调度 $\tau(t)$ + ODE 求解，
+              <strong>就是 flow matching</strong>。本仓库的 <code>GumbelSoftmaxBridge</code> 实现的是后者。
+            </div>
+          </div>
+          <div class="note">
+            <div class="note-title">看图时只需盯住这 3 件事</div>
+            <div class="note-text">
+              1. 中间状态是不是始终还能解释成「合法概率分布」。<br />
+              2. 它在哪种几何空间里走（欧氏 / 单纯形 / 球面）。<br />
+              3. 它真的是 flow，还是另一类技巧（如 reparameterization）。
+            </div>
+          </div>
+        </div>
+
+        <!-- ============== INTUITION ROW (新手向类比) ============== -->
+        <div class="intuition">
+          <div class="intuition-cell">
+            <span class="tag tag-gaussian">Gaussian FM</span><br />
+            想象在一张白纸上，从随机点 A 直线走到目标点 B。路径上每个中间点只是普通向量，不一定是合法分布。
+          </div>
+          <div class="intuition-cell">
+            <span class="tag tag-dirichlet">Dirichlet</span><br />
+            想象在概率三角形里，把均匀撒开的沙子慢慢推向某个角落。整个过程它一直是合法分布。
+          </div>
+          <div class="intuition-cell">
+            <span class="tag tag-fisher">Fisher</span><br />
+            先把概率开方变成球面上的点，再沿球面最短弧线走——这是「分布几何」里的真直线。
+          </div>
+          <div class="intuition-cell">
+            <span class="tag tag-gumbel">Gumbel-Softmax</span><br />
+            两个同名方法：<strong>2016 vanilla</strong> 用固定温度做 reparameterization，
+            <em>不是 flow</em>；<strong>2025 Flow Matching</strong> 把温度做成 $\tau(t)$ 调度
+            + ODE 求解，<em>是 flow</em>。本仓库实现的是 2025 FM 版。
+          </div>
+        </div>
+
+        <!-- ============== ILLUSTRATION ROW (4 SVG) ============== -->
+        <div class="grid4">
+
+          <!-- Gaussian SVG -->
+          <div class="card gaussian">
+            <div>
+              <div class="card-title" style="color:#365b92;">Gaussian FM</div>
+              <div class="card-subtitle">欧氏空间里的直线插值。</div>
+            </div>
+            <div class="figure-box">
+              <svg viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg" aria-label="Gaussian FM 示意图">
+                <!-- horizontal axis -->
+                <line x1="40" y1="100" x2="280" y2="100" stroke="#7c8aa8" stroke-width="1.2" />
+                <!-- tick marks -->
+                <line x1="40"  y1="96" x2="40"  y2="104" stroke="#7c8aa8" stroke-width="1.2" />
+                <line x1="160" y1="96" x2="160" y2="104" stroke="#7c8aa8" stroke-width="1.2" />
+                <line x1="280" y1="96" x2="280" y2="104" stroke="#7c8aa8" stroke-width="1.2" />
+
+                <!-- arrow z0 -> z1 -->
+                <defs>
+                  <marker id="arrowGauss" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                    <path d="M0 0 L10 5 L0 10 Z" fill="#5e7aa8" />
+                  </marker>
+                </defs>
+                <line x1="48" y1="100" x2="272" y2="100" stroke="#5e7aa8" stroke-width="1.6"
+                      marker-end="url(#arrowGauss)" />
+
+                <!-- endpoints -->
+                <circle cx="40"  cy="100" r="7" fill="#3a5d96" />
+                <circle cx="280" cy="100" r="7" fill="#d28a4c" />
+
+                <!-- midpoint z_t -->
+                <circle cx="160" cy="100" r="5.5" fill="#7c8aa8" />
+
+                <!-- labels -->
+                <text x="22" y="86" font-size="12" font-weight="700" fill="#3a5d96">z₀</text>
+                <text x="270" y="86" font-size="12" font-weight="700" fill="#a06430">z₁</text>
+                <text x="148" y="86" font-size="12" font-weight="700" fill="#3f3a34">zₜ</text>
+
+                <!-- annotation -->
+                <text x="60"  y="142" font-size="12" fill="#5a5145">中间值可以为负</text>
+                <text x="60"  y="160" font-size="12" fill="#5a5145">总和不一定为 1</text>
+                <text x="60"  y="178" font-size="11.5" fill="#7a7267">→ 不是合法概率分布</text>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Dirichlet SVG -->
+          <div class="card dirichlet">
+            <div>
+              <div class="card-title" style="color:#8c541f;">Dirichlet</div>
+              <div class="card-subtitle">在单纯形内向某顶点集中。</div>
+            </div>
+            <div class="figure-box">
+              <svg viewBox="0 0 320 260" xmlns="http://www.w3.org/2000/svg" aria-label="Dirichlet 示意图">
+                <defs>
+                  <radialGradient id="dir-gradient" cx="50%" cy="14%" r="80%">
+                    <stop offset="0%"  stop-color="#cb7a35" stop-opacity="0.85" />
+                    <stop offset="55%" stop-color="#e8b070" stop-opacity="0.35" />
+                    <stop offset="100%" stop-color="#cb7a35" stop-opacity="0.0" />
+                  </radialGradient>
+                  <radialGradient id="dir-mini-0" cx="50%" cy="50%" r="60%">
+                    <stop offset="0%" stop-color="#e8b070" stop-opacity="0.18" />
+                    <stop offset="100%" stop-color="#e8b070" stop-opacity="0.10" />
+                  </radialGradient>
+                  <radialGradient id="dir-mini-1" cx="50%" cy="22%" r="70%">
+                    <stop offset="0%" stop-color="#cb7a35" stop-opacity="0.55" />
+                    <stop offset="100%" stop-color="#cb7a35" stop-opacity="0.05" />
+                  </radialGradient>
+                  <radialGradient id="dir-mini-2" cx="50%" cy="14%" r="55%">
+                    <stop offset="0%" stop-color="#a24d2e" stop-opacity="0.95" />
+                    <stop offset="80%" stop-color="#cb7a35" stop-opacity="0.0" />
+                  </radialGradient>
+                </defs>
+
+                <!-- main triangle -->
+                <polygon points="50,180 160,30 270,180"
+                         fill="url(#dir-gradient)"
+                         stroke="#cb7a35" stroke-width="1.6" />
+                <!-- vertex dots + labels -->
+                <circle cx="50"  cy="180" r="4" fill="#8c541f" />
+                <circle cx="160" cy="30"  r="4" fill="#8c541f" />
+                <circle cx="270" cy="180" r="4" fill="#8c541f" />
+                <text x="32" y="196" font-size="12" font-weight="700" fill="#8c541f">p₁</text>
+                <text x="151" y="22" font-size="12" font-weight="700" fill="#8c541f">p₂</text>
+                <text x="262" y="196" font-size="12" font-weight="700" fill="#8c541f">p₃</text>
+
+                <!-- mini triangles row: t=0 / t=4 / t=∞ -->
+                <g transform="translate(28, 210)">
+                  <polygon points="20,40 40,8 60,40" fill="url(#dir-mini-0)" stroke="#cb7a35" stroke-width="1" />
+                  <text x="20" y="52" font-size="11" fill="#5a5145">t=0 (均匀)</text>
+                </g>
+                <g transform="translate(120, 210)">
+                  <polygon points="20,40 40,8 60,40" fill="url(#dir-mini-1)" stroke="#cb7a35" stroke-width="1" />
+                  <text x="22" y="52" font-size="11" fill="#5a5145">t=4 (偏 p₂)</text>
+                </g>
+                <g transform="translate(210, 210)">
+                  <polygon points="20,40 40,8 60,40" fill="url(#dir-mini-2)" stroke="#cb7a35" stroke-width="1" />
+                  <text x="20" y="52" font-size="11" fill="#5a5145">t=∞ (集中)</text>
+                </g>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Fisher SVG -->
+          <div class="card fisher">
+            <div>
+              <div class="card-title" style="color:#156260;">Fisher</div>
+              <div class="card-subtitle">单纯形 → 球面 → 最短弧线。</div>
+            </div>
+            <div class="figure-box">
+              <svg viewBox="0 0 360 220" xmlns="http://www.w3.org/2000/svg" aria-label="Fisher 示意图">
+                <defs>
+                  <marker id="arrowFisher" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                    <path d="M0 0 L10 5 L0 10 Z" fill="#1f7d7a" />
+                  </marker>
+                  <marker id="arrowFisherBack" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                    <path d="M0 0 L10 5 L0 10 Z" fill="#5a8d7e" />
+                  </marker>
+                </defs>
+
+                <!-- left: simplex triangle -->
+                <polygon points="20,160 60,90 100,160"
+                         fill="#effbf7" stroke="#1f7d7a" stroke-width="1.5" />
+                <circle cx="60" cy="125" r="3.5" fill="#1f7d7a" />
+                <text x="40" y="178" font-size="11" fill="#456c69">单纯形 Δ²</text>
+                <text x="50" y="120" font-size="10.5" fill="#1f7d7a">u₀</text>
+
+                <!-- middle: u = sqrt(p) arrow forward -->
+                <path d="M108 122 C140 110, 160 96, 188 86"
+                      fill="none" stroke="#1f7d7a" stroke-width="1.6"
+                      marker-end="url(#arrowFisher)" />
+                <text x="118" y="100" font-size="11.5" fill="#1f7d7a" font-style="italic">u = √p</text>
+
+                <!-- right: spherical octant silhouette (1/8 sphere) -->
+                <!-- two elliptical arcs forming the rim of the octant -->
+                <path d="M225 175 A75 30 0 0 1 335 175"
+                      fill="none" stroke="#1f7d7a" stroke-width="1.4" />
+                <path d="M225 175 A30 75 0 0 0 225 25"
+                      fill="none" stroke="#1f7d7a" stroke-width="1.4" />
+                <path d="M225 25  A75 75 0 0 1 335 175"
+                      fill="none" stroke="#1f7d7a" stroke-width="1.4" />
+                <!-- light surface tint via translucent fill polygon between arcs -->
+                <path d="M225 175 A75 30 0 0 1 335 175 A75 75 0 0 0 225 25 A30 75 0 0 1 225 175 Z"
+                      fill="#1f7d7a" fill-opacity="0.08" stroke="none" />
+
+                <!-- great-circle arc from u0 (centroid-projected) to u1 (apex) -->
+                <path d="M252 145 A78 78 0 0 1 225 25"
+                      fill="none" stroke="#a24d2e" stroke-width="1.8"
+                      marker-end="url(#arrowFisher)" />
+                <!-- u0 dot on sphere (mapped centroid) -->
+                <circle cx="252" cy="145" r="3.5" fill="#a24d2e" />
+                <text x="232" y="160" font-size="11" fill="#a24d2e">u₀</text>
+                <!-- u1 dot at apex -->
+                <circle cx="225" cy="25" r="3.5" fill="#a24d2e" />
+                <text x="200" y="22" font-size="11" fill="#a24d2e">u₁</text>
+
+                <!-- annotation for great circle -->
+                <text x="262" y="92" font-size="10.5" fill="#1f7d7a">great-circle 弧</text>
+
+                <!-- return arrow: p = u^2 -->
+                <path d="M250 192 C190 200, 140 196, 110 188"
+                      fill="none" stroke="#5a8d7e" stroke-width="1.4"
+                      marker-end="url(#arrowFisherBack)" />
+                <text x="158" y="210" font-size="11.5" fill="#456c69" font-style="italic">p = u²</text>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Gumbel-Softmax FM SVG -->
+          <div class="card gumbel">
+            <div>
+              <div class="card-title" style="color:#a24d2e;">Gumbel-Softmax FM</div>
+              <div class="card-subtitle">
+                τ(t) = τ_max · e<tspan style="font-size:11px">−λt</tspan> 时间调度下，
+                $x_t$ 沿单纯形从「均匀噪声」流向 one-hot 目标。这条轨迹就是 flow 的 path。
+              </div>
+            </div>
+            <div class="figure-box">
+              <svg viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg" aria-label="Gumbel-Softmax FM 示意图">
+                <defs>
+                  <marker id="arrowGumbelFlow" viewBox="0 0 10 10" refX="9" refY="5"
+                          markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                    <path d="M0,0 L10,5 L0,10 z" fill="#a24d2e" />
+                  </marker>
+                </defs>
+
+                <!-- shared baseline -->
+                <line x1="14" y1="160" x2="346" y2="160" stroke="#b8a98e" stroke-width="1.2" />
+
+                <!-- subplot 1: t=0, tau(0) = tau_max -> uniform -->
+                <g transform="translate(20, 0)">
+                  <rect x="6"  y="124" width="18" height="36" fill="#f6c8a8" stroke="#cf6d43" stroke-width="1" />
+                  <rect x="34" y="124" width="18" height="36" fill="#f6c8a8" stroke="#cf6d43" stroke-width="1" />
+                  <rect x="62" y="124" width="18" height="36" fill="#f6c8a8" stroke="#cf6d43" stroke-width="1" />
+                  <text x="9"  y="174" font-size="10" fill="#7a6757">1</text>
+                  <text x="37" y="174" font-size="10" fill="#7a6757">2</text>
+                  <text x="65" y="174" font-size="10" fill="#7a6757">3</text>
+                  <text x="2" y="194" font-size="11.5" fill="#3f3a34">t = 0, τ(0) = τ_max</text>
+                  <text x="0" y="210" font-size="10.5" fill="#7a6757">flow 起点 ≈ 均匀</text>
+                </g>
+
+                <!-- arrow: t=0 -> t=0.5, labelled u_t^θ -->
+                <line x1="108" y1="138" x2="138" y2="138"
+                      stroke="#a24d2e" stroke-width="1.6"
+                      marker-end="url(#arrowGumbelFlow)" />
+                <text x="106" y="130" font-size="10.5" fill="#a24d2e" font-style="italic">u_t^θ</text>
+
+                <!-- subplot 2: t=0.5, intermediate -->
+                <g transform="translate(140, 0)">
+                  <rect x="6"  y="127" width="18" height="33" fill="#f0a577" stroke="#cf6d43" stroke-width="1" />
+                  <rect x="34" y="95"  width="18" height="65" fill="#cf6d43" stroke="#a24d2e" stroke-width="1" />
+                  <rect x="62" y="148" width="18" height="12" fill="#f0a577" stroke="#cf6d43" stroke-width="1" />
+                  <text x="9"  y="174" font-size="10" fill="#7a6757">1</text>
+                  <text x="37" y="174" font-size="10" fill="#7a6757">2</text>
+                  <text x="65" y="174" font-size="10" fill="#7a6757">3</text>
+                  <text x="6" y="194" font-size="11.5" fill="#3f3a34">t = 0.5</text>
+                  <text x="0" y="210" font-size="10.5" fill="#7a6757">ODE 中间步</text>
+                </g>
+
+                <!-- arrow: t=0.5 -> t=1 -->
+                <line x1="228" y1="138" x2="258" y2="138"
+                      stroke="#a24d2e" stroke-width="1.6"
+                      marker-end="url(#arrowGumbelFlow)" />
+                <text x="226" y="130" font-size="10.5" fill="#a24d2e" font-style="italic">u_t^θ</text>
+
+                <!-- subplot 3: t=1, tau(1) -> sharp ≈ target one-hot -->
+                <g transform="translate(260, 0)">
+                  <rect x="6"  y="150" width="18" height="10"  fill="#f0a577" stroke="#cf6d43" stroke-width="1" />
+                  <rect x="34" y="60"  width="18" height="100" fill="#a24d2e" stroke="#7a3819" stroke-width="1" />
+                  <rect x="62" y="159" width="18" height="1"   fill="#f0a577" stroke="#cf6d43" stroke-width="1" />
+                  <text x="9"  y="174" font-size="10" fill="#7a6757">1</text>
+                  <text x="37" y="174" font-size="10" fill="#7a6757">2</text>
+                  <text x="65" y="174" font-size="10" fill="#7a6757">3</text>
+                  <text x="2" y="194" font-size="11.5" fill="#3f3a34">t = 1, τ(1) ≈ τ_min</text>
+                  <text x="0" y="210" font-size="10.5" fill="#7a6757">flow 终点 ≈ e_2</text>
+                </g>
+
+                <!-- bottom annotation -->
+                <text x="180" y="232" font-size="10.5" fill="#7a6757" text-anchor="middle" font-style="italic">
+                  3 张柱状图不是 3 个独立采样，而是同一条 flow path 的快照
+                </text>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============== FORMULA SECTION ============== -->
+        <div class="section-title">下面开始对应推公式</div>
+        <div class="section-subtitle">
+          下面四列与上方一一对应。统一采用 3 类例子，目标类别设为第 2 类，即目标 one-hot
+          $\mathbf{e}_2 = [0,\,1,\,0]$。
+        </div>
+
+        <div class="grid4" style="margin-top:16px;">
+
+          <!-- Formula: Gaussian -->
+          <div class="formula-card gaussian">
+            <div class="card-title" style="color:#365b92;">Gaussian FM</div>
+
+            <div>
+              <div class="subhead">原理公式</div>
+              <div class="formula-box">
+                <div class="row">状态空间：欧氏 $\mathbb{R}^K$</div>
+                <div class="row">线性插值路径：</div>
+                <div class="row">$$z_t = (1-s)\,z_0 + s\,z_1,\quad s\in[0,1]$$</div>
+              </div>
+            </div>
+
+            <div>
+              <div class="subhead">数字 Example</div>
+              <div class="formula-box alt">
+                <div class="row">$z_0 = [0.2,\,-1.0,\,0.5]$</div>
+                <div class="row">$z_1 = \mathbf{e}_2 = [0,\,1,\,0]$，$s = 0.25$</div>
+                <div class="row">$$z_t = 0.75\,z_0 + 0.25\,z_1 = [0.15,\,-0.50,\,0.375]$$</div>
+                <div class="row" style="font-size:13px;color:#5a5145;">
+                  注意：第 2 项 $-0.50$ 为负，三项之和 $=0.025$，并非合法概率分布。
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="subhead">和其他方法的区别</div>
+              <div class="diff">
+                中间状态只是普通连续向量，不保证非负，也不保证总和为 1。所以它不像「类别概率分配」，
+                更像在连续编码空间里做 flow。
+              </div>
+            </div>
+          </div>
+
+          <!-- Formula: Dirichlet -->
+          <div class="formula-card dirichlet">
+            <div class="card-title" style="color:#8c541f;">Dirichlet</div>
+
+            <div>
+              <div class="subhead">原理公式</div>
+              <div class="formula-box">
+                <div class="row">条件路径：</div>
+                <div class="row">$$x_t \sim \mathrm{Dir}(\mathbf{1} + t\,\mathbf{e}_c)$$</div>
+                <div class="row">均值：</div>
+                <div class="row">$$\mathbb{E}[x_t] = \frac{\boldsymbol{\alpha}}{\alpha_0},\quad \alpha_0 = \sum_i \alpha_i$$</div>
+              </div>
+            </div>
+
+            <div>
+              <div class="subhead">数字 Example</div>
+              <div class="formula-box alt">
+                <div class="row">$K = 3,\ t = 4,\ c = 2$</div>
+                <div class="row">$\boldsymbol{\alpha} = \mathbf{1} + 4\,\mathbf{e}_2 = [1,\,5,\,1],\ \alpha_0 = 7$</div>
+                <div class="row">
+                  $$\mathbb{E}[x_t] = \left[\tfrac{1}{7},\,\tfrac{5}{7},\,\tfrac{1}{7}\right] \approx [0.143,\,0.714,\,0.143]$$
+                </div>
+                <div class="row" style="font-size:13px;color:#5a5145;">
+                  典型采样会接近 $[0.10,\,0.80,\,0.10]$ 这类合法分布。
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="subhead">和其他方法的区别</div>
+              <div class="diff">
+                它从一开始就把状态定义成合法概率分布。问题在于同一个 $t$ 在不同 $K$ 下不再代表
+                同样尖锐的状态（$\alpha$ 尺度随 $K$ 漂移）。
+              </div>
+            </div>
+          </div>
+
+          <!-- Formula: Fisher -->
+          <div class="formula-card fisher">
+            <div class="card-title" style="color:#156260;">Fisher</div>
+
+            <div>
+              <div class="subhead">原理公式</div>
+              <div class="formula-box">
+                <div class="row">开方映射到球面：</div>
+                <div class="row">$$u = \sqrt{p},\quad \sum_i u_i^2 = 1$$</div>
+                <div class="row">球面最短弧线（slerp）插值：</div>
+                <div class="row">$$u_t = \mathrm{slerp}(u_0,\,u_1,\,s),\quad p_t = u_t^2$$</div>
+              </div>
+            </div>
+
+            <div>
+              <div class="subhead">数字 Example</div>
+              <div class="formula-box alt">
+                <div class="row">$p_0 = [\tfrac{1}{3},\tfrac{1}{3},\tfrac{1}{3}],\ p_1 = \mathbf{e}_2 = [0,1,0]$</div>
+                <div class="row">$u_0 = \sqrt{p_0} \approx [0.577,\,0.577,\,0.577]$</div>
+                <div class="row">$u_1 = \sqrt{p_1} = [0,\,1,\,0]$，取 $s=0.5$</div>
+                <div class="row">
+                  $$u_t \approx [0.325,\,0.888,\,0.325]$$
+                </div>
+                <div class="row">
+                  $$p_t = u_t^2 \approx [0.106,\,0.789,\,0.106]$$
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="subhead">和其他方法的区别</div>
+              <div class="diff">
+                它不是在普通平直空间里走，而是先换到更适合概率分布的几何坐标里（球面），
+                再沿那个几何里的最短路径走。
+              </div>
+            </div>
+          </div>
+
+          <!-- Formula: Gumbel-Softmax -->
+          <div class="formula-card gumbel">
+            <div class="card-title" style="color:#a24d2e;">Gumbel-Softmax</div>
+
+            <div>
+              <div class="subhead">原理公式</div>
+              <div class="formula-box">
+                <div class="row">带温度的 softmax：</div>
+                <div class="row">
+                  $$x_t[j] = \mathrm{softmax}\!\left(\frac{\ell_j + g_j}{\tau}\right)$$
+                </div>
+                <div class="row" style="font-size:13px;color:#5a5145;">
+                  $\tau$ 大 ⇒ 分布更软；$\tau$ 小 ⇒ 分布更尖。
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="subhead">数字 Example</div>
+              <div class="formula-box alt">
+                <div class="row">$\boldsymbol{\ell} = [0.3,\,1.1,\,-0.2]$</div>
+                <div class="row">$\mathbf{g} = [0.1,\,0.0,\,-0.4]$（说明性 noise，非真实抽样）</div>
+                <div class="row">$\boldsymbol{\ell} + \mathbf{g} = [0.4,\,1.1,\,-0.6]$</div>
+                <div class="row">
+                  $\tau = 1.0:\ x_t \approx [0.296,\,0.595,\,0.109]$
+                </div>
+                <div class="row">
+                  $\tau = 0.3:\ x_t \approx [0.088,\,0.909,\,0.003]$
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="subhead">和其他方法的区别</div>
+              <div class="diff">
+                <strong class="warn">⚠ 注意区分两个同名方法：</strong><br />
+                <strong>2016 vanilla（Jang/Maddison）</strong>：
+                温度 $\tau$ 是固定/手调的超参，目的是让离散类别在 forward 上「软化」
+                以便求梯度 — <strong>不是 flow，是 reparameterization</strong>。<br /><br />
+                <strong>2025 Flow Matching（Tang et al. arXiv:2503.17361）</strong>：
+                温度做成时间调度 $\tau(t)=\tau_{\max}e^{-\lambda t}$，
+                整条 $x_t$ 是单纯形上的 conditional path，配条件速度 + ODE 求解
+                — <strong>是真正的 flow matching</strong>。本仓库 <code>GumbelSoftmaxBridge</code>
+                实现的就是这一版（默认 $\tau_{\max}{=}10$，$\lambda{=}3$，$\beta{=}2$）。<br /><br />
+                上面公式里的 noise $\mathbf{g}$ 仅为说明性，并非真实从 $\mathrm{Gumbel}(0,1)$ 抽样。
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============== TANG 2025 DEEP DIVE ============== -->
+        <div class="section-title">Gumbel-Softmax Flow Matching (Tang 2025) 原理详解</div>
+        <div class="section-subtitle">
+          上面那个 panel 只画了一个 softmax 公式。Tang 2025 真正在做的是把同一个
+          softmax 升级成「单纯形上的连续 path + ODE 求解」。下面 7 个 box 把整套机制
+          一步步拆开，对应公式编号沿用论文 (arXiv:2503.17361 §4-5)。本仓库
+          <code>GumbelSoftmaxBridge</code> 严格按这套实现。
+        </div>
+
+        <div class="formula-card gumbel" style="margin-top:14px;">
+
+          <div>
+            <div class="subhead">0 · 它要解决什么问题</div>
+            <div class="formula-box">
+              我们想在 <strong>离散类别空间</strong>(K 个类) 上做生成。普通 Flow Matching 在
+              $\mathbb{R}^K$ 里做直线插值，但离散类别天然约束在 K-1 维单纯形
+              $\Delta^{K-1}$ 上 — 中间状态不能「负概率」或「和 ≠ 1」。<br /><br />
+              已有方法各有问题：<br />
+              · <strong>Dirichlet FM (Stark 2024)</strong>：高 K 下有 support shrinkage 病理
+              (Stark Prop. 1 自己指出的 failure mode)，还要预算 $c$-factor 网格。<br />
+              · <strong>Fisher FM (Davis 2024)</strong>：走球面测地线，几何优雅但实现要 sqrt + slerp。<br /><br />
+              <strong>Tang 的洞察</strong>：用 Gumbel-Softmax 自身作为单纯形上的 path interpolant —
+              softmax 输出本来就是合法概率分布，温度 $\tau$ 给了一个「噪声 → 尖锐」的
+              连续插值轴。
+            </div>
+          </div>
+
+          <div>
+            <div class="subhead">1 · 路径 (Eq. 9 — interpolant)</div>
+            <div class="formula-box">
+              给定目标类别 $k$ (one-hot $e_k$)，时间 $t \in [0, 1]$，中间状态：
+              $$x_t[i] = \mathrm{softmax}_i\!\left(\frac{\delta_{ik} + g_i/\beta}{\tau(t)}\right)$$
+              其中：<br />
+              · $\delta_{ik} = 1$ iff $i = k$ (目标 one-hot)<br />
+              · $g_i$ 是 i.i.d. Gumbel 噪声，$g_i = -\log(-\log U_i),\ U_i \sim \mathrm{Uniform}(0,1)$<br />
+              · $\beta$ 是噪声强度 (paper 默认 2.0)<br />
+              · $\tau(t)$ 是时间相关温度 (见下条)<br /><br />
+              <strong>两端行为</strong>：<br />
+              · $t \to 0$：$\tau$ 大，$\delta$ 项被淹没，$x_0 \approx \mathrm{softmax}(g/\beta\tau_{\max})$
+              ≈ 接近均匀的「噪声分布」。<br />
+              · $t \to 1$：$\tau$ 小，$\delta_{ik}/\tau$ 项主导，softmax 把质量全推到第 $k$ 维，
+              $x_1 \to e_k$。<br /><br />
+              中间任意 $t$，$x_t$ 都是合法单纯形元素 (softmax 输出 sum = 1) — <strong>路径全程合法</strong>。
+            </div>
+          </div>
+
+          <div>
+            <div class="subhead">2 · 温度调度 (Eq. 8)</div>
+            <div class="formula-box">
+              $$\tau(t) = \tau_{\max}\, e^{-\lambda t},\quad t \in [0, 1]$$
+              paper 默认 $\tau_{\max}=10,\ \lambda=3$。意义：<br />
+              · 起点 $\tau(0) = 10$ → softmax 几乎均匀。<br />
+              · 终点 $\tau(1) = 10\,e^{-3} \approx 0.5$ → softmax 已经很尖。<br /><br />
+              代码里加了 $\tau_{\min}=10^{-2}$ floor 防止数值上 $\tau$ 真的趋 0
+              (paper 没写，但温度方法的标准防护)。
+            </div>
+          </div>
+
+          <div>
+            <div class="subhead">3 · 条件速度 (Eq. 13)</div>
+            <div class="formula-box">
+              固定目标 $x_1 = e_k$，沿路径求时间导数化简：
+              $$u_t(x_t \mid x_1=e_k)_i = \frac{\lambda}{\tau(t)}\, x_{t,k}\, (\delta_{ik} - x_{t,i})$$
+              直观分解：<br />
+              · $\delta_{ik} - x_{t,i}$ ≈ 「当前 $x_t$ 距离目标 one-hot 还差多少」<br />
+              · $\lambda / \tau(t)$ ≈ 「时间步尺度」($\tau$ 越小推进越猛)<br />
+              · $x_{t,k}$ ≈ 「目标维度当前的概率」(强了大胆推，弱了慢慢来)
+            </div>
+          </div>
+
+          <div>
+            <div class="subhead">4 · 边际速度 (Eq. 12，给定模型 endpoint $x_\theta$)</div>
+            <div class="formula-box">
+              把 Eq. 13 对所有候选目标 $k$ 用模型预测的 endpoint 分布 $x_\theta$
+              加权求和并展开，<strong>代数恒等</strong>化简得：
+              $$u_t^\theta(x_t)_i = \frac{\lambda}{\tau(t)}\, x_{t,i}\, \bigl(x_{\theta,i} - \langle x_\theta, x_t \rangle\bigr)$$
+              注意这是闭式 — <strong>不需要内层循环遍历 K 个候选</strong>。本仓库
+              <code>bridges.py:540-548</code> 的 <code>step()</code> 用的就是这个展开形式，
+              对 GPU 矢量化友好。
+            </div>
+          </div>
+
+          <div>
+            <div class="subhead">5 · 训练损失 (Eq. 11)</div>
+            <div class="formula-box">
+              $$\mathcal{L} = -\mathbb{E}\!\left[\log \langle x_\theta(x_t, t),\ x_1\rangle\right]$$
+              翻译：<strong>模型预测 endpoint 分布 $x_\theta$，对 ground-truth $x_1=e_k$ 求 log，
+              等价于 endpoint 上的 cross-entropy</strong>。<br /><br />
+              这点很重要：<strong>loss = 标准 masked CE</strong>，跟 classifier-FM 一致，
+              跟 Fisher / Dirichlet 用的 endpoint parameterization 也一致 —
+              <strong>切换 bridge 只是换 path / step，loss 契约不变</strong>。本仓库
+              <code>bridges.py:227-251</code> 的 <code>compute_loss</code> 是基类共享的
+              masked CE，所有 active bridge 共用。
+            </div>
+          </div>
+
+          <div>
+            <div class="subhead">6 · 采样 (推理)</div>
+            <div class="formula-box">
+              从 $x_0 \sim$ Gumbel-Softmax(uniform target) 开始，Euler ODE 沿
+              $u_t^\theta$ 积分到 $t=1$：
+              <pre style="background:#fffdf8;border:1px solid #e8dece;border-radius:8px;padding:10px;font-size:12.5px;line-height:1.6;color:#3a342d;margin:6px 0;overflow-x:auto;">for t in linspace(0, 1, num_steps):
+    x_θ_pred = model.endpoint_logits(x_t, t).softmax()       # 端点预测
+    v = (λ / τ(t)) * x_t * (x_θ_pred - &lt;x_θ_pred, x_t&gt;)     # Eq. 12
+    x_t = x_t + dt * v
+    x_t = simplex_project(x_t)                                # 防漂移
+labels = argmax(x_t)</pre>
+              最后 argmax 拿离散类别。Solver 可换 Heun (二阶 predictor-corrector)，
+              本仓库默认 Euler。
+            </div>
+          </div>
+
+          <div>
+            <div class="subhead">7 · 为什么对我们的 variable-K 场景合适</div>
+            <div class="formula-box alt">
+              <strong>1. Softmax 归一化随 K 天然稳定</strong> — 没有 Dirichlet 的
+              support shrinkage，没有 $c$-factor 预算网格。<br /><br />
+              <strong>2. Loss = masked CE</strong> — 跟 Fisher / 任何 endpoint-param
+              方法接口一致，bridge 可以无痛换 (本仓库 <code>build_bridge('gumbel'|'fisher')</code>
+              只切 1 个字段)。<br /><br />
+              <strong>3. Variable-K 友好</strong> — padding 维度通过 <code>_masked_softmax</code>
+              在分母里设 $-10^4$ 屏蔽，strict no-op；batch 内不同 $K_b$ 的样本可以
+              一起训，padding 不污染梯度。<br /><br />
+              <strong>4. 超参少</strong> — 只有 $\tau_{\max},\ \lambda,\ \beta$ 三个，
+              paper §6.2-6.3 已给推荐默认值 (10 / 3 / 2)。
+            </div>
+          </div>
+
+          <div>
+            <div class="subhead">关键差别 vs 2016 vanilla Gumbel-Softmax</div>
+            <table class="comparison-table" style="margin-top:6px;">
+              <thead>
+                <tr>
+                  <th style="width: 22%;">维度</th>
+                  <th style="width: 39%;">Jang/Maddison 2016</th>
+                  <th style="width: 39%;">Tang 2025 FM</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="method-cell">$\tau$</td>
+                  <td>固定 / 手调超参</td>
+                  <td>时间调度 $\tau(t)=\tau_{\max}e^{-\lambda t}$</td>
+                </tr>
+                <tr>
+                  <td class="method-cell">用途</td>
+                  <td>reparameterization (让离散采样可微)</td>
+                  <td>在单纯形上定义 conditional path</td>
+                </tr>
+                <tr>
+                  <td class="method-cell">中间态</td>
+                  <td>一次性 forward 用，无「中间」概念</td>
+                  <td>$x_t$ 是 ODE 解，$t$ 连续</td>
+                </tr>
+                <tr>
+                  <td class="method-cell">训练目标</td>
+                  <td>downstream task loss (e.g. ELBO)</td>
+                  <td>endpoint CE (Eq. 11)</td>
+                </tr>
+                <tr>
+                  <td class="method-cell">推理</td>
+                  <td>一次 softmax 取 argmax</td>
+                  <td>Euler ODE 多步积分</td>
+                </tr>
+                <tr>
+                  <td class="method-cell">是否 flow</td>
+                  <td><span class="nope">✗</span></td>
+                  <td><span class="ok">✓</span></td>
+                </tr>
+              </tbody>
+            </table>
+            <div style="margin-top:10px;font-size:13.5px;color:#5a5145;line-height:1.7;">
+              <strong>核心区别</strong>：同一个 softmax 公式，Tang 把 $\tau$ 从超参升级成
+              时间调度，把单点采样升级成连续 path，把 reparameterization 技巧升级成
+              完整的 flow matching 框架。
+            </div>
+          </div>
+
+          <div>
+            <div class="subhead">8 · 「flow」在这里到底是什么意思</div>
+            <div class="formula-box">
+              <strong>一句话定义</strong>：flow = 时间连续的 path + 由速度场驱动的 ODE。
+              一个生成模型称为 flow，意思是它通过求解微分方程
+              $\frac{dx_t}{dt} = u_t(x_t)$，把样本从源分布 $p_0$ 连续地搬到目标分布 $p_1$。<br /><br />
+              在 Gumbel-Softmax FM 里，这条 flow 的 5 个组件是：
+              <table class="comparison-table" style="margin-top:6px;">
+                <thead>
+                  <tr>
+                    <th style="width: 22%;">组件</th>
+                    <th style="width: 78%;">在 Gumbel-Softmax FM 里是什么</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td class="method-cell">状态空间</td>
+                      <td>单纯形 $\Delta^{K-1}$ — 所有合法 K 类概率分布</td></tr>
+                  <tr><td class="method-cell">源分布 $p_0$</td>
+                      <td>接近均匀：$x_0 \approx \mathrm{softmax}(g/\beta\tau_{\max})$
+                      ($\tau(0)$ 很大，Gumbel 噪声主导)</td></tr>
+                  <tr><td class="method-cell">目标分布 $p_1$</td>
+                      <td>one-hot 集合 $\{e_1, \ldots, e_K\}$</td></tr>
+                  <tr><td class="method-cell">路径 $x_t$</td>
+                      <td>Eq. 9 的 softmax interpolant — 单纯形里一条从「均匀」流向 $e_k$ 的曲线</td></tr>
+                  <tr><td class="method-cell">速度场 $u_t^\theta$</td>
+                      <td>Eq. 12 的闭式表达 — $x_t$ 在每点的「风向」，推它朝模型预测的端点 $x_\theta$ 走</td></tr>
+                </tbody>
+              </table>
+              <br />
+              <strong>K = 3 几何直观</strong>：把 $\Delta^2$ 想成一个三角形，3 个顶点是
+              $e_1, e_2, e_3$。<br />
+<pre style="background:#fffdf8;border:1px solid #e8dece;border-radius:8px;padding:10px;font-size:12.5px;line-height:1.5;color:#3a342d;margin:6px 0;overflow-x:auto;">         e_2
+          ▲
+         / \
+        /   \
+       /  ●  \    ← t=0: 一团点散在中心附近 (≈ 均匀)
+      /   ↓   \
+     /    ↓    \   ← 速度场 u_t^θ 推它们朝某个角走
+    /     ●     \  ← t=0.5: 已经偏向 e_2
+   /      ↓      \
+  /       ●       \ ← t=1: 落在 e_2 角
+ e_1 ───────── e_3</pre>
+              每个样本沿三角形<strong>内部</strong>的曲线走 — 始终在三角形里 (合法概率分布)，
+              最后落在某个角 (变成离散类别)。<br /><br />
+              <strong>「flow」体现在</strong>：时间连续 / 状态在演化 / 演化由速度场决定 /
+              整条轨迹合法。<br />
+              <strong>「matching」体现在</strong>：训练时不真模拟 ODE，而是让模型预测的速度场
+              在每个采样的 $(t, x_t)$ 上<strong>匹配</strong>条件速度场 (paper 证明等价于
+              endpoint CE，见 box 11)。
+            </div>
+          </div>
+
+          <div>
+            <div class="subhead">9 · 背景知识：ODE 是什么</div>
+            <div class="formula-box">
+              <strong>ODE</strong> = Ordinary Differential Equation，常微分方程。形式：
+              $$\frac{dx_t}{dt} = f(t, x_t)$$
+              <strong>物理直觉</strong>：已知速度，求轨迹。给定初值 $x_0$，
+              任意时刻 $x_t$ 由 ODE 唯一决定 (Picard-Lindelöf 定理)。<br /><br />
+              <strong>数值解 (Euler)</strong>：把 $[0, 1]$ 切成 $N$ 步，每步 $\Delta t = 1/N$，
+              迭代：
+              $$x_{t+\Delta t} = x_t + \Delta t \cdot f(t, x_t)$$
+              算 N 次 $f$ 就近似拿到 $x_1$。<br /><br />
+              <strong>在 flow matching 里</strong>：$f$ 就是速度场 $u_t^\theta$，$t \in [0, 1]$。
+              从 source 积分到 target 就<strong>生成</strong>了一个样本 — 「采样 = 解 ODE」。
+              本仓库默认 Euler，可换 Heun (二阶 predictor-corrector)。
+            </div>
+          </div>
+
+          <div>
+            <div class="subhead">10 · 「闭式解」(closed-form) vs 数值解</div>
+            <div class="formula-box">
+              <strong>闭式解</strong>：有显式公式可以直接代入 $t$ 算出 $x_t$，不需要迭代。<br />
+              <strong>数值解</strong>：没有显式公式，必须离散化逐步逼近 (Euler / Heun / RK4)。<br /><br />
+              <strong>Gumbel-Softmax FM 有 3 处「闭式」让训练异常高效</strong>：<br /><br />
+
+              <strong>(a) 路径采样闭式 (Eq. 9)</strong><br />
+              给 $(t, k, g)$，直接 softmax 一次就得到 $x_t$。<strong>训练时不用积分 ODE 来采 $x_t$</strong>。
+              这跟 Dirichlet FM 不一样 — Dirichlet 训练时还要预算 $c$-factor 网格才能采样。<br /><br />
+
+              <strong>(b) 速度场闭式 (Eq. 12)</strong><br />
+              $$u_t^\theta(x_t)_i = \frac{\lambda}{\tau(t)}\, x_{t,i}\,(x_{\theta,i} - \langle x_\theta, x_t\rangle)$$
+              不需要内层循环遍历 K 个候选目标 — 一行 vectorized 操作就够。<br /><br />
+
+              <strong>(c) 速度从 endpoint 闭式恢复</strong><br />
+              模型只输出 endpoint 分布 $x_\theta$，速度场用 (b) 闭式算出。
+              <strong>模型不需要直接学速度</strong>。<br /><br />
+
+              <strong>结论</strong>：训练侧 100% 闭式，没有任何 ODE 积分或网格预算。
+              只有<strong>推理时</strong>才真的需要数值解 ODE — Euler 多步积分。
+            </div>
+          </div>
+
+          <div>
+            <div class="subhead">11 · 为什么不直接监督速度，要监督 endpoint</div>
+            <div class="formula-box">
+              两种 parameterization 选择：
+              <table class="comparison-table" style="margin-top:6px;">
+                <thead>
+                  <tr>
+                    <th style="width: 30%;">方式</th>
+                    <th style="width: 35%;">模型输出</th>
+                    <th style="width: 35%;">Loss</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td class="method-cell">Velocity FM</td>
+                      <td>速度 $v_\theta(x_t, t)$</td>
+                      <td>$\|v_\theta - u_t\|^2$ (MSE)</td></tr>
+                  <tr><td class="method-cell">Endpoint FM<br />(classifier-FM)</td>
+                      <td>端点分布 $x_\theta(x_t, t)$</td>
+                      <td>$\mathrm{CE}(x_\theta,\, x_1)$</td></tr>
+                </tbody>
+              </table>
+              <br />
+              Tang 2025 选 endpoint，4 个原因：<br /><br />
+
+              <strong>1. 速度尺度爆炸</strong> — Eq. 12 里有 $\lambda/\tau(t)$，$t \to 1$ 时
+              $\tau(t) \to \tau_{\min}$，速度幅值 $\propto 1/\tau_{\min}$ 暴涨。直接 MSE 监督这个量，
+              loss landscape 数值上很烂。Endpoint $x_\theta$ 永远在 $[0, 1]$ 单纯形内，数值稳定。<br /><br />
+
+              <strong>2. 任务对齐</strong> — 我们最终要的就是 $\arg\max(x_1) = $ 离散类别。
+              Endpoint 直接就是类别预测，监督它 = 直接监督任务。速度只是中间量。<br /><br />
+
+              <strong>3. Loss 共享</strong> — masked CE 跟 Fisher / 普通分类任务接口一致。
+              Bridge 可以无痛换 — 本仓库 <code>build_bridge('gumbel'|'fisher')</code> 只切 1 个字段，
+              loss 契约不变。<br /><br />
+
+              <strong>4. 理论等价</strong> — Tang 论文 Eq. 11 证明：
+              $$\mathcal{L} = -\mathbb{E}\!\left[\log \langle x_\theta(x_t, t),\ x_1\rangle\right]$$
+              等价于 velocity matching loss 的 endpoint-参数化形式。换句话说，
+              <strong>监督 endpoint 就是在监督速度</strong>，但实操上更稳更简洁。<br /><br />
+
+              代码侧：<code>bridges.py:227-251</code> 的 <code>compute_loss</code> 是
+              <code>BaseCategoricalFlowBridge</code> 共享的 masked CE，所有 active bridge 都走它 —
+              这就是「endpoint parameterization」契约的物化。
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ============== COMPARISON TABLE ============== -->
+        <div class="section-title" style="margin-top:28px;">方法对比一览</div>
+        <div class="section-subtitle">
+          按「中间状态是否合法分布 / 几何空间 / 对类别数 K 的工程稳定性 / 是否真正的 flow」横向对比。
+        </div>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th style="width: 16%;">方法</th>
+              <th style="width: 22%;">中间状态是合法概率分布?</th>
+              <th style="width: 20%;">几何空间</th>
+              <th style="width: 18%;">对 K 的工程稳定性</th>
+              <th style="width: 24%;">是否真正的 flow</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="method-cell" style="color:#365b92;">Gaussian FM</td>
+              <td><span class="nope">✗</span> 普通向量，可负、和≠1</td>
+              <td>欧氏 $\mathbb{R}^K$</td>
+              <td>高</td>
+              <td><span class="ok">✓</span> 真 flow（直线插值）</td>
+            </tr>
+            <tr>
+              <td class="method-cell" style="color:#8c541f;">Dirichlet</td>
+              <td><span class="ok">✓</span> 始终落在单纯形内</td>
+              <td>单纯形 $\Delta^{K-1}$</td>
+              <td>中（$\alpha$ 尺度随 K 漂移）</td>
+              <td><span class="ok">✓</span> 真 flow（在单纯形上）</td>
+            </tr>
+            <tr>
+              <td class="method-cell" style="color:#156260;">Fisher</td>
+              <td><span class="ok">✓</span> sqrt 映射后球面，反映回单纯形</td>
+              <td>球面正八分体（sqrt 映射后）</td>
+              <td>中–高</td>
+              <td><span class="ok">✓</span> 真 flow（球面 great-circle）</td>
+            </tr>
+            <tr>
+              <td class="method-cell" style="color:#a24d2e;">Gumbel-Softmax<br /><span style="font-size:11px;color:#7a4a30;">(2016 vanilla)</span></td>
+              <td><span class="ok">✓</span>（softmax 输出落在单纯形）</td>
+              <td>单纯形 $\Delta^{K-1}$</td>
+              <td>高</td>
+              <td>
+                <strong style="color:#a24d2e;">✗ 不是 flow，是 categorical reparameterization</strong>
+              </td>
+            </tr>
+            <tr>
+              <td class="method-cell" style="color:#a24d2e;">Gumbel-Softmax FM<br /><span style="font-size:11px;color:#7a4a30;">(Tang 2025)</span></td>
+              <td><span class="ok">✓</span> $\tau(t)$ 调度下始终是单纯形元素</td>
+              <td>单纯形 $\Delta^{K-1}$（softmax interpolant）</td>
+              <td>高（softmax 归一化随 K 稳定）</td>
+              <td>
+                <span class="ok">✓</span> 真 flow（条件 path + ODE，本仓库默认 bridge）
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- ============== AUDIT CALLOUT ============== -->
+        <div class="audit-callout">
+          <div class="audit-title">公式正确性复核</div>
+          <div>已与用户人工校验过的 4 条公式数字示例 + 1 条说明性提醒：</div>
+          <ul>
+            <li><span class="check">✓</span> Gaussian 线性插值：$z_t = [0.15,\,-0.50,\,0.375]$ 已校验</li>
+            <li><span class="check">✓</span> Dirichlet 均值：$\mathbb{E}[x_t] \approx [0.143,\,0.714,\,0.143]$ 已校验</li>
+            <li><span class="check">✓</span> Fisher sqrt + slerp：$u_t \approx [0.325,\,0.888,\,0.325]$，$p_t \approx [0.106,\,0.789,\,0.106]$ 已校验</li>
+            <li><span class="check">✓</span> Gumbel-Softmax 温度退火：$\tau{=}1.0 \Rightarrow [0.296,\,0.595,\,0.109]$，$\tau{=}0.3 \Rightarrow [0.088,\,0.909,\,0.003]$ 数值正确</li>
+            <li>
+              <span class="warn">⚠</span> 注意：Gumbel 例子里的
+              $\mathbf{g} = [0.1,\,0.0,\,-0.4]$ 仅为示意 reparameterization，
+              <strong>不是真实从 $\mathrm{Gumbel}(0,1)$ 抽样</strong>的样本
+              （即并非真正按 Gumbel(0,1) 分布采样得到）。
+            </li>
+            <li>
+              <span class="check">✓</span> 关于「Gumbel-Softmax 是不是 flow」：
+              图里写的固定温度 softmax 公式是 <strong>2016 vanilla 版（Jang/Maddison）</strong>，
+              那确实只是 reparameterization 技巧；但 <strong>2025 的 Gumbel-Softmax Flow Matching
+              （Tang et al. arXiv:2503.17361）</strong> 把同一个 softmax interpolant
+              配上 $\tau(t)=\tau_{\max}e^{-\lambda t}$ 调度 + 条件速度 + ODE，<strong>就是
+              flow matching</strong>。本仓库 <code>GumbelSoftmaxBridge</code> 实现的是后者。
+            </li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </body>
+</html>

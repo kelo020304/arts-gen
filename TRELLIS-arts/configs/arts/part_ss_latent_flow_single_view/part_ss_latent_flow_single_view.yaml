@@ -1,0 +1,152 @@
+stage: part_ss_latent_flow_single_view
+
+# Model architecture is identical to the 4-view path. num_views=1 documents the
+# single-condition-view contract; the model forward itself is view-count agnostic.
+model:
+  resolution: 16
+  latent_channels: 8
+  model_channels: 1024
+  cond_dim: 1024
+  num_blocks: 12
+  num_heads: 16
+  patch_size: 1
+  num_views: 1
+  max_parts: 20
+  num_part_query_layers: 2
+  part_label_vocab_size: 64
+  require_part_token: true
+  global_cond_patch_size: 2
+  concat_global: false
+  use_fp16: false
+  use_checkpoint: false
+  # Keep the single-view path aligned with 4-view training: many visible parts
+  # from one object are chunked through the SS backbone to cap activation peaks
+  # (legacy independent path only; cross_part_attention processes K parts jointly).
+  max_part_forward_batch: 4
+  # Fix 1/2: joint per-object forward + per-part identity embedding (see 4-view
+  # config for rationale). Same architecture across view counts.
+  cross_part_attention: true
+  token_identity_embedding: true
+  # Fix 7/8: self-conditioning + classifier-free guidance (see 4-view config).
+  # self_conditioning changes backbone in_channels -> checkpoints are not
+  # cross-compatible with the flag off.
+  self_conditioning: true
+  classifier_free_guidance: true
+  # Soft role marking: cross-attn role tokens use the soft per-patch overlap
+  # weights (part_token_weights) instead of the hard min_fg=3 vote, so sub-patch
+  # parts aren't marked all-context. No new params / no data change / no anchor.
+  soft_role_marking: true
+  # Summary-token cross-part interaction (ISAB / Perceiver pooling) for the EVEN
+  # joint blocks (replaces O((K*T)^2) cross-part self-attn; see 4-view config).
+  # Single-view runs at batch_size 1 and is mostly a smoke/contract path, so it
+  # keeps the full-joint behavior OFF; flip to true to mirror the 4-view path.
+  summary_cross_part_attention: false
+  n_summary_tokens: 64
+
+data:
+  data_root: data/smoke_test/1
+  recon_subdir: reconstruction
+  mask_subdir: renders
+  manifest_path: vlm/training_json/synthetic_manifest.jsonl
+  num_views: 1
+  # Avoid rare single-view samples with very large visible-part count. Those
+  # inflate condition-token memory even when backbone target parts are chunked.
+  max_target_parts_per_sample: 20
+  drop_over_max_parts: true
+  # Some generated single-view manifests can reference views whose DINO token
+  # files were not produced/synced. Filter them at dataset init instead of
+  # crashing later inside a DataLoader worker.
+  filter_missing_dino_tokens: true
+  allow_missing_masks: false
+  require_part_token: true
+  mask_patch_grid: 37
+  use_mask_overlap_pooling: true
+  mask_overlap_patch_grid_h: 37
+  mask_overlap_patch_grid_w: 37
+  mask_overlap_patch_h: 14
+  mask_overlap_patch_w: 14
+  mask_overlap_patch_start_index: 1
+
+flow:
+  type: rectified
+  t_min: 0.0
+  t_max: 1.0
+  noise_scale: 1.0
+  latent_scale: 8.0
+  num_steps: 20
+  solver: euler
+  # Fix 5: logit-normal continuous-time schedule (see 4-view config rationale).
+  t_schedule: logit_normal
+  t_logit_normal_mean: 0.0
+  t_logit_normal_std: 1.0
+  # Fix 6: latent normalization mode. per_channel auto-computes mean/std over the
+  # first latent_stats_max_samples objects at trainer start (rank0 + broadcast)
+  # unless latent_mean/latent_std or latent_stats_path are given (see 4-view config).
+  latent_norm_mode: per_channel
+  latent_mean: null
+  latent_std: null
+  latent_stats_path: null
+  latent_stats_max_samples: 256
+  # Eval-time classifier-free guidance scale (1.0 = no guidance; see 4-view config).
+  cfg_scale: 1.0
+
+loss:
+  part_weight_mode: raw_voxel_count
+  part_weight_ref_mode: median
+  part_weight_alpha: 0.5
+  part_weight_min: 0.5
+  part_weight_max: 3.0
+  normalize_part_weights_per_object: true
+  size_bucket_boundaries: [500.0, 3000.0]
+  object_balanced: true
+  object_weight_mode: none
+  object_weight_k_ref_source: dataset_median
+  object_weight_k_ref: null
+  object_weight_min: 0.75
+  object_weight_max: 2.0
+  relative_endpoint_weight: 0.25
+  relative_endpoint_eps: 1.0e-6
+  # Fix 3: per-object slot<->part shuffle (see 4-view config rationale).
+  part_shuffle: true
+  # Fix 4: DeltaFM velocity-contrastive identity loss (default on).
+  velocity_contrastive_weight: 0.05
+  velocity_contrastive_lambda: 0.05
+  # Legacy endpoint-based identity contrastive, ablation only.
+  identity_contrastive_weight: 0.0
+  identity_contrastive_temperature: 0.1
+  identity_contrastive_eps: 1.0e-6
+  # Self-conditioning double-pass probability (requires model.self_conditioning).
+  self_conditioning_prob: 0.5
+  # Classifier-free-guidance training dropout (requires model.classifier_free_guidance).
+  cfg_dropout_prob: 0.1
+
+eval:
+  fixed_every: 5000
+  all_every: 0
+  decode_every: 0
+  decode_max_samples: 20
+  ss_decoder_ckpt: pretrained/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16.safetensors
+  decode_threshold: 0.0
+  debug_thresholds: [0.0, -0.25, -0.5, -1.0]
+  decode_iou_pred_vs_raw_ind: true
+  inspection_root: docs/inspections/part_ss_latent_flow_single_view
+
+training:
+  seed: 42
+  batch_size: 1
+  grad_accum_steps: 1
+  max_steps: 2400000
+  lr: 1.0e-4
+  warmup_steps: 50
+  weight_decay: 0.01
+  grad_clip: 1.0
+  fp16: true
+  num_workers: 2
+  log_every: 10
+  checkpoint_every: 5000
+  output_dir: runs/part_ss_latent_flow_single_view
+
+wandb:
+  enabled: false
+  project: part_ss_latent_flow_single_view
+  name: part-ss-latent-flow-single-view

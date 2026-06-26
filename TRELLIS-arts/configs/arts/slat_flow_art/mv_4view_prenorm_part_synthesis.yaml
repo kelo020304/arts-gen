@@ -1,0 +1,67 @@
+# SLat Flow finetune on corrected whole SLat targets.
+#
+# Data contract:
+# - target latent:
+#   /robot/data-lab/arts-gen-data/data/PhysX-Mobility-full-4view-0511/
+#     part_synthesis_slat/{object_id[:2]}/{object_id}_angle_{angle_idx}/overall/latent.npz
+# - condition:
+#   reconstruction/dinov2_tokens_prenorm/{object_id}/angle_{angle_idx}/tokens.npz
+#   manifest-selected 4 views, official 1374-token prenorm DINOv2 condition.
+#
+# The model architecture is unchanged: ElasticSLatFlowModel consumes variable-length
+# image tokens through cross-attention. Multi-view support is implemented in the
+# dataset by concatenating V token sequences and padding dropped views to keep
+# batch tensor shapes stable.
+
+_base_: mv_4view.yaml
+
+data:
+  data_root: /robot/data-lab/arts-gen-data/data/PhysX-Mobility-full-4view-0511
+  recon_subdir: reconstruction
+  manifest_path: /robot/data-lab/jzh/art-gen/data/PhysX-Mobility-full-4view-0511/PhysX-Mobility-full-4view-0511/manifests/part_completion/arts_mllm_physx-mobility.train.jsonl
+  manifest_format: jsonl
+  slat_layout: part_synthesis_overall
+  slat_subdir: part_synthesis_slat
+  token_subdir: dinov2_tokens_prenorm
+  token_condition_norm: layer_norm
+  token_num_tokens: 1374
+  token_dim: 1024
+  use_manifest_view_indices: true
+  num_views: 4
+  min_views: 1
+  view_dropout: true
+  max_num_voxels: 65536
+  normalization:
+    mean:
+      - -2.1687545776367188
+      - -0.004347046371549368
+      - -0.13352349400520325
+      - -0.08418072760105133
+      - -0.5271206498146057
+      -  0.7238689064979553
+      - -1.1414450407028198
+      -  1.2039363384246826
+    std:
+      -  2.377650737762451
+      -  2.386378288269043
+      -  2.124418020248413
+      -  2.1748552322387695
+      -  2.663944721221924
+      -  2.371192216873169
+      -  2.6217446327209473
+      -  2.684523105621338
+
+training:
+  batch_size_per_gpu: 2
+  batch_split: 1
+  output_dir: output/slat_flow_art_mv_4view_prenorm_part_synthesis
+  pretrained_ckpt: /robot/data-lab/arts-reconstruction/pretrained/arts-gen-pretrained/trellis_slat_ckpts_official/TRELLIS-image-large/ckpts/slat_flow_img_dit_L_64l8p2_fp16.safetensors
+  i_sample: 999999
+
+wandb:
+  name: slat-flow-art-mv4view-prenorm-part-synthesis
+  tags:
+    - slat_flow_art
+    - mv4view
+    - prenorm
+    - part_synthesis_slat

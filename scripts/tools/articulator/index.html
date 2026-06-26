@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Articulator — 通用铰链资产标注</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; font-family: ui-monospace, "SF Mono", Menlo, monospace; background: #1a1a1a; color: #ddd; }
+  /* Top-down stacked layout. No right sidebar.
+       row 1: tab bar (always visible)
+       row 2: active tab panel (drops down below the tab bar)
+       row 3: 3D viewport (full width, fills remaining vertical space) */
+  #app { display: flex; flex-direction: column; height: 100vh; }
+  #tab-bar { display: flex; gap: 4px; padding: 6px 10px; background: #1a1a1a; border-bottom: 1px solid #2c2c2c; flex-wrap: wrap; align-items: center; }
+  .tab { padding: 6px 12px; background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 4px; cursor: pointer; font-size: 12px; user-select: none; color: #ccc; }
+  .tab:hover { background: #353535; }
+  .tab.active { background: #4a8; color: #111; border-color: #4a8; font-weight: 600; }
+  #panel { background: #222; border-bottom: 1px solid #333; padding: 12px 14px; max-height: 45vh; overflow-y: auto; }
+  #canvas-wrap { position: relative; background: #222; flex: 1; min-height: 0; }
+  #canvas-wrap canvas { display: block; width: 100%; height: 100%; }
+  #hud { position: absolute; top: 8px; left: 8px; padding: 6px 10px; background: rgba(0,0,0,0.6); border-radius: 4px; font-size: 12px; color: #aaa; }
+  h2 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; color: #888; letter-spacing: 0.5px; }
+  section.tab-panel { display: none; }
+  section.tab-panel.active { display: block; }
+  /* Make per-tab content lay out HORIZONTALLY (multi-column flex) so the
+     viewport stays close to the top and we don't waste height. */
+  .tab-panel > .columns { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
+  .tab-panel > .columns > .col { flex: 1 1 320px; min-width: 280px; }
+
+  /* Big DBSCAN progress banner (full width of panel, very visible). */
+  #preprocess-banner { display: none; padding: 10px 14px; background: linear-gradient(90deg, #2a4a2a, #1f3a3a); border: 1px solid #4a8; border-radius: 4px; color: #cfc; font-size: 12px; margin-bottom: 10px; align-items: center; gap: 10px; }
+  #preprocess-banner.active { display: flex; }
+  #preprocess-banner.error { background: linear-gradient(90deg, #4a2828, #3a1f1f); border-color: #a55; color: #fcc; }
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 3px solid rgba(255,255,255,0.15); border-top-color: #4a8; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+  #preprocess-banner.error .spinner { border-top-color: #f88; animation: none; border-color: #f88; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  button { background: #2d2d2d; color: #ddd; border: 1px solid #444; border-radius: 4px; padding: 5px 9px; font-size: 11px; cursor: pointer; font-family: inherit; }
+  button:hover { background: #3a3a3a; }
+  button.active { background: #4a8; color: #fff; border-color: #4a8; }
+  button.danger { background: #843; color: #fff; border-color: #a55; }
+  button.add { background: #2a4a2a; color: #cfc; border-color: #4a8; }
+  input, select { background: #1d1d1d; color: #ddd; border: 1px solid #333; border-radius: 3px; padding: 3px 5px; font-family: inherit; font-size: 11px; }
+  input[type=file] { font-size: 11px; color: #999; }
+  input[type=number] { width: 60px; }
+  input[type=range] { flex: 1; }
+  label.field { font-size: 11px; color: #999; }
+  .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .card { padding: 8px; background: #1d1d1d; border: 1px solid #333; border-radius: 4px; margin-bottom: 8px; }
+  .card-title { font-size: 12px; color: #ccc; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .card-title input.id-input { background: #111; border: 1px solid #555; color: #fff; padding: 2px 5px; font-size: 12px; flex: 1; }
+  .card-title button.tiny { font-size: 10px; padding: 2px 6px; }
+  details summary { cursor: pointer; font-size: 11px; color: #aaa; margin-bottom: 4px; }
+  .field-grid { display: grid; grid-template-columns: 80px 1fr; gap: 4px 8px; font-size: 11px; align-items: center; }
+  .field-grid label { color: #888; }
+  .pill-list { display: flex; flex-wrap: wrap; gap: 4px; max-height: 100px; overflow-y: auto; padding: 4px; background: #151515; border: 1px solid #2c2c2c; border-radius: 3px; }
+  .pill { font-size: 10px; padding: 2px 6px; background: #333; border-radius: 10px; cursor: pointer; user-select: none; }
+  .pill.active { background: #4a8; color: #fff; }
+  .pill.muted { background: #222; color: #666; }
+  #tree-summary { font-size: 11px; color: #aaa; padding: 6px 8px; background: #151515; border-radius: 3px; white-space: pre; min-height: 18px; margin-bottom: 8px; }
+  #tree-summary.error { color: #f88; background: #2a1010; }
+  #log { font-size: 11px; color: #888; max-height: 80px; overflow-y: auto; background: #1d1d1d; padding: 6px; border-radius: 3px; }
+  #cluster-table { max-height: 220px; overflow-y: auto; border: 1px solid #2c2c2c; border-radius: 4px; padding: 4px; font-size: 11px; }
+  .cluster-row { display: grid; grid-template-columns: 18px 1fr 110px; gap: 4px; align-items: center; padding: 2px 4px; }
+  .cluster-row:hover { background: #2a2a2a; }
+  .cluster-row.selected { background: #345; }
+  .swatch { width: 12px; height: 12px; border-radius: 2px; }
+  .cluster-row .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #bbb; }
+  kbd { background: #2a2a2a; border: 1px solid #555; border-radius: 3px; padding: 0 4px; font-size: 10px; }
+</style>
+</head>
+<body>
+<div id="fatal-error" style="display:none; position:fixed; top:0; left:0; right:0; padding:12px 16px; background:#a33; color:#fff; font-size:13px; z-index:9999; font-family:monospace; white-space:pre-wrap;"></div>
+<script>
+window.addEventListener('error', (e) => {
+  const el = document.getElementById('fatal-error');
+  el.style.display = 'block';
+  el.textContent = '[fatal] ' + (e.message || e) + '\n' + (e.error && e.error.stack ? e.error.stack : '');
+});
+window.addEventListener('unhandledrejection', (e) => {
+  const el = document.getElementById('fatal-error');
+  el.style.display = 'block';
+  el.textContent = '[promise] ' + (e.reason && e.reason.message ? e.reason.message : e.reason);
+});
+</script>
+
+<div id="app">
+  <div id="tab-bar">
+    <div class="tab active" data-tab="load">① 加载</div>
+    <div class="tab" data-tab="parts">② Parts</div>
+    <div class="tab" data-tab="clusters">③ Cluster</div>
+    <div class="tab" data-tab="joints">④ Joints</div>
+    <div class="tab" data-tab="sites">⑤ Sites</div>
+    <div class="tab" data-tab="ext">⑥ Ext Mesh</div>
+    <div class="tab" data-tab="dims">⑦ Dims</div>
+    <div class="tab" data-tab="export">⑧ 导出</div>
+  </div>
+
+  <div id="panel">
+    <!-- Global DBSCAN progress banner (visible from any tab while running). -->
+    <div id="preprocess-banner">
+      <span class="spinner"></span>
+      <span id="preprocess-banner-text" style="flex:1;">DBSCAN 预处理运行中…</span>
+    </div>
+    <section class="tab-panel active" data-tab-panel="load">
+      <div class="columns">
+
+        <div class="col">
+          <h2>① DBSCAN 预处理</h2>
+          <div style="font-size:11px;color:#888;margin-bottom:6px;">原始 mesh → 拆 cluster（Seed3D 一整块 GLB 走这里）</div>
+          <div class="row" style="margin-bottom:6px;">
+            <input type="file" id="preprocess-input" accept=".glb,.gltf">
+          </div>
+          <div class="row" style="margin-bottom:6px;">
+            <label class="field">eps</label>
+            <input type="number" id="preprocess-eps" value="0.10" step="0.01" style="width:70px;">
+            <label class="field">min_verts</label>
+            <input type="number" id="preprocess-minverts" value="1" step="1" style="width:70px;">
+          </div>
+          <div class="row">
+            <button id="btn-preprocess" style="font-weight:600;">运行 DBSCAN</button>
+            <span id="preprocess-status" style="font-size:11px;color:#888;"></span>
+          </div>
+          <pre id="preprocess-log" style="display:none; font-size:10px; background:#1d1d1d; padding:6px; border-radius:3px; margin-top:6px; max-height:140px; overflow-y:auto; white-space:pre-wrap;"></pre>
+          <div style="margin-top:4px; font-size:10px; color:#666;">eps 越大 cluster 越大；耳机用 0.20，折叠手机建议 0.05–0.10</div>
+        </div>
+
+        <div class="col">
+          <h2>② 加载 clean.glb</h2>
+          <div class="row" style="margin-bottom:6px;">
+            <input type="file" id="file-input" accept=".glb,.gltf">
+          </div>
+          <div class="row">
+            <button id="btn-load-default">从服务器加载 clean.glb</button>
+          </div>
+          <div style="font-size:11px;color:#888;margin-top:6px;">已经分好 cluster 的就走这里（DBSCAN 跑完会自动加载，不用手动点）</div>
+        </div>
+
+        <div class="col">
+          <h2>③ 加载 labels.json</h2>
+          <div class="row" style="margin-bottom:6px;">
+            <input type="file" id="labels-input" accept=".json">
+          </div>
+          <div class="row">
+            <button id="btn-load-labels-server">从服务器加载 labels.json</button>
+          </div>
+          <div class="row" style="margin-top:10px;font-size:11px;color:#888;">
+            device:&nbsp;<input id="device-name" type="text" value="Device" style="width:160px;">
+          </div>
+          <div id="log" style="margin-top:6px;"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="parts">
+      <div class="columns">
+        <div class="col" style="flex: 0 0 280px;">
+          <h2>结构概览</h2>
+          <div id="tree-summary">未加载</div>
+          <div class="row" style="margin-top:6px;">
+            <button id="btn-add-part" class="add">+ 添加 part</button>
+          </div>
+          <div class="row" style="margin-top:6px;">
+            <button id="btn-auto-label">按位置启发式分配 cluster</button>
+          </div>
+        </div>
+        <div class="col" style="flex: 1 1 auto;">
+          <h2>Parts</h2>
+          <div id="parts-list" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="joints">
+      <div class="columns">
+        <div class="col" style="flex: 0 0 320px;">
+          <h2>角度预览 (选中的 revolute)</h2>
+          <div class="row">
+            <input type="range" id="lid-angle" min="-180" max="180" value="0" step="1" disabled>
+            <input type="number" id="lid-angle-num" min="-180" max="180" value="0" step="1" disabled>
+            <span style="color:#888;font-size:11px;">°</span>
+          </div>
+          <div class="row" style="margin-top:6px;">
+            <button id="btn-bake-angle" class="tiny" disabled>bake → joint.bake_angle</button>
+            <button id="btn-snap-hinge" class="tiny" title="把 hinge p0/p1 锚到关联 box-split 的切面上，避免铰链轴和分割边缘错位">snap to split</button>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <button id="btn-add-joint" class="add">+ 添加 joint</button>
+          </div>
+          <div style="font-size:11px;color:#888;margin-top:6px;">在右侧 joint 卡片里点 "select" 来切换当前预览的 joint</div>
+        </div>
+        <div class="col" style="flex:1 1 auto;">
+          <h2>Joints</h2>
+          <div id="joints-list" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="sites">
+      <div class="columns">
+        <div class="col" style="flex:0 0 280px;">
+          <h2>⑤ Sites — 语义 AABB</h2>
+          <div style="font-size:11px;color:#888;line-height:1.5;">
+            Site = 不可见的 AABB 盒, 标注 part 内部的语义区域 (屏幕 / 按键 / 摄像头 / 把手).<br>
+            导出后变成 <code style="background:#222;padding:1px 3px;">/&lt;part&gt;/Sites/&lt;site_id&gt;</code> 的 invisible Cube,<br>
+            渲染器跳过, 但 robot policy 可以查询位姿 (随 articulation 自动跟随).<br><br>
+            <b>怎么标:</b> 在右侧每个 part 卡片里点 <kbd>+ 框选 site</kbd> 后, 在 viewport 拖一个矩形 — 框内 part 顶点的 AABB 就是这个 site.
+          </div>
+        </div>
+        <div class="col" style="flex:1 1 auto;">
+          <h2>每个 part 的 sites</h2>
+          <div id="sites-list" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="clusters">
+      <div class="row" style="margin-bottom:8px;">
+        <button id="btn-box-select">框选成独立 part</button>
+        <span style="font-size:11px;color:#888;">框内内容会自动组成新 part；跨多个 cluster 时会一起收进去，只命中一部分的 cluster 会先切开</span>
+      </div>
+      <h2>③ Cluster 总览</h2>
+      <div style="font-size:11px;color:#888;margin-bottom:6px;">点 cluster 选中（高亮蓝色）；右侧下拉选 part 即可分配</div>
+      <div id="cluster-table" style="max-height:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:4px 12px;"></div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="ext">
+      <h2>⑤ 外部 mesh (可选)</h2>
+      <div class="row" style="margin-bottom:6px;">
+        <button id="btn-add-ext-mesh" class="add">+ 添加外部 mesh</button>
+      </div>
+      <div id="ext-meshes-list"></div>
+      <div style="font-size:11px;color:#777;margin-top:6px;">
+        选中外部 mesh 后出现 3D gizmo · <kbd>T</kbd> translate · <kbd>R</kbd> rotate · <kbd>S</kbd> scale · <kbd>Esc</kbd> 取消
+      </div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="dims">
+      <h2>⑥ 物理尺寸</h2>
+      <div class="row">
+        <label class="field">X (mm)</label><input type="number" id="dim-x" value="50" step="0.01" style="width:90px;">
+        <label class="field">Y (mm)</label><input type="number" id="dim-y" value="50" step="0.01" style="width:90px;">
+        <label class="field">Z (mm)</label><input type="number" id="dim-z" value="25" step="0.01" style="width:90px;">
+      </div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="export">
+      <div class="columns">
+        <div class="col" style="flex: 1 1 480px;">
+          <h2>⑦ 一键导出 USDA</h2>
+          <div class="field-grid" style="grid-template-columns:120px 1fr;">
+            <label>clean.glb 路径</label>
+            <input type="text" id="export-clean-glb" placeholder="outputs/foo/clean.glb">
+            <label>原始 GLB 路径</label>
+            <input type="text" id="export-texture-glb" placeholder="(可选) 取纹理用全分辨率 GLB，默认用 clean.glb">
+            <label>输出 USDA 路径</label>
+            <input type="text" id="export-out-path" placeholder="outputs/foo/foo.usda">
+          </div>
+          <div id="export-summary" style="font-size:11px;color:#aaa;margin-top:6px;padding:6px;background:#151515;border-radius:3px;">
+            将导出: <span id="export-summary-text">…</span>
+          </div>
+          <div class="row" style="margin-top:6px;">
+            <button id="btn-clear-splits" class="danger" title="清掉所有 box-split 历史，重新加载 GLB 后从头开始">清空所有 box-splits</button>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <button id="btn-build-usd" style="font-weight:600;background:#2a4a2a;border-color:#4a8;color:#cfc;">导出 USDA</button>
+            <span id="build-usd-status" style="font-size:11px;color:#888;"></span>
+          </div>
+          <pre id="build-usd-log" style="display:none; font-size:10px; background:#1d1d1d; padding:6px; border-radius:3px; margin-top:6px; max-height:160px; overflow-y:auto; white-space:pre-wrap;"></pre>
+          <div style="font-size:11px; color:#888; margin-top:6px;">
+            路径相对仓库根目录解析；绝对路径也行。服务器写文件，需要在 arts-gen 环境跑 serve.py。
+          </div>
+        </div>
+        <div class="col" style="flex: 0 0 220px;">
+          <h2>副选项</h2>
+          <div class="row" style="margin-bottom:6px;">
+            <button id="btn-export">下载 labels.json (v2)</button>
+          </div>
+          <div class="row">
+            <button id="btn-show-cmd">显示 USD 生成命令</button>
+          </div>
+          <pre id="cmd-box" style="display:none; font-size:10px; background:#1d1d1d; padding:8px; border-radius:3px; margin-top:8px; white-space:pre-wrap;"></pre>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="canvas-wrap">
+    <div id="hud">click cluster to select · drag to orbit · scroll to zoom · click red/green sphere to drag hinge endpoints in 3D · Esc to deselect</div>
+    <div id="box-select-banner" style="display:none; position:absolute; top:8px; right:8px; padding:8px 12px; background:#4a8; color:#111; font-size:12px; border-radius:4px; font-weight:600;">
+      📦 框选模式：拖动画框 — Esc 退出
+    </div>
+    <div id="box-overlay" style="display:none; position:absolute; border:2px dashed #4a8; background:rgba(74,170,136,0.15); pointer-events:none;"></div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js",
+    "three/addons/": "./vendor/addons/"
+  }
+}
+</script>
+<script type="module" src="./main.js"></script>
+</body>
+</html>

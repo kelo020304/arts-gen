@@ -1,0 +1,70 @@
+# Full-data fine-tune for 4view tokens -> whole-object global SS latent.
+# Do not launch until the run owner confirms the checkpoint/output location.
+
+_base_: mv_4view.yaml
+
+stage: ss_flow_global_z
+
+model:
+  args:
+    use_checkpoint: true
+
+data:
+  # Object-level holdout. Every angle for these object IDs is excluded from
+  # training. The file is deterministic: seed=20260605, n=200.
+  exclude_obj_ids_file: TRELLIS-arts/configs/arts/ss_flow_global_z/splits/val_objects_seed20260605_n200.txt
+
+training:
+  seed: 42
+  max_steps: 50000
+  batch_size_per_gpu: 1
+  batch_split: 1
+  optimizer:
+    name: AdamW
+    args:
+      lr: 5.0e-5
+      weight_decay: 0.0
+      betas: [0.9, 0.999]
+  lr_scheduler:
+    name: LinearWarmupLRScheduler
+    args:
+      warmup_steps: 1000
+  grad_clip: 1.0
+  ema_rate: 0.9999
+  fp16_mode: inflat_all
+  p_uncond: 0.1
+  output_dir: /robot/data-lab/jzh/art-gen-output/ss_flow_global_z_full_4view
+  pretrained_ckpt: /robot/data-lab/jzh/art-gen/weights/ss_flow_img_dit_L_16l8_fp16.safetensors
+  i_print: 100
+  i_log: 50
+  i_sample: 2500
+  i_save: 2500
+  i_ddpcheck: 10000
+
+snapshot:
+  enabled: true
+  use_ema: true
+  ema_rate: 0.9999
+  ss_decoder_ckpt: pretrained/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16.safetensors
+  num_samples: 200
+  render_samples: 16
+  batch_size: 1
+  num_steps: 30
+  cfg_strength: 3.0
+  decode_threshold: 0.0
+  seed: 1234
+  verbose: false
+  data:
+    test_obj_ids_file: TRELLIS-arts/configs/arts/ss_flow_global_z/splits/val_objects_seed20260605_n200.txt
+    one_sample_per_object: true
+    max_samples: 200
+
+wandb:
+  project: arts-reconstruction
+  name: ss-flow-global-z-full-4view
+  tags:
+    - ss_flow_global_z
+    - mv4view
+    - full
+  enabled: false
+  mode: disabled

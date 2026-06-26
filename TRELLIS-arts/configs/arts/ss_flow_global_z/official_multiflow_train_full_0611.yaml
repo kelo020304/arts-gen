@@ -1,0 +1,27 @@
+_base_: official_single_multiflow_full_0611.yaml
+
+data:
+  condition_mode: multiflow_view
+
+training:
+  output_dir: /robot/data-lab/jzh/art-gen-output/tre_mf_4view_multiflow_0611
+  batch_size_per_gpu: 8
+  i_sample: 1000
+  i_save: 5000
+
+snapshot:
+  enabled: true
+  ss_decoder_ckpt: pretrained/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16.safetensors
+  num_samples: 4
+  batch_size: 1
+  num_steps: 20
+  cfg_strength: 3.0
+  decode_threshold: 0.0
+  seed: 1234
+  verbose: false
+  render_samples: 4
+
+wandb:
+  enabled: false
+  mode: disabled
+  name: ss-flow-official-multiflow-train-full-0611

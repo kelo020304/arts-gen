@@ -1,0 +1,38 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mujoco model="ra_036">
+  <compiler angle="radian" meshdir="." />
+  <asset>
+    <mesh name="part_07_mesh" file="assets/part_07.obj" />
+    <mesh name="body_mesh" file="assets/body.obj" />
+    <mesh name="part_02_mesh" file="assets/part_02.obj" />
+    <mesh name="part_00_mesh" file="assets/part_00.obj" />
+    <mesh name="part_05_mesh" file="assets/part_05.obj" />
+    <mesh name="part_06_mesh" file="assets/part_06.obj" />
+    <mesh name="part_03_mesh" file="assets/part_03.obj" />
+    <mesh name="part_01_mesh" file="assets/part_01.obj" />
+    <mesh name="part_08_mesh" file="assets/part_08.obj" />
+    <mesh name="part_04_mesh" file="assets/part_04.obj" />
+  </asset>
+  <worldbody>
+    <body name="root" pos="0 0 0" quat="1 0 0 0">
+      <body name="part_07" pos="0 0 0" quat="1 0 0 0">
+        <geom type="mesh" name="part_07_visual" mesh="part_07_mesh" pos="0 0 0" quat="1 0 0 0" group="2" contype="0" conaffinity="0" />
+        <geom type="mesh" name="part_08_visual" mesh="part_08_mesh" pos="0 0 0" quat="1 0 0 0" group="2" contype="0" conaffinity="0" />
+      </body>
+      <body name="body" pos="0 0 0" quat="1 0 0 0">
+        <geom type="mesh" name="body_visual" mesh="body_mesh" pos="0 0 0" quat="1 0 0 0" group="2" contype="0" conaffinity="0" />
+        <geom type="mesh" name="part_02_visual" mesh="part_02_mesh" pos="0 0 0" quat="1 0 0 0" group="2" contype="0" conaffinity="0" />
+        <geom type="mesh" name="part_00_visual" mesh="part_00_mesh" pos="0 0 0" quat="1 0 0 0" group="2" contype="0" conaffinity="0" />
+        <geom type="mesh" name="part_06_visual" mesh="part_06_mesh" pos="0 0 0" quat="1 0 0 0" group="2" contype="0" conaffinity="0" />
+        <geom type="mesh" name="part_01_visual" mesh="part_01_mesh" pos="0 0 0" quat="1 0 0 0" group="2" contype="0" conaffinity="0" />
+        <geom type="mesh" name="part_04_visual" mesh="part_04_mesh" pos="0 0 0" quat="1 0 0 0" group="2" contype="0" conaffinity="0" />
+      </body>
+      <body name="part_05" pos="0 0 0" quat="1 0 0 0">
+        <geom type="mesh" name="part_05_visual" mesh="part_05_mesh" pos="0 0 0" quat="1 0 0 0" group="2" contype="0" conaffinity="0" />
+      </body>
+      <body name="part_03" pos="0 0 0" quat="1 0 0 0">
+        <geom type="mesh" name="part_03_visual" mesh="part_03_mesh" pos="0 0 0" quat="1 0 0 0" group="2" contype="0" conaffinity="0" />
+      </body>
+    </body>
+  </worldbody>
+</mujoco>

@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scene Viewer</title>
+  <link rel="stylesheet" href="/static/supersplat/index.css">
+  <style>
+    :root {
+      color-scheme: dark;
+      --text: #eef6ff;
+      --muted: rgba(238, 246, 255, 0.72);
+      --panel: rgba(8, 15, 26, 0.72);
+      --panel-border: rgba(121, 184, 255, 0.18);
+      --accent: #8fe6ff;
+      --danger: #ff9e9e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: "Segoe UI", "PingFang SC", "Noto Sans", sans-serif;
+      background: #060c14;
+      color: var(--text);
+    }
+
+    body {
+      position: relative;
+    }
+
+    pc-app {
+      position: fixed;
+      inset: 0;
+      display: block;
+      background:
+        radial-gradient(circle at top, rgba(104, 163, 224, 0.08), transparent 28rem),
+        #060c14;
+    }
+
+    pc-app canvas {
+      display: block;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 20px;
+    }
+
+    .topbar > * {
+      pointer-events: auto;
+    }
+
+    .nav-link,
+    .status-pill,
+    .title-block {
+      border-radius: 999px;
+      border: 1px solid var(--panel-border);
+      background: var(--panel);
+      backdrop-filter: blur(14px);
+    }
+
+    .nav-link {
+      padding: 10px 14px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 14px;
+      line-height: 1;
+      transition: border-color 0.16s ease, background 0.16s ease;
+    }
+
+    .nav-link:hover {
+      border-color: rgba(143, 230, 255, 0.36);
+      background: rgba(12, 21, 36, 0.88);
+    }
+
+    .title-block {
+      max-width: min(56vw, 720px);
+      padding: 10px 16px;
+      text-align: center;
+    }
+
+    .title-label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .title-value {
+      display: block;
+      margin-top: 4px;
+      font-size: 16px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .status-pill {
+      min-width: 116px;
+      padding: 10px 14px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .status-pill.ready {
+      color: var(--accent);
+    }
+
+    .status-pill.error {
+      color: var(--danger);
+    }
+
+    .loading-card {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      min-width: min(560px, calc(100vw - 32px));
+      max-width: calc(100vw - 32px);
+      padding: 16px 18px;
+      border-radius: 18px;
+      border: 1px solid var(--panel-border);
+      background: rgba(7, 13, 22, 0.84);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+      pointer-events: auto;
+    }
+
+    .loading-card[hidden] {
+      display: none;
+    }
+
+    .loading-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .loading-message {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 860px) {
+      .topbar {
+        flex-wrap: wrap;
+      }
+
+      .title-block {
+        order: 3;
+        width: 100%;
+        max-width: none;
+      }
+
+      .status-pill {
+        margin-left: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <pc-app id="viewer-app">
+    <pc-entity id="viewer-camera" name="viewer-camera"></pc-entity>
+  </pc-app>
+
+  <div class="overlay">
+    <header class="topbar">
+      <a class="nav-link" href="/scenes/">返回场景列表</a>
+      <div class="title-block">
+        <span class="title-label">Scene</span>
+        <span class="title-value" id="scene-title">Loading...</span>
+      </div>
+      <div class="status-pill" id="status-pill">Initializing</div>
+    </header>
+  </div>
+
+  <section class="loading-card" id="loading-card">
+    <h1 class="loading-title" id="loading-title">Loading 3DGS scene</h1>
+    <p class="loading-message" id="loading-message">
+      Preparing the PlayCanvas viewer and requesting the scene PLY stream.
+    </p>
+  </section>
+
+  <script type="module">
+    import { main } from "/static/supersplat/index.js";
+
+    const defaultSettings = {
+      background: { color: [0, 0, 0, 0] },
+      camera: { fov: 60, startAnim: "orbit", animTrack: "" },
+      animTracks: [],
+    };
+
+    const sceneTitle = document.getElementById("scene-title");
+    const statusPill = document.getElementById("status-pill");
+    const loadingCard = document.getElementById("loading-card");
+    const loadingTitle = document.getElementById("loading-title");
+    const loadingMessage = document.getElementById("loading-message");
+    const appElement = document.getElementById("viewer-app");
+    const cameraElement = document.getElementById("viewer-camera");
+
+    function getSceneName() {
+      const trimmedPath = window.location.pathname.replace(/\/+$/, "");
+      const parts = trimmedPath.split("/");
+      return decodeURIComponent(parts[parts.length - 1] || "");
+    }
+
+    function setStatus(text, tone = "") {
+      statusPill.textContent = text;
+      statusPill.className = tone ? `status-pill ${tone}` : "status-pill";
+    }
+
+    function showError(message) {
+      setStatus("Load failed", "error");
+      loadingCard.hidden = false;
+      loadingTitle.textContent = "Viewer failed to load";
+      loadingMessage.textContent = message;
+    }
+
+    async function loadSettings() {
+      try {
+        const response = await fetch("/static/supersplat/settings.json", { cache: "no-store" });
+        if (!response.ok) {
+          return defaultSettings;
+        }
+        return await response.json();
+      } catch (_error) {
+        return defaultSettings;
+      }
+    }
+
+    async function bootstrap() {
+      const sceneName = getSceneName();
+      if (!sceneName) {
+        throw new Error("Scene name is missing from the URL.");
+      }
+
+      const encodedSceneName = encodeURIComponent(sceneName);
+      const plyUrl = `/scenes/${encodedSceneName}/ply`;
+
+      document.title = `${sceneName} | Scene Viewer`;
+      sceneTitle.textContent = sceneName;
+
+      setStatus("Checking");
+      const headResponse = await fetch(plyUrl, { method: "HEAD" });
+      if (!headResponse.ok) {
+        throw new Error(`PLY file is not available for scene "${sceneName}".`);
+      }
+
+      setStatus("Preparing");
+      loadingMessage.textContent = "Initializing PlayCanvas and fetching viewer settings.";
+      const settings = await loadSettings();
+
+      if (typeof appElement.ready !== "function" || typeof cameraElement.ready !== "function") {
+        throw new Error("SuperSplat web components did not initialize correctly.");
+      }
+
+      await Promise.all([appElement.ready(), cameraElement.ready()]);
+
+      window.firstFrame = () => {
+        setStatus("Ready", "ready");
+        loadingCard.hidden = true;
+      };
+
+      setStatus("Loading");
+      loadingMessage.textContent = "Streaming the 3DGS PLY file into the viewer.";
+      main(appElement.app, cameraElement.entity, settings, {
+        contentUrl: plyUrl,
+        aa: true,
+        noui: true,
+        noanim: true,
+      });
+    }
+
+    window.addEventListener("unhandledrejection", (event) => {
+      event.preventDefault();
+      const message = event.reason instanceof Error ? event.reason.message : String(event.reason);
+      showError(message);
+    });
+
+    bootstrap().catch((error) => {
+      showError(error instanceof Error ? error.message : String(error));
+    });
+  </script>
+</body>
+</html>

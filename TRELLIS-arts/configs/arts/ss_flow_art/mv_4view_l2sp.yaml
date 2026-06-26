@@ -1,0 +1,25 @@
+# SS Flow (paper Stage 2) Scheme B / L2-SP anchor 配置
+# Launcher 对应: MODE=l2sp
+# 模式语义:
+# - 仍是 full fine-tune：不启用 LoRA，可训练参数就是原模型参数
+# - 额外加一项正则，把可训练参数拉向 pretrained checkpoint 的初始值
+# - 目标是既允许模型适配新域，又尽量保留预训练通用能力
+_base_: mv_4view.yaml
+
+anchor:
+  enabled: true
+  mode: l2_sp                # 当前只实现 L2-SP；不是 distillation
+  lambda: 1.0e-4             # 正则强度；越大越“拉回 pretrained”
+  target: trainable          # 只锚定当前可训练参数
+  log_summary_every: 500     # 周期性打印 drift summary
+  log_per_layer_every: 2000  # 更低频打印逐层 drift
+
+training:
+  output_dir: output/ss_flow_art_mv_4view_l2sp
+
+wandb:
+  name: ss-flow-art-mv4view-l2sp
+  tags:
+    - ss_flow_art
+    - mv4view
+    - mode=l2sp

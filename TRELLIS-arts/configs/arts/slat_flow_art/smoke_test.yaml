@@ -1,0 +1,45 @@
+# SLat Flow (paper Stage 4) Smoke Test config -- local 4090
+# Inherits mv_4view.yaml (including elastic, grad_clip, fp16_mode -- D-18).
+# Does NOT override elastic/grad_clip/fp16_mode so smoke exercises same code paths.
+_base_: mv_4view.yaml
+
+data:
+  data_root: data/smoke_test
+  recon_subdir: reconstruction
+  manifest_path: null
+  val_manifest_path: null
+  num_views: 4
+  min_views: 1
+  view_dropout: false           # Smoke: disable view dropout for determinism
+  test_obj_ids:
+    # Smoke 数据 (/sda1/AAAI2027/smoke_test) 仅 100023 有 dinov2_tokens
+    - "100023"
+
+training:
+  batch_size_per_gpu: 1          # D-20
+  batch_split: 1
+  max_steps: 100                 # Can be overridden to 200 via CLI
+  optimizer:
+    name: AdamW
+    args:
+      lr: 1.0e-4                 # Slightly higher lr for smoke signal visibility
+      weight_decay: 0.0
+      betas: [0.9, 0.999]
+  i_print: 1
+  i_log: 1
+  i_sample: 999999               # D-13: effectively disable snapshot during smoke
+  i_save: 50                     # Smoke needs step50 + step100 ckpts for verification
+  i_ddpcheck: 999999
+  # elastic / grad_clip / fp16_mode / fp16_scale_growth inherited from mv_4view.yaml
+  output_dir: output/slat_flow_art_smoke
+
+wandb:
+  name: slat-flow-art-smoke
+  mode: disabled
+
+lora:
+  enabled: false                 # Default off; LoRA test uses CLI override
+  rank: 16
+  alpha: 32
+  dropout: 0.0                   # Smoke: disable dropout for determinism
+  target_modules: all_attn

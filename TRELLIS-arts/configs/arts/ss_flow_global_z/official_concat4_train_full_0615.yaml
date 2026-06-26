@@ -1,0 +1,20 @@
+_base_: official_multiflow_train_full_0611.yaml
+
+model:
+  args:
+    use_camera_pose: false
+    use_view_id_embedding: true
+    num_view_embeddings: 4
+
+data:
+  condition_mode: multiflow_view
+  num_views: 4
+
+training:
+  fusion_mode: concat
+  output_dir: /robot/data-lab/jzh/art-gen-output/tre_mf_4view_concat_viewid_0615
+
+wandb:
+  enabled: false
+  mode: disabled
+  name: ss-flow-official-concat4-viewid-train-full-0615

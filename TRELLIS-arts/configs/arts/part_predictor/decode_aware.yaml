@@ -1,0 +1,11 @@
+_base_: base.yaml
+
+data:
+  load_slat: true
+  slat_dir: "slat_latents_expanded"
+
+decode_aware:
+  enabled: true
+  weight: 0.5
+  decoder_ckpt: "pretrained/ckpts/slat_dec_gs_swin8_B_64l8gs32_fp16"
+  slat_dir: "slat_latents_expanded"

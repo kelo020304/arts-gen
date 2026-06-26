@@ -1,0 +1,60 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mujoco model="ra_088">
+  <compiler angle="radian" meshdir="." />
+  <asset>
+    <mesh name="mesh_0" file="assets/part_06.obj" />
+    <mesh name="mesh_1" file="assets/part_01.obj" />
+    <mesh name="mesh_2" file="assets/part_04.obj" />
+    <mesh name="mesh_3" file="assets/body.obj" />
+    <mesh name="mesh_4" file="assets/part_05.obj" />
+    <mesh name="mesh_5" file="assets/part_08.obj" />
+    <mesh name="mesh_6" file="assets/part_07.obj" />
+    <mesh name="mesh_7" file="assets/part_02.obj" />
+    <mesh name="mesh_8" file="assets/part_00.obj" />
+    <mesh name="mesh_9" file="assets/part_03.obj" />
+    <mesh name="mesh_10" file="assets/part_09.obj" />
+    <mesh name="mesh_11" file="assets/part_10.obj" />
+    <mesh name="mesh_12" file="assets/part_11.obj" />
+  </asset>
+  <worldbody>
+    <body name="mesh_0" pos="0 0 0">
+      <geom name="mesh_0_visual" type="mesh" mesh="mesh_0" group="2" contype="0" conaffinity="0" />
+    </body>
+    <body name="mesh_1" pos="0 0 0">
+      <geom name="mesh_1_visual" type="mesh" mesh="mesh_1" group="2" contype="0" conaffinity="0" />
+    </body>
+    <body name="mesh_2" pos="0 0 0">
+      <geom name="mesh_2_visual" type="mesh" mesh="mesh_2" group="2" contype="0" conaffinity="0" />
+    </body>
+    <body name="mesh_3" pos="0 0 0">
+      <geom name="mesh_3_visual" type="mesh" mesh="mesh_3" group="2" contype="0" conaffinity="0" />
+    </body>
+    <body name="mesh_4" pos="0 0 0">
+      <geom name="mesh_4_visual" type="mesh" mesh="mesh_4" group="2" contype="0" conaffinity="0" />
+    </body>
+    <body name="mesh_5" pos="0 0 0">
+      <geom name="mesh_5_visual" type="mesh" mesh="mesh_5" group="2" contype="0" conaffinity="0" />
+    </body>
+    <body name="mesh_6" pos="0 0 0">
+      <geom name="mesh_6_visual" type="mesh" mesh="mesh_6" group="2" contype="0" conaffinity="0" />
+    </body>
+    <body name="mesh_7" pos="0 0 0">
+      <geom name="mesh_7_visual" type="mesh" mesh="mesh_7" group="2" contype="0" conaffinity="0" />
+    </body>
+    <body name="mesh_8" pos="0 0 0">
+      <geom name="mesh_8_visual" type="mesh" mesh="mesh_8" group="2" contype="0" conaffinity="0" />
+    </body>
+    <body name="mesh_9" pos="0 0 0">
+      <geom name="mesh_9_visual" type="mesh" mesh="mesh_9" group="2" contype="0" conaffinity="0" />
+    </body>
+    <body name="mesh_10" pos="0 0 0">
+      <geom name="mesh_10_visual" type="mesh" mesh="mesh_10" group="2" contype="0" conaffinity="0" />
+    </body>
+    <body name="mesh_11" pos="0 0 0">
+      <geom name="mesh_11_visual" type="mesh" mesh="mesh_11" group="2" contype="0" conaffinity="0" />
+    </body>
+    <body name="mesh_12" pos="0 0 0">
+      <geom name="mesh_12_visual" type="mesh" mesh="mesh_12" group="2" contype="0" conaffinity="0" />
+    </body>
+  </worldbody>
+</mujoco>

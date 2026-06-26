@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 940" font-family="ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif">
+  <style>
+    .title { font-size: 22px; font-weight: 700; fill: #111827; }
+    .subtitle { font-size: 13px; fill: #6b7280; }
+    .label { font-size: 14px; font-weight: 600; fill: #111827; }
+    .label-w { font-size: 14px; font-weight: 600; fill: #ffffff; }
+    .small { font-size: 11px; fill: #4b5563; }
+    .api { font-size: 11px; font-style: italic; fill: #047857; }
+    .purpose { font-size: 11px; font-style: italic; fill: #b45309; }
+    .pin { font-size: 10px; fill: #9ca3af; }
+    rect { stroke-width: 1.5; }
+    .arrow { stroke: #374151; stroke-width: 1.5; fill: none; marker-end: url(#a); }
+    .joint-arrow { stroke: #dc2626; stroke-width: 2; fill: none; marker-end: url(#ar); stroke-dasharray: 4,3; }
+    .legend-arrow { stroke: #374151; stroke-width: 1.5; fill: none; marker-end: url(#a); }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#374151"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#dc2626"/></marker>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.12"/></filter>
+  </defs>
+
+  <!-- ========== LEFT PANEL: articulation tree ========== -->
+  <g transform="translate(40, 30)">
+    <text class="title" x="0" y="20">Articulation Tree</text>
+    <text class="subtitle" x="0" y="42">每个 Xform = 一个 rigid body, 兄弟节点平铺；joint 用关系连接</text>
+
+    <!-- root -->
+    <rect x="180" y="70" width="260" height="62" fill="#1f2937" stroke="#0f172a" rx="6" filter="url(#sh)"/>
+    <text class="label-w" x="310" y="95" text-anchor="middle">/root  &lt;Xform&gt;</text>
+    <text x="310" y="115" text-anchor="middle" font-size="11" font-style="italic" fill="#a7f3d0">PhysicsArticulationRootAPI</text>
+
+    <!-- bodies -->
+    <g transform="translate(0, 200)">
+      <rect x="20" y="0" width="170" height="74" fill="#dbeafe" stroke="#1d4ed8" rx="6" filter="url(#sh)"/>
+      <text class="label" x="105" y="22" text-anchor="middle">body_A  (chassis)</text>
+      <text class="api" x="105" y="40" text-anchor="middle">PhysicsRigidBodyAPI</text>
+      <text class="small" x="105" y="56" text-anchor="middle">kinematic</text>
+      <text class="pin" x="105" y="68" text-anchor="middle">parent of B, C</text>
+
+      <rect x="220" y="0" width="170" height="74" fill="#dbeafe" stroke="#1d4ed8" rx="6" filter="url(#sh)"/>
+      <text class="label" x="305" y="22" text-anchor="middle">body_B  (door)</text>
+      <text class="api" x="305" y="40" text-anchor="middle">PhysicsRigidBodyAPI</text>
+      <text class="small" x="305" y="56" text-anchor="middle">dynamic</text>
+
+      <rect x="420" y="0" width="170" height="74" fill="#dbeafe" stroke="#1d4ed8" rx="6" filter="url(#sh)"/>
+      <text class="label" x="505" y="22" text-anchor="middle">body_C  (drawer)</text>
+      <text class="api" x="505" y="40" text-anchor="middle">PhysicsRigidBodyAPI</text>
+      <text class="small" x="505" y="56" text-anchor="middle">dynamic</text>
+    </g>
+
+    <!-- arrows root->bodies (containment) -->
+    <path class="arrow" d="M310 132 L 105 200"/>
+    <path class="arrow" d="M310 132 L 305 200"/>
+    <path class="arrow" d="M310 132 L 505 200"/>
+
+    <!-- joint arrows between bodies -->
+    <path class="joint-arrow" d="M105 274 Q 105 320 105 340"/>
+    <path class="joint-arrow" d="M190 237 C 230 237 240 237 220 237"/>
+    <path class="joint-arrow" d="M390 237 C 410 237 410 237 420 237"/>
+
+    <!-- Joint info under each body -->
+    <g transform="translate(0, 320)">
+      <rect x="20" y="0" width="170" height="48" fill="#fee2e2" stroke="#dc2626" rx="5"/>
+      <text class="label" x="105" y="20" text-anchor="middle" fill="#991b1b">FixedJoint</text>
+      <text class="small" x="105" y="36" text-anchor="middle" fill="#991b1b">body_A → world</text>
+
+      <rect x="220" y="0" width="170" height="48" fill="#fee2e2" stroke="#dc2626" rx="5"/>
+      <text class="label" x="305" y="20" text-anchor="middle" fill="#991b1b">RevoluteJoint</text>
+      <text class="small" x="305" y="36" text-anchor="middle" fill="#991b1b">A → B (door axis)</text>
+
+      <rect x="420" y="0" width="170" height="48" fill="#fee2e2" stroke="#dc2626" rx="5"/>
+      <text class="label" x="505" y="20" text-anchor="middle" fill="#991b1b">PrismaticJoint</text>
+      <text class="small" x="505" y="36" text-anchor="middle" fill="#991b1b">A → C (slide axis)</text>
+    </g>
+
+    <text class="subtitle" x="0" y="412" font-style="italic">注: joint prim 实际上写在 child body 的 Xform 内部 (见右图 →)</text>
+  </g>
+
+  <!-- divider -->
+  <line x1="660" y1="20" x2="660" y2="700" stroke="#e5e7eb" stroke-width="1"/>
+
+  <!-- ========== RIGHT PANEL: body internals ========== -->
+  <g transform="translate(680, 30)">
+    <text class="title" x="0" y="20">Body Internals</text>
+    <text class="subtitle" x="0" y="42">三层关注点分离: 渲染 / 物理 / 语义 — 同一 prim 树, 不同消费者</text>
+
+    <!-- body Xform -->
+    <rect x="120" y="70" width="320" height="62" fill="#dbeafe" stroke="#1d4ed8" rx="6" filter="url(#sh)"/>
+    <text class="label" x="280" y="95" text-anchor="middle">body_B  &lt;Xform&gt;</text>
+    <text class="api" x="280" y="115" text-anchor="middle">PhysicsRigidBodyAPI, MassAPI</text>
+
+    <!-- Visuals -->
+    <rect x="0" y="200" width="170" height="120" fill="#ecfdf5" stroke="#059669" rx="6" filter="url(#sh)"/>
+    <text class="label" x="85" y="225" text-anchor="middle" fill="#065f46">Visuals/</text>
+    <text class="purpose" x="85" y="244" text-anchor="middle" fill="#065f46">(default purpose)</text>
+    <line x1="14" y1="254" x2="156" y2="254" stroke="#059669" stroke-dasharray="2,2"/>
+    <text class="small" x="85" y="275" text-anchor="middle">def Mesh "..."</text>
+    <text class="small" x="85" y="291" text-anchor="middle">UV + texture</text>
+    <text class="api" x="85" y="308" text-anchor="middle">MaterialBindingAPI</text>
+
+    <!-- Collisions -->
+    <rect x="190" y="200" width="170" height="180" fill="#fffbeb" stroke="#d97706" rx="6" filter="url(#sh)"/>
+    <text class="label" x="275" y="225" text-anchor="middle" fill="#92400e">Collisions/</text>
+    <text class="purpose" x="275" y="244" text-anchor="middle" fill="#92400e">purpose = "guide"</text>
+    <line x1="204" y1="254" x2="346" y2="254" stroke="#d97706" stroke-dasharray="2,2"/>
+    <text class="small" x="275" y="274" text-anchor="middle">def Mesh col_01</text>
+    <text class="small" x="275" y="290" text-anchor="middle">def Mesh col_02</text>
+    <text class="small" x="275" y="306" text-anchor="middle">def Mesh col_03</text>
+    <text class="small" x="275" y="322" text-anchor="middle">...</text>
+    <text class="api" x="275" y="346" text-anchor="middle">PhysicsMeshCollisionAPI</text>
+    <text class="pin" x="275" y="364" text-anchor="middle" font-style="italic">offline V-HACD / CoACD</text>
+
+    <!-- Sites -->
+    <rect x="380" y="200" width="170" height="180" fill="#faf5ff" stroke="#7c3aed" rx="6" filter="url(#sh)"/>
+    <text class="label" x="465" y="225" text-anchor="middle" fill="#5b21b6">Sites/</text>
+    <text class="purpose" x="465" y="244" text-anchor="middle" fill="#5b21b6">purpose = "guide"</text>
+    <line x1="394" y1="254" x2="536" y2="254" stroke="#7c3aed" stroke-dasharray="2,2"/>
+    <text class="small" x="465" y="274" text-anchor="middle">def Cube "screen_face"</text>
+    <text class="small" x="465" y="290" text-anchor="middle">def Cube "camera_lens"</text>
+    <text class="small" x="465" y="306" text-anchor="middle">def Cube "handle"</text>
+    <text class="small" x="465" y="322" text-anchor="middle">...</text>
+    <text class="api" x="465" y="346" text-anchor="middle">visibility = "invisible"</text>
+    <text class="pin" x="465" y="364" text-anchor="middle" font-style="italic">语义寻址锚点</text>
+
+    <!-- arrows body -> children -->
+    <path class="arrow" d="M280 132 L  85 200"/>
+    <path class="arrow" d="M280 132 L 275 200"/>
+    <path class="arrow" d="M280 132 L 465 200"/>
+
+    <!-- Joint inside body Xform -->
+    <rect x="120" y="430" width="320" height="62" fill="#fee2e2" stroke="#dc2626" rx="6" filter="url(#sh)"/>
+    <text class="label" x="280" y="453" text-anchor="middle" fill="#991b1b">PhysicsRevoluteJoint</text>
+    <text class="small" x="280" y="471" text-anchor="middle" fill="#991b1b">body0 = parent (body_A), body1 = self (body_B)</text>
+    <text class="pin" x="280" y="486" text-anchor="middle">+ DriveAPI:angular  (limits, stiffness)</text>
+
+    <path class="arrow" d="M280 132 C 280 250 280 380 280 430"/>
+
+    <!-- Consumer annotations -->
+    <g transform="translate(0, 540)">
+      <rect x="0" y="0" width="600" height="118" fill="#f9fafb" stroke="#e5e7eb" rx="6"/>
+      <text font-size="13" font-weight="700" x="14" y="22" fill="#111827">这份 USD 同时被三类消费者使用:</text>
+
+      <circle cx="22" cy="42" r="5" fill="#059669"/>
+      <text font-size="12" x="36" y="46"><tspan font-weight="600" fill="#065f46">渲染器</tspan> <tspan fill="#374151">只看 Visuals/</tspan> <tspan class="pin">— purpose=guide 自动跳过</tspan></text>
+
+      <circle cx="22" cy="66" r="5" fill="#d97706"/>
+      <text font-size="12" x="36" y="70"><tspan font-weight="600" fill="#92400e">PhysX</tspan> <tspan fill="#374151">只看 Collisions/ + Joint</tspan> <tspan class="pin">— offline convex 已冻结, 仿真可复现</tspan></text>
+
+      <circle cx="22" cy="90" r="5" fill="#7c3aed"/>
+      <text font-size="12" x="36" y="94"><tspan font-weight="600" fill="#5b21b6">Robot policy</tspan> <tspan fill="#374151">查询 Sites/ 拿语义区域位姿</tspan> <tspan class="pin">— 跟随 articulation 自动变换</tspan></text>
+    </g>
+  </g>
+
+  <!-- ========== BOTTOM: design rationale ========== -->
+  <g transform="translate(40, 760)">
+    <line x1="0" y1="0" x2="1240" y2="0" stroke="#e5e7eb"/>
+    <text class="title" x="0" y="28">为什么这个布局值得作为标准</text>
+    <g font-size="13" fill="#1f2937">
+      <text x="0" y="58"><tspan font-weight="700" fill="#1d4ed8">1.</tspan> <tspan font-weight="600">关注点分离</tspan> — Visuals / Collisions / Sites 是 USD 的 3 个 Xform 子树, 完全正交, 互不污染。改 collision 不动 visual; 加 site 不动 mesh.</text>
+      <text x="0" y="84"><tspan font-weight="700" fill="#d97706">2.</tspan> <tspan font-weight="600">purpose=guide</tspan> — USD 内置 token, 让"非视觉"的 prim 在渲染器里隐身但 PhysX/policy 仍能 traverse. 一份 USDA 服务三类客户.</text>
+      <text x="0" y="110"><tspan font-weight="700" fill="#059669">3.</tspan> <tspan font-weight="600">Convex 离线分解</tspan> — collision 不再依赖 PhysX runtime 切凸包. 跨 IsaacSim/MuJoCo 版本可复现, 加载快几个数量级.</text>
+      <text x="0" y="136"><tspan font-weight="700" fill="#7c3aed">4.</tspan> <tspan font-weight="600">Sites 是寻址语义</tspan> — robot policy 调 <tspan font-family="ui-monospace, monospace" fill="#374151">/body_B/Sites/screen_face</tspan> 取位姿, 不再依赖世界坐标硬编码.</text>
+      <text x="0" y="162"><tspan font-weight="700" fill="#dc2626">5.</tspan> <tspan font-weight="600">Joint 写在 child body 内</tspan> — "哪个 body 由哪个 joint 拉住"一目了然, prim 路径自描述拓扑.</text>
+    </g>
+  </g>
+</svg>

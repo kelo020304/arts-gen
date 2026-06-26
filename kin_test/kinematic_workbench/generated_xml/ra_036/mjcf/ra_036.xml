@@ -1,0 +1,50 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mujoco model="ra_036">
+  <compiler angle="radian" meshdir="/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/generated_mesh/ra_036/mjcf/assets" />
+  <asset>
+    <mesh name="part_07_mesh" file="part_07.obj" />
+    <mesh name="body_mesh" file="body.obj" />
+    <mesh name="part_02_mesh" file="part_02.obj" />
+    <mesh name="part_00_mesh" file="part_00.obj" />
+    <mesh name="part_05_mesh" file="part_05.obj" />
+    <mesh name="part_06_mesh" file="part_06.obj" />
+    <mesh name="part_03_mesh" file="part_03.obj" />
+    <mesh name="part_01_mesh" file="part_01.obj" />
+    <mesh name="part_08_mesh" file="part_08.obj" />
+    <mesh name="part_04_mesh" file="part_04.obj" />
+  </asset>
+  <worldbody>
+    <body name="root" pos="0 0 0">
+      <body name="part_07" pos="0 0 0">
+        <geom name="part_07_visual" type="mesh" mesh="part_07_mesh" group="2" contype="0" conaffinity="0" />
+      </body>
+      <body name="body" pos="0 0 0">
+        <geom name="body_visual" type="mesh" mesh="body_mesh" group="2" contype="0" conaffinity="0" />
+      </body>
+      <body name="part_02" pos="0 0 0">
+        <geom name="part_02_visual" type="mesh" mesh="part_02_mesh" group="2" contype="0" conaffinity="0" />
+      </body>
+      <body name="part_00" pos="0 0 0">
+        <geom name="part_00_visual" type="mesh" mesh="part_00_mesh" group="2" contype="0" conaffinity="0" />
+      </body>
+      <body name="part_05" pos="0 0 0">
+        <geom name="part_05_visual" type="mesh" mesh="part_05_mesh" group="2" contype="0" conaffinity="0" />
+      </body>
+      <body name="part_06" pos="0 0 0">
+        <geom name="part_06_visual" type="mesh" mesh="part_06_mesh" group="2" contype="0" conaffinity="0" />
+      </body>
+      <body name="part_03" pos="0 0 0">
+        <geom name="part_03_visual" type="mesh" mesh="part_03_mesh" group="2" contype="0" conaffinity="0" />
+      </body>
+      <body name="part_01" pos="0 0 0">
+        <geom name="part_01_visual" type="mesh" mesh="part_01_mesh" group="2" contype="0" conaffinity="0" />
+      </body>
+      <body name="part_08" pos="0 0 0">
+        <geom name="part_08_visual" type="mesh" mesh="part_08_mesh" group="2" contype="0" conaffinity="0" />
+      </body>
+      <body name="part_04" pos="0 0 0">
+        <geom name="part_04_visual" type="mesh" mesh="part_04_mesh" group="2" contype="0" conaffinity="0" />
+      </body>
+    </body>
+  </worldbody>
+</mujoco>

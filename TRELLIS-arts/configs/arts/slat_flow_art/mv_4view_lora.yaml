@@ -1,0 +1,25 @@
+# SLat Flow (paper Stage 4) LoRA-only 配置
+# Launcher 对应: MODE=lora
+# 模式语义:
+# - 只在 attention 线性层上训练 LoRA adapter
+# - `input_layer / input_blocks / out_blocks / out_layer` 等 sparse IO 层保持冻结
+# - 更省显存，但对新域的几何/统计适配能力弱于 lora_ext / full
+# thin override: 只改 lora / output_dir / wandb
+_base_: mv_4view.yaml
+
+lora:
+  enabled: true
+  rank: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: all_attn   # SLat Flow 只在 attention 投影层训练 LoRA
+
+training:
+  output_dir: output/slat_flow_art_mv_4view_lora
+
+wandb:
+  name: slat-flow-art-mv4view-lora
+  tags:
+    - slat_flow_art
+    - mv4view
+    - mode=lora

@@ -1,0 +1,71 @@
+# SS Flow (paper Stage 2) Smoke Test 专用配置
+# 目的: 5 步训练验证全流程，不追求收敛
+# 继承 base.yaml 默认值
+
+_base_: ../base/base.yaml
+
+# Explicit stage (overrides base.yaml default; here it equals it but kept for clarity).
+stage: ss_flow_art
+
+model:
+  name: SparseStructureFlowModel
+  args:
+    resolution: 16
+    in_channels: 8
+    model_channels: 1024
+    cond_channels: 1024
+    out_channels: 8
+    num_blocks: 24
+    num_heads: 16
+    mlp_ratio: 4
+    patch_size: 1
+    pe_mode: ape
+    use_fp16: true
+    use_checkpoint: true   # smoke: trade compute for memory (4090 + co-tenant process)
+    share_mod: false
+    qk_rms_norm: true
+    qk_rms_norm_cross: false
+
+data:
+  data_root: data/smoke_test
+  manifest_path: arts/manifest.json   # 不存在则 fallback 到 test_obj_ids enumerate
+  num_views: 4
+  min_views: 1
+  view_dropout: false   # Smoke Test 关闭 view dropout，减少随机性
+  # Smoke 数据 (/sda1/AAAI2027/smoke_test) 仅 100023 有完整 dinov2_tokens
+  test_obj_ids: ["100023"]
+
+training:
+  optimizer:
+    name: AdamW
+    args:
+      lr: 1.0e-4          # 较大学习率，5 步内能看到 loss 变化
+      weight_decay: 0.0
+      betas: [0.9, 0.999]
+  lr_scheduler: null       # 5 步不需要 scheduler
+  grad_clip: 1.0
+  max_steps: 5
+  batch_size_per_gpu: 1
+  batch_split: 1
+  i_print: 1               # 每步打印
+  i_log: 1                 # 每步记录
+  i_sample: 999999          # 不采样（5 步不需要）
+  i_save: 999999            # smoke_test.py 手动控制 checkpoint
+  i_ddpcheck: 999999
+  ema_rate: 0.9999
+  fp16_mode: inflat_all
+  fp16_scale_growth: 1.0e-3
+  output_dir: output/ss_flow_art_smoke_test
+  pretrained_ckpt: pretrained/ckpts/ss_flow_img_dit_L_16l8_fp16.safetensors
+
+wandb:
+  project: arts-reconstruction
+  name: ss-flow-art-smoke-test
+  mode: disabled           # local 4090 smoke; 不连 wandb 减少干扰
+
+lora:
+  enabled: false           # 默认关闭，LoRA 测试时通过 CLI 覆盖
+  rank: 16
+  alpha: 32
+  dropout: 0.0             # Smoke Test 关闭 dropout 减少随机性
+  target_modules: all_attn

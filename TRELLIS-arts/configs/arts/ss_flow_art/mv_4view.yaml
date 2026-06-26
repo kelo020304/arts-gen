@@ -1,0 +1,66 @@
+# SS Flow (paper Stage 2) 多视角 Flow Matching 全量微调配置
+# Launcher 对应: MODE=full
+# 模式说明:
+# - full:     全量 fine-tune；不启用 LoRA，不启用 anchor
+# - lora:     只训练 attention 上的 LoRA adapter；底座参数保持冻结
+# - lora_ext: 训练 attention 上的 LoRA adapter，同时解冻少量 keep_trainable 几何/IO 层
+# - l2sp:     全量 fine-tune，同时用 L2-SP anchor 把可训练参数拉回 pretrained 初值
+# 本文件就是 full 模式基线；其他三个模式都在此基础上做 thin override
+
+_base_: ../base/base.yaml
+
+# Explicit stage declaration (D-11). thin override yaml inherits via _base_.
+stage: ss_flow_art
+
+model:
+  name: SparseStructureFlowModel
+  args:
+    resolution: 16
+    in_channels: 8
+    model_channels: 1024
+    cond_channels: 1024
+    out_channels: 8
+    num_blocks: 24
+    num_heads: 16
+    mlp_ratio: 4
+    patch_size: 1
+    pe_mode: ape
+    use_fp16: true
+    use_checkpoint: false
+    share_mod: false
+    qk_rms_norm: true
+    qk_rms_norm_cross: false
+
+data:
+  data_root: data/PhysX-Mobility
+  manifest_path: arts/manifest.json
+  num_views: 4
+  min_views: 1
+  view_dropout: true
+
+training:
+  batch_size_per_gpu: 1
+  batch_split: 1
+  max_steps: 50000
+  optimizer:
+    name: AdamW
+    args:
+      lr: 1.0e-5
+      weight_decay: 0.0
+      betas: [0.9, 0.999]
+  grad_clip: 1.0
+  fp16_mode: amp
+  output_dir: output/ss_flow_art_mv_4view
+  pretrained_ckpt: pretrained/ckpts/ss_flow_img_dit_L_16l8_fp16.safetensors
+  i_print: 100
+  i_log: 50
+  i_sample: 5000
+  i_save: 5000
+
+wandb:
+  project: arts-reconstruction
+  name: ss-flow-art-mv4view
+  tags:
+    - ss_flow_art
+    - mv4view
+  mode: online

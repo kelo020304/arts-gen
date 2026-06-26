@@ -1,0 +1,5299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MJCF Joint Editor</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { overflow: hidden; background: #222; font-family: 'Segoe UI', Arial, sans-serif; }
+  #viewer-canvas { display: block; width: 100vw; height: 100vh; }
+
+  #toolbar {
+    position: fixed; top: 12px; left: 12px; z-index: 100;
+    background: rgba(30,30,46,0.92); border-radius: 8px; padding: 10px 16px;
+    color: #ddd; font-size: 13px; display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  }
+  #toolbar select {
+    background: #2a2a3e; color: #eee; border: 1px solid #555; border-radius: 4px;
+    padding: 4px 8px; font-size: 13px; cursor: pointer;
+  }
+  #toolbar button {
+    background: #2e7d32; color: #fff; border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 6px; padding: 6px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  #toolbar button:disabled {
+    opacity: 0.55; cursor: not-allowed;
+  }
+  #status-text { color: #aaa; font-size: 12px; }
+  #save-status-text { color: #8ff0b4; font-size: 12px; }
+  #export-status-text { color: #8dc7ff; font-size: 12px; }
+  #export-status-text.error { color: #ff9a9a; }
+  #selected-body-text { color: #ffd27a; font-size: 12px; }
+
+  #joint-panel {
+    position: fixed; top: 76px; right: 12px; bottom: 12px; z-index: 110;
+    width: 320px; display: flex; flex-direction: column;
+    background: rgba(18,18,28,0.94); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+    color: #ddd; overflow: hidden; backdrop-filter: blur(6px);
+  }
+  #joint-panel[hidden] { display: none; }
+  #joint-panel-header {
+    padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.08);
+    font-size: 14px; font-weight: 700; color: #fff;
+    letter-spacing: 0.02em;
+  }
+  #joint-panel-body {
+    flex: 1; overflow-y: auto; padding: 12px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .panel-section {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .panel-section-title {
+    color: #8e90aa; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0 2px;
+  }
+  #joint-panel-empty {
+    padding: 14px; border-radius: 10px; background: rgba(255,255,255,0.04);
+    color: #aaa; font-size: 12px; line-height: 1.5;
+  }
+  #joint-body-list {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .joint-body-row {
+    display: flex; align-items: stretch; gap: 8px;
+  }
+  .joint-body-merge-toggle {
+    flex: 0 0 auto; align-self: center; width: 16px; height: 16px; cursor: pointer;
+    accent-color: #ffb000;
+  }
+  .joint-body-button {
+    width: 100%; padding: 11px 12px; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.05); color: #ddd; cursor: pointer;
+    text-align: left; transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+  }
+  .joint-body-button:hover {
+    border-color: rgba(255,210,122,0.32);
+    background: rgba(255,210,122,0.08);
+    transform: translateY(-1px);
+  }
+  .joint-body-button.selected {
+    border-color: rgba(255,176,0,0.48);
+    background: rgba(255,176,0,0.14);
+    box-shadow: inset 0 0 0 1px rgba(255,176,0,0.16);
+  }
+  .joint-body-name {
+    color: #fff; font-size: 13px; font-weight: 600;
+    line-height: 1.4;
+  }
+  .joint-body-meta {
+    margin-top: 4px; color: #8e90aa; font-size: 11px; line-height: 1.4;
+  }
+  .joint-slider-row {
+    padding: 12px; border-radius: 10px; background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .joint-slider-top {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+    margin-bottom: 8px;
+  }
+  .joint-slider-title {
+    display: flex; align-items: center; gap: 8px; min-width: 0;
+  }
+  .joint-slider-name {
+    color: #fff; font-size: 13px; font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .joint-type-badge {
+    padding: 2px 7px; border-radius: 999px; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    border: 1px solid transparent;
+  }
+  .joint-type-badge.hinge {
+    color: #ffd27a; background: rgba(255,210,122,0.12); border-color: rgba(255,210,122,0.26);
+  }
+  .joint-type-badge.slide {
+    color: #7ad8ff; background: rgba(122,216,255,0.12); border-color: rgba(122,216,255,0.26);
+  }
+  .joint-slider-value {
+    color: #8ff0b4; font-size: 11px; line-height: 1.4; text-align: right;
+    min-width: 108px;
+  }
+  .joint-slider-range {
+    margin-bottom: 8px; color: #8e90aa; font-size: 11px; line-height: 1.4;
+  }
+  .joint-slider {
+    width: 100%; appearance: none; -webkit-appearance: none;
+    height: 6px; border-radius: 999px; outline: none; cursor: pointer;
+    background: linear-gradient(90deg, #2f3148 0%, #494d6d 100%);
+  }
+  .joint-slider::-webkit-slider-thumb {
+    width: 16px; height: 16px; border-radius: 50%; -webkit-appearance: none;
+    background: #f5f7ff; border: 2px solid #2e7d32; box-shadow: 0 0 0 3px rgba(46,125,50,0.18);
+  }
+  .joint-slider::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #f5f7ff; border: 2px solid #2e7d32; box-shadow: 0 0 0 3px rgba(46,125,50,0.18);
+  }
+  .joint-editor-card {
+    padding: 12px; border-radius: 10px; background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 10px;
+  }
+  .joint-editor-copy {
+    color: #aaa; font-size: 12px; line-height: 1.5;
+  }
+  .joint-editor-selected {
+    color: #fff; font-size: 13px; font-weight: 600;
+  }
+  .joint-editor-grid {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+  }
+  .joint-editor-field {
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .joint-editor-field.full {
+    grid-column: 1 / -1;
+  }
+  .joint-editor-field label {
+    color: #8e90aa; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .joint-editor-field input,
+  .joint-editor-field select {
+    width: 100%; background: #1f2133; color: #eef1ff; border: 1px solid #444963;
+    border-radius: 6px; padding: 6px 8px; font-size: 12px;
+  }
+  .joint-editor-actions {
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .joint-editor-actions button {
+    padding: 7px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.08); color: #f3f5ff; font-size: 12px; font-weight: 600;
+    cursor: pointer;
+  }
+  .joint-editor-actions button.active {
+    background: rgba(255,176,0,0.18);
+    border-color: rgba(255,176,0,0.4);
+    color: #ffd27a;
+  }
+  .joint-editor-actions button:disabled {
+    opacity: 0.5; cursor: not-allowed;
+  }
+
+  @media (max-width: 900px) {
+    #joint-panel {
+      top: auto; left: 12px; right: 12px; bottom: 12px; width: auto; max-height: 42vh;
+    }
+  }
+
+  #drop-zone {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 200;
+    background: rgba(20,20,40,0.85); display: none; align-items: center; justify-content: center;
+    border: 4px dashed #6c5ce7; pointer-events: none;
+  }
+  #drop-zone.visible { display: flex; }
+  #drop-zone span {
+    color: #fff; font-size: 22px; font-weight: bold;
+    background: rgba(108,92,231,0.3); padding: 24px 40px; border-radius: 12px;
+  }
+
+  #error-bar {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 150;
+    background: rgba(200,40,40,0.9); color: #fff; padding: 8px 20px; border-radius: 6px;
+    font-size: 13px; display: none; max-width: 80vw;
+  }
+
+  #kinematic-agent-panel {
+    position: fixed; top: 76px; left: 12px; z-index: 120;
+    width: 390px; max-height: calc(100vh - 96px); overflow: hidden;
+    display: flex; flex-direction: column; gap: 10px;
+    background: rgba(18,18,28,0.94); border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 12px; color: #e7e9f4; box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+    padding: 12px; backdrop-filter: blur(6px);
+  }
+  #kinematic-agent-panel[hidden] { display: none; }
+  .kinematic-agent-header {
+    display: flex; justify-content: space-between; gap: 10px; align-items: flex-start;
+    border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;
+  }
+  .kinematic-agent-title { font-size: 14px; font-weight: 800; color: #fff; }
+  .kinematic-agent-sub { margin-top: 3px; color: #9aa0b7; font-size: 11px; line-height: 1.35; }
+  .kinematic-agent-badge {
+    flex: 0 0 auto; padding: 3px 8px; border-radius: 999px;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+    border: 1px solid rgba(141,199,255,0.28); color: #8dc7ff; background: rgba(141,199,255,0.10);
+  }
+  .kinematic-agent-body {
+    overflow: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 2px;
+  }
+  .kinematic-agent-grid {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
+  }
+  .kinematic-agent-progress {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .kinematic-agent-progress-track {
+    height: 8px; overflow: hidden; border-radius: 999px;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.08);
+  }
+  #kinematic-agent-progress-fill {
+    display: block; height: 100%; width: 0%;
+    border-radius: inherit; background: linear-gradient(90deg, #8ff0b4, #8dc7ff);
+    transition: width 120ms linear;
+  }
+  .kinematic-agent-progress-meta {
+    display: flex; justify-content: space-between; gap: 8px;
+    color: #9aa0b7; font-size: 10px; line-height: 1.25;
+  }
+  .kinematic-agent-stat {
+    min-height: 52px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;
+    padding: 8px; background: rgba(255,255,255,0.04);
+  }
+  .kinematic-agent-label {
+    color: #8e90aa; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .kinematic-agent-value {
+    margin-top: 5px; color: #fff; font-size: 12px; font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+  .kinematic-agent-section-title {
+    color: #8e90aa; font-size: 10px; font-weight: 800;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  #kinematic-agent-estimates,
+  #kinematic-agent-signals {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .kinematic-agent-row {
+    border: 1px solid rgba(255,255,255,0.08); border-left: 4px solid rgba(141,199,255,0.8);
+    border-radius: 8px; background: rgba(255,255,255,0.04); padding: 8px;
+    font-size: 11px; line-height: 1.35;
+  }
+  .kinematic-agent-row.error { border-left-color: #ff8a80; }
+  .kinematic-agent-row.warning { border-left-color: #ffd27a; }
+  .kinematic-agent-row.note { border-left-color: #8ff0b4; }
+  .kinematic-agent-diagnostics-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  #kinematic-agent-copy-diagnostics {
+    flex: 0 0 auto; border: 1px solid rgba(141,199,255,0.35);
+    background: rgba(141,199,255,0.12); color: #dce7ff;
+    border-radius: 6px; padding: 4px 8px; font-size: 10px; font-weight: 800;
+    cursor: pointer;
+  }
+  #kinematic-agent-copy-diagnostics:hover {
+    background: rgba(141,199,255,0.20);
+  }
+  #kinematic-agent-diagnostics-copy {
+    width: 100%; min-height: 74px; max-height: 130px; resize: vertical;
+    box-sizing: border-box; margin-top: 6px; color: #dce7ff;
+    background: rgba(5,7,12,0.75); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px; padding: 8px; font: 10px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  #kinematic-agent-code {
+    margin: 0; max-height: 180px; overflow: auto; white-space: pre-wrap;
+    color: #dce7ff; background: rgba(5,7,12,0.75);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;
+    padding: 10px; font-size: 10px; line-height: 1.45;
+  }
+  body.kinematic-agent-mode #asset-picker,
+  body.kinematic-agent-mode #save-xml-button,
+  body.kinematic-agent-mode #export-usd-button,
+  body.kinematic-agent-mode #save-status-text,
+  body.kinematic-agent-mode #export-status-text {
+    display: none;
+  }
+</style>
+
+<script src="/shared_libs/three.min.js"></script>
+<script src="/shared_libs/OBJLoader.js"></script>
+<script src="/shared_libs/OrbitControls.js"></script>
+<script src="/shared_libs/BufferGeometryUtils.js"></script>
+<script src="/shared_libs/TransformControls.js"></script>
+</head>
+<body>
+
+<canvas id="viewer-canvas"></canvas>
+
+<div id="toolbar">
+  <label for="asset-picker" style="font-weight:bold;">Asset:</label>
+  <select id="asset-picker"><option value="">-- select --</option></select>
+  <button type="button" id="save-xml-button">Save XML</button>
+  <button type="button" id="export-usd-button">Isaac Sim 启动中...</button>
+  <span id="save-status-text">Saved</span>
+  <span id="export-status-text">Isaac Sim 启动中...</span>
+  <span id="status-text">Loading...</span>
+  <span id="selected-body-text">Selected: none</span>
+</div>
+
+<aside id="kinematic-agent-panel" hidden>
+  <div class="kinematic-agent-header">
+    <div>
+      <div class="kinematic-agent-title">Kinematic Agent</div>
+      <div class="kinematic-agent-sub" id="kinematic-agent-run-label">waiting for run</div>
+    </div>
+    <div class="kinematic-agent-badge" id="kinematic-agent-badge">live</div>
+  </div>
+  <div class="kinematic-agent-body">
+    <div class="kinematic-agent-grid">
+      <div class="kinematic-agent-stat">
+        <div class="kinematic-agent-label">Iteration</div>
+        <div class="kinematic-agent-value" id="kinematic-agent-iteration">0</div>
+      </div>
+      <div class="kinematic-agent-stat">
+        <div class="kinematic-agent-label">Phase</div>
+        <div class="kinematic-agent-value" id="kinematic-agent-phase">idle</div>
+      </div>
+      <div class="kinematic-agent-stat">
+        <div class="kinematic-agent-label">Playback</div>
+        <div class="kinematic-agent-value" id="kinematic-agent-playback">waiting</div>
+      </div>
+    </div>
+    <div class="kinematic-agent-progress">
+      <div class="kinematic-agent-progress-track" aria-label="Agent iteration progress">
+        <span id="kinematic-agent-progress-fill"></span>
+      </div>
+      <div class="kinematic-agent-progress-meta">
+        <span id="kinematic-agent-progress-label">waiting for asset</span>
+        <span id="kinematic-agent-progress-value">0%</span>
+      </div>
+    </div>
+    <div>
+      <div class="kinematic-agent-section-title">Estimates</div>
+      <div id="kinematic-agent-estimates"></div>
+    </div>
+    <div>
+      <div class="kinematic-agent-section-title">Warning / Note / Error</div>
+      <div id="kinematic-agent-signals"></div>
+    </div>
+    <div>
+      <div class="kinematic-agent-diagnostics-head">
+        <div class="kinematic-agent-section-title">Diagnostics</div>
+        <button id="kinematic-agent-copy-diagnostics" type="button">Copy</button>
+      </div>
+      <textarea id="kinematic-agent-diagnostics-copy" readonly spellcheck="false">waiting for diagnostics</textarea>
+    </div>
+    <div>
+      <div class="kinematic-agent-section-title">estimate_limit.py update</div>
+      <pre id="kinematic-agent-code">waiting for agent edit</pre>
+    </div>
+  </div>
+</aside>
+
+<aside id="joint-panel" hidden>
+  <div id="joint-panel-header">Bodies &amp; Joints</div>
+  <div id="joint-panel-body"></div>
+</aside>
+
+<div id="drop-zone"><span>Drop MJCF XML here to reload</span></div>
+<div id="error-bar"></div>
+<input type="file" id="file-input" accept=".xml,.mjcf" style="display:none;">
+
+<script>
+// ============================================================
+// State
+// ============================================================
+var assetName = '';
+var kinematicAgentRunId = '';
+var scene, camera, renderer, controls;
+var rootGroup = null;
+var _workbenchGlobalOrientationDegrees = { roll: 0, pitch: 0, yaw: 0 };
+var _mjJointMap = Object.create(null);
+var _mjBodyMap = Object.create(null);
+var _selectedBodyName = null;
+var _materialOwnerIds = Object.create(null);
+var _jointSliderMap = Object.create(null);
+var _jointBodyListItemMap = Object.create(null);
+var _selectionEmissiveColor = new THREE.Color(0xffb000);
+var _draftManifest = null;
+var _anchorDragRaycaster = new THREE.Raycaster();
+var _kinematicAgentState = {
+  enabled: false,
+  pollTimerId: null,
+  loadedIteration: null,
+  loadedAssetName: null,
+  latestState: null,
+  playbackManifest: null,
+  playbackJoints: [],
+  playbackStartMs: 0,
+  playbackFrameId: null,
+  activeJointName: null,
+  runtimeError: null
+};
+var _uiState = {
+  isDirty: false,
+  saveStatus: 'Saved',
+  isaacReady: false,
+  isaacStatus: 'Isaac Sim 启动中...',
+  isaacStatusPollTimerId: null,
+  isExporting: false,
+  exportStatusText: '',
+  exportStatusIsError: false,
+  mergeSelection: new Set(),
+  lastMergeSnapshot: null,
+  activeJointEditMode: null,
+  activeJointName: null,
+  activeJointSnapshot: null,
+  activeJointTempType: null,
+  activeJointTempRange: null,
+  activeJointTempAnchor: null,
+  activeJointTempAxis: null,
+  activeJointHandle: null,
+  jointTransformAxisFilter: 'all',
+  activeAnchorDrag: null,
+  activeBodyEditMode: null,
+  activeBodyName: null,
+  activeBodyHandle: null,
+  transformControls: null
+};
+
+// Extract asset name or kinematic run id from URL.
+(function() {
+  var agentParts = window.location.pathname.split('/kinematic-agent/');
+  if (agentParts.length > 1 && agentParts[1]) {
+    kinematicAgentRunId = decodeURIComponent(agentParts[1].replace(/\/+$/, ''));
+    _kinematicAgentState.enabled = true;
+    document.body.classList.add('kinematic-agent-mode');
+    return;
+  }
+  var assetParts = window.location.pathname.split('/object-post-process/');
+  if (assetParts.length > 1 && assetParts[1]) {
+    assetName = decodeURIComponent(assetParts[1].replace(/\/+$/, ''));
+  }
+})();
+
+// ============================================================
+// Three.js Initialization
+// ============================================================
+(function initViewer() {
+  var canvas = document.getElementById('viewer-canvas');
+
+  renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xffffff);
+
+  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.001, 100);
+  camera.up.set(0, 0, 1);  // Z-up (MuJoCo convention)
+  camera.position.set(1.5, -1.0, 1.0);
+
+  controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.12;
+
+  // Lights
+  var ambLight = new THREE.AmbientLight(0x404060, 0.6);
+  scene.add(ambLight);
+  var dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight1.position.set(2, 3, 2);
+  scene.add(dirLight1);
+  var dirLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+  dirLight2.position.set(-1, 1, -1);
+  scene.add(dirLight2);
+
+  // Grid helper (XY plane for Z-up)
+  var grid = new THREE.GridHelper(2, 20, 0x999999, 0xcccccc);
+  grid.rotation.x = Math.PI / 2;  // rotate from XZ to XY plane
+  scene.add(grid);
+
+  // --- Axes indicator (bottom-right corner) ---
+  var axesScene = new THREE.Scene();
+  var axesCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 10);
+  axesCamera.up.set(0, 0, 1);  // Z-up, match main camera
+  axesCamera.position.set(0, -2.5, 0);
+  axesCamera.lookAt(0, 0, 0);
+
+  // RGB axes: X=red, Y=green, Z=blue
+  var axesHelper = new THREE.AxesHelper(1);
+  axesScene.add(axesHelper);
+
+  // Axis labels
+  function makeLabel(text, color, pos) {
+    var c = document.createElement('canvas');
+    c.width = 64; c.height = 64;
+    var ctx = c.getContext('2d');
+    ctx.font = 'bold 48px Arial';
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 32, 32);
+    var tex = new THREE.CanvasTexture(c);
+    var mat = new THREE.SpriteMaterial({ map: tex, depthTest: false });
+    var sprite = new THREE.Sprite(mat);
+    sprite.position.copy(pos);
+    sprite.scale.set(0.3, 0.3, 1);
+    return sprite;
+  }
+  axesScene.add(makeLabel('X', '#ff4444', new THREE.Vector3(1.3, 0, 0)));
+  axesScene.add(makeLabel('Y', '#44ff44', new THREE.Vector3(0, 1.3, 0)));
+  axesScene.add(makeLabel('Z', '#4488ff', new THREE.Vector3(0, 0, 1.3)));
+
+  // Render loop
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+
+    // Main scene
+    renderer.render(scene, camera);
+
+    // Axes indicator — sync rotation with main camera (Z-up)
+    axesCamera.up.set(0, 0, 1);
+    axesCamera.quaternion.copy(camera.quaternion);
+    axesCamera.position.set(0, 0, 2.5).applyQuaternion(camera.quaternion);
+    axesCamera.lookAt(0, 0, 0);
+
+    var axesSize = 150;
+    var w = renderer.domElement.width;
+    var h = renderer.domElement.height;
+    renderer.setViewport(0, 0, axesSize, axesSize);
+    renderer.setScissor(0, 0, axesSize, axesSize);
+    renderer.setScissorTest(true);
+    renderer.autoClear = false;
+    renderer.clearDepth();
+    renderer.render(axesScene, axesCamera);
+    renderer.autoClear = true;
+    renderer.setScissorTest(false);
+    renderer.setViewport(0, 0, w, h);
+  }
+  animate();
+
+  // Resize
+  window.addEventListener('resize', function() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+})();
+
+(function initJointTransformControls() {
+  var transformControls = new THREE.TransformControls(camera, renderer.domElement);
+  transformControls.setSize(1.15);
+  transformControls.visible = false;
+  function syncActiveJointEditPreviewFromHandle() {
+    if (_uiState.activeJointEditMode === null) {
+      return;
+    }
+    try {
+      updateTemporaryJointEditFromHandle();
+    } catch (err) {
+      showError(String(err && err.message ? err.message : err));
+    }
+  }
+  transformControls.addEventListener('dragging-changed', function(event) {
+    controls.enabled = !event.value;
+    if (event.value === false) {
+      try {
+        if (_uiState.activeBodyEditMode !== null) {
+          commitActiveEditHandle();
+        }
+      } catch (err) {
+        showError(String(err && err.message ? err.message : err));
+      }
+    }
+  });
+  transformControls.addEventListener('objectChange', function() {
+    if (_uiState.activeJointEditMode !== 'axis') {
+      return;
+    }
+    syncActiveJointEditPreviewFromHandle();
+  });
+  scene.add(transformControls);
+  _uiState.transformControls = transformControls;
+})();
+
+(function initAnchorDragInteractions() {
+  var domElement = renderer.domElement;
+
+  domElement.addEventListener('pointerdown', function(event) {
+    try {
+      beginAnchorPointerDrag(event);
+    } catch (err) {
+      showError(String(err && err.message ? err.message : err));
+    }
+  });
+
+  window.addEventListener('pointermove', function(event) {
+    try {
+      updateAnchorPointerDrag(event);
+    } catch (err) {
+      showError(String(err && err.message ? err.message : err));
+    }
+  });
+
+  window.addEventListener('pointerup', function(event) {
+    stopAnchorPointerDrag(event.pointerId);
+  });
+
+  window.addEventListener('pointercancel', function(event) {
+    stopAnchorPointerDrag(event.pointerId);
+  });
+})();
+
+// ============================================================
+// Asset Picker
+// ============================================================
+(function initAssetPicker() {
+  var picker = document.getElementById('asset-picker');
+  var saveButton = document.getElementById('save-xml-button');
+  var exportButton = document.getElementById('export-usd-button');
+
+  if (_kinematicAgentState.enabled) {
+    picker.disabled = true;
+    saveButton.disabled = true;
+    exportButton.disabled = true;
+    return;
+  }
+
+  fetch('/api/assets')
+    .then(function(r) { return r.json(); })
+    .then(function(assets) {
+      assets.forEach(function(name) {
+        var opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        if (name === assetName) opt.selected = true;
+        picker.appendChild(opt);
+      });
+    })
+    .catch(function(err) {
+      showStatus('Failed to load asset list: ' + err);
+    });
+
+  picker.addEventListener('change', function() {
+    var selected = picker.value;
+    if (selected) {
+      window.location.href = '/object-post-process/' + encodeURIComponent(selected);
+    }
+  });
+
+  saveButton.addEventListener('click', function() {
+    try {
+      handleSaveXml();
+    } catch (err) {
+      setSaveStatus('Save failed');
+      showError('Save failed: ' + String(err && err.message ? err.message : err));
+    }
+  });
+  exportButton.addEventListener('click', function() {
+    try {
+      handleExportUsd();
+    } catch (err) {
+      setExportStatus('Export failed', true);
+      showError('Export failed: ' + String(err && err.message ? err.message : err));
+    }
+  });
+  updateSaveButtonState();
+})();
+
+(function initIsaacStatusPolling() {
+  if (_kinematicAgentState.enabled) {
+    return;
+  }
+  pollIsaacStatus();
+})();
+
+// ============================================================
+// Load Manifest & Build Scene
+// ============================================================
+if (_kinematicAgentState.enabled) {
+  initKinematicAgentMode();
+} else if (assetName) {
+  showStatus('Loading ' + assetName + '...');
+  fetch('/api/assets/' + encodeURIComponent(assetName) + '/preview-manifest')
+    .then(function(r) { return r.json(); })
+    .then(function(manifest) {
+      if (manifest.status !== 'ok') {
+        showError('Manifest error: ' + String(manifest.message));
+        return;
+      }
+      return loadManifestIntoDraftAndBuildScene(manifest, { preserveCamera: false, preserveSelection: false });
+    })
+    .catch(function(err) {
+      showError('Failed to load manifest: ' + err);
+    });
+} else {
+  showStatus('Select an asset to begin');
+}
+
+function initKinematicAgentMode() {
+  var panel = document.getElementById('kinematic-agent-panel');
+  if (panel) {
+    panel.hidden = false;
+  }
+  var copyButton = document.getElementById('kinematic-agent-copy-diagnostics');
+  if (copyButton) {
+    copyButton.addEventListener('click', copyKinematicDiagnostics);
+  }
+  document.getElementById('kinematic-agent-run-label').textContent = kinematicAgentRunId;
+  showStatus('Kinematic agent live: ' + kinematicAgentRunId);
+  pollKinematicAgentState();
+}
+
+function scheduleKinematicAgentPoll(delayMs) {
+  if (!_kinematicAgentState.enabled) {
+    return;
+  }
+  if (_kinematicAgentState.pollTimerId !== null) {
+    window.clearTimeout(_kinematicAgentState.pollTimerId);
+  }
+  _kinematicAgentState.pollTimerId = window.setTimeout(function() {
+    _kinematicAgentState.pollTimerId = null;
+    pollKinematicAgentState();
+  }, delayMs);
+}
+
+function pollKinematicAgentState() {
+  if (!_kinematicAgentState.enabled) {
+    return;
+  }
+  fetch('/api/kinematic-agent/' + encodeURIComponent(kinematicAgentRunId) + '/state?t=' + Date.now(), {
+    cache: 'no-store'
+  })
+    .then(function(response) { return response.json(); })
+    .then(function(state) {
+      _kinematicAgentState.latestState = state;
+      renderKinematicAgentPanel(state);
+      applyKinematicAgentOrientation(state);
+      if (isKinematicRunFinishedPassed(state)) {
+        stopKinematicPlaybackAtManualState('manual sliders ready');
+      }
+      var latestIteration = Number(state.latest_iteration || 0);
+      var latestPreview = state.latest_preview || {};
+      var latestAssetName = typeof latestPreview.asset_name === 'string' ? latestPreview.asset_name : '';
+      if (latestAssetName && latestAssetName !== _kinematicAgentState.loadedAssetName) {
+        return loadKinematicAgentManifest(latestIteration, latestAssetName);
+      }
+    })
+    .catch(function(err) {
+      var message = String(err && err.message ? err.message : err);
+      _kinematicAgentState.runtimeError = message;
+      renderKinematicAgentError(message);
+    })
+    .then(function() {
+      scheduleKinematicAgentPoll(500);
+    });
+}
+
+function applyKinematicAgentOrientation(state) {
+  if (!state || typeof state !== 'object') {
+    return;
+  }
+  var latestPreview = state.latest_preview || {};
+  var orientation = latestPreview.orientation_degrees || state.orientation_degrees;
+  if (!orientation || typeof orientation !== 'object') {
+    return;
+  }
+  setWorkbenchGlobalOrientation(orientation);
+}
+
+function loadKinematicAgentManifest(iteration, assetNameForPreview) {
+  return fetch('/api/kinematic-agent/' + encodeURIComponent(kinematicAgentRunId) + '/manifest?t=' + Date.now(), {
+    cache: 'no-store'
+  })
+    .then(function(response) { return response.json(); })
+    .then(function(manifest) {
+      if (manifest.status !== 'ok') {
+        throw new Error('Manifest error: ' + String(manifest.message || 'unknown'));
+      }
+      return loadManifestIntoDraftAndBuildScene(manifest, {
+        preserveCamera: _kinematicAgentState.loadedAssetName !== null,
+        preserveSelection: false
+      }).then(function() {
+        _kinematicAgentState.loadedIteration = iteration;
+        _kinematicAgentState.loadedAssetName = assetNameForPreview || null;
+        _kinematicAgentState.runtimeError = null;
+        var latestPreview = (_kinematicAgentState.latestState || {}).latest_preview || {};
+        startKinematicFullRangePlayback(manifest, latestPreview);
+      });
+    });
+}
+
+function renderKinematicAgentPanel(state) {
+  var latestEvent = state.latest_event || {};
+  var latestPreview = state.latest_preview || {};
+  document.getElementById('kinematic-agent-iteration').textContent = String(state.latest_iteration || latestEvent.iteration || 0);
+  document.getElementById('kinematic-agent-phase').textContent = latestEvent.phase || latestEvent.event || 'waiting';
+  document.getElementById('kinematic-agent-playback').textContent =
+    latestPreview.playback ? latestPreview.playback.mode : 'waiting';
+  document.getElementById('kinematic-agent-badge').textContent = latestEvent.status || 'live';
+  renderKinematicProgress(state);
+
+  var estimates = Array.isArray(latestPreview.estimates) ? latestPreview.estimates : [];
+  var jointStates = latestPreview.joint_states || {};
+  document.getElementById('kinematic-agent-estimates').innerHTML = estimates.length
+    ? estimates.map(function(est) {
+      var axis = est.axis_label || (Array.isArray(est.axis_world) ? est.axis_world.join(',') : '');
+      var state = jointStates[est.joint_name] || {};
+      var jointType = (latestPreview.joint_types || {})[est.joint_name] || '';
+      var status = state.status ? ' ' + state.status : '';
+      return '<div class="kinematic-agent-row">' +
+        '<strong>' + escapeHtml(est.joint_name || '-') + '</strong> ' +
+        escapeHtml(axis) + ' ' + escapeHtml(formatKinematicEstimateRange(jointType, est.lower, est.upper)) +
+        escapeHtml(status) +
+        '</div>';
+    }).join('')
+    : '<div class="kinematic-agent-row note">waiting for first estimate</div>';
+
+  var signals = collectKinematicSignals(state);
+  document.getElementById('kinematic-agent-signals').innerHTML = signals.length
+    ? signals.map(function(signal) {
+      return '<div class="kinematic-agent-row ' + signal.kind + '">' +
+        '<strong>' + escapeHtml(signal.kind) + '</strong> ' + escapeHtml(signal.text) +
+        '</div>';
+    }).join('')
+    : '<div class="kinematic-agent-row note">no warning or error</div>';
+  renderKinematicDiagnostics(state, signals, _kinematicAgentState.runtimeError);
+
+  var codeEvent = latestKinematicEventWith(function(event) {
+    return event.details && (event.details.editable_diff || event.details.editable_code);
+  }, state);
+  var codeText = codeEvent && codeEvent.details
+    ? (codeEvent.details.editable_diff || codeEvent.details.editable_code)
+    : 'waiting for agent edit';
+  document.getElementById('kinematic-agent-code').textContent = codeText;
+}
+
+function renderKinematicProgress(state) {
+  var latestEvent = state.latest_event || {};
+  var latestPreview = state.latest_preview || {};
+  var maxIterations = kinematicMaxAgentIterations(state);
+  var eventIteration = Number(latestEvent.iteration || 0);
+  var previewIteration = Number(state.latest_iteration || 0);
+  var activeIteration = Math.max(eventIteration, previewIteration, 0);
+  if (maxIterations > 0) {
+    var iterationProgress = Math.max(0, Math.min(activeIteration / maxIterations, 1));
+    var label = 'iteration ' + activeIteration + ' / ' + maxIterations;
+    if (latestEvent.phase || latestEvent.event) {
+      label += ' ' + (latestEvent.phase || latestEvent.event);
+    }
+    if (latestEvent.event === 'api_waiting') {
+      label += ' waiting API';
+    }
+    setKinematicProgress(iterationProgress, label);
+    return;
+  }
+  if (latestEvent.event === 'api_waiting' && latestEvent.details) {
+    setKinematicProgress(0, 'iteration ' + activeIteration + ' waiting API');
+    return;
+  }
+  if (latestPreview.preview_kind === 'rest') {
+    setKinematicProgress(0, 'asset loaded, limits unknown');
+    return;
+  }
+  if (latestPreview.asset_name && _kinematicAgentState.playbackFrameId === null) {
+    setKinematicProgress(0, 'candidate asset loaded');
+    return;
+  }
+  if (!latestPreview.asset_name) {
+    setKinematicProgress(0, 'building initial asset');
+  }
+}
+
+function kinematicMaxAgentIterations(state) {
+  var events = Array.isArray(state.events) ? state.events : [];
+  for (var i = events.length - 1; i >= 0; i--) {
+    var details = events[i] && events[i].details;
+    if (!details) {
+      continue;
+    }
+    var value = Number(details.max_agent_iterations || details.max_iterations || 0);
+    if (value > 0) {
+      return value;
+    }
+  }
+  return 0;
+}
+
+function renderKinematicAgentError(message) {
+  document.getElementById('kinematic-agent-signals').innerHTML =
+    '<div class="kinematic-agent-row error"><strong>error</strong> ' + escapeHtml(message) + '</div>';
+  var state = _kinematicAgentState.latestState || {};
+  renderKinematicDiagnostics(state, [{ kind: 'error', text: String(message) }], message);
+}
+
+function renderKinematicDiagnostics(state, signals, runtimeError) {
+  var box = document.getElementById('kinematic-agent-diagnostics-copy');
+  if (!box) {
+    return;
+  }
+  var latestEvent = (state && state.latest_event) || {};
+  var latestPreview = (state && state.latest_preview) || {};
+  var lines = [
+    'run_id=' + String(kinematicAgentRunId || '-'),
+    'status=' + String((latestEvent && latestEvent.status) || (state && state.status) || '-'),
+    'iteration=' + String((state && state.latest_iteration) || (latestEvent && latestEvent.iteration) || 0),
+    'phase=' + String((latestEvent && latestEvent.phase) || (latestEvent && latestEvent.event) || '-'),
+    'playback=' + String((latestPreview.playback && latestPreview.playback.mode) || '-'),
+    'asset=' + String(latestPreview.asset_name || '-')
+  ];
+  if (runtimeError) {
+    lines.push('runtime_error=' + String(runtimeError));
+  }
+  if (Array.isArray(signals) && signals.length) {
+    lines.push('signals:');
+    signals.forEach(function(signal) {
+      lines.push('- ' + signal.kind + ': ' + signal.text);
+    });
+  }
+  if (latestEvent && latestEvent.details) {
+    try {
+      lines.push('latest_event_details=' + JSON.stringify(latestEvent.details));
+    } catch (_err) {
+      lines.push('latest_event_details=<unserializable>');
+    }
+  }
+  box.value = lines.join('\n');
+}
+
+function copyKinematicDiagnostics() {
+  var box = document.getElementById('kinematic-agent-diagnostics-copy');
+  var button = document.getElementById('kinematic-agent-copy-diagnostics');
+  if (!box) {
+    return;
+  }
+  var text = box.value || '';
+  function copied() {
+    if (button) {
+      button.textContent = 'Copied';
+      window.setTimeout(function() { button.textContent = 'Copy'; }, 1200);
+    }
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(copied, function() {
+      box.focus();
+      box.select();
+      document.execCommand('copy');
+      copied();
+    });
+    return;
+  }
+  box.focus();
+  box.select();
+  document.execCommand('copy');
+  copied();
+}
+
+function collectKinematicSignals(state) {
+  var latestEvent = state.latest_event || {};
+  var signals = [];
+  var details = latestEvent.details || {};
+  var bundle = details.compile_signals || {};
+  if (Array.isArray(bundle.signals) && bundle.signals.length) {
+    bundle.signals.forEach(function(signal) {
+      var severity = String(signal.severity || 'note');
+      var text = String(signal.code || signal.kind || severity);
+      if (signal.joint_name) {
+        text += ' ' + String(signal.joint_name);
+      }
+      if (signal.summary) {
+        text += ': ' + String(signal.summary);
+      }
+      if (signal.detail) {
+        text += ' ' + String(signal.detail);
+      }
+      signals.push({ kind: severity === 'failure' ? 'error' : severity, text: text });
+    });
+  }
+  (latestEvent.errors || []).forEach(function(text) {
+    signals.push({ kind: 'error', text: String(text) });
+  });
+  (latestEvent.warnings || []).forEach(function(text) {
+    signals.push({ kind: 'warning', text: String(text) });
+  });
+  if (latestEvent.event) {
+    signals.push({ kind: 'note', text: latestEvent.event });
+  }
+  return signals.slice(0, 5);
+}
+
+function latestKinematicEventWith(predicate, state) {
+  var events = Array.isArray(state.events) ? state.events : [];
+  for (var i = events.length - 1; i >= 0; i--) {
+    if (predicate(events[i])) {
+      return events[i];
+    }
+  }
+  return null;
+}
+
+function startKinematicFullRangePlayback(manifest, preview) {
+  _kinematicAgentState.playbackManifest = manifest;
+  _kinematicAgentState.playbackJoints = Array.isArray(manifest.joints)
+    ? manifest.joints.filter(function(joint) {
+      return Array.isArray(joint.range) && joint.range.length === 2;
+    })
+    : [];
+  _kinematicAgentState.playbackStartMs = performance.now();
+  _kinematicAgentState.activeJointName = null;
+  if (
+    isKinematicRunFinishedPassed(_kinematicAgentState.latestState)
+    || (preview && preview.playback && preview.playback.mode === 'manual_sliders')
+  ) {
+    stopKinematicPlaybackAtManualState('manual sliders ready');
+    return;
+  }
+  if (preview && preview.preview_kind === 'rest') {
+    stopKinematicPlaybackAtManualState('rest pose');
+    setKinematicProgress(0, 'asset loaded, limits unknown');
+    return;
+  }
+  if (_kinematicAgentState.playbackFrameId === null) {
+    _kinematicAgentState.playbackFrameId = window.requestAnimationFrame(tickKinematicPlayback);
+  }
+}
+
+function tickKinematicPlayback(nowMs) {
+  _kinematicAgentState.playbackFrameId = null;
+  var joints = _kinematicAgentState.playbackJoints || [];
+  if (!_kinematicAgentState.enabled || joints.length === 0) {
+    return;
+  }
+  var secondsPerJoint = 1.8;
+  var elapsed = Math.max(0, (nowMs - _kinematicAgentState.playbackStartMs) / 1000);
+  var slot = Math.floor(elapsed / secondsPerJoint) % joints.length;
+  var phase = (elapsed % secondsPerJoint) / secondsPerJoint;
+  var wave = phase < 0.5 ? phase * 2 : (1 - phase) * 2;
+  var active = joints[slot];
+  joints.forEach(function(joint) {
+    var value = joint.default || 0;
+    if (joint.name === active.name) {
+      value = Number(joint.range[0]) + (Number(joint.range[1]) - Number(joint.range[0])) * wave;
+    }
+    try {
+      applyJointPreview(joint.name, value);
+      if (_jointSliderMap[joint.name]) {
+        _jointSliderMap[joint.name].input.value = String(value);
+        updateJointSliderValueLabel(joint.name, value);
+      }
+    } catch (err) {
+      // Scene may still be rebuilding; the next animation frame will retry.
+    }
+  });
+  _kinematicAgentState.activeJointName = active.name;
+  document.getElementById('kinematic-agent-playback').textContent = active.name + ' full range';
+  _kinematicAgentState.playbackFrameId = window.requestAnimationFrame(tickKinematicPlayback);
+}
+
+function isKinematicRunFinishedPassed(state) {
+  var latestEvent = (state || {}).latest_event || {};
+  return latestEvent.event === 'run_finished' && latestEvent.status === 'passed';
+}
+
+function stopKinematicPlaybackAtManualState(label) {
+  if (_kinematicAgentState.playbackFrameId !== null) {
+    window.cancelAnimationFrame(_kinematicAgentState.playbackFrameId);
+    _kinematicAgentState.playbackFrameId = null;
+  }
+  (_kinematicAgentState.playbackJoints || []).forEach(function(joint) {
+    var value = Number(joint.default || 0);
+    try {
+      applyJointPreview(joint.name, value);
+      if (_jointSliderMap[joint.name]) {
+        _jointSliderMap[joint.name].input.value = String(value);
+        updateJointSliderValueLabel(joint.name, value);
+      }
+    } catch (_err) {
+      // Scene may still be rebuilding; the next poll or user slider action will retry.
+    }
+  });
+  document.getElementById('kinematic-agent-playback').textContent = label || 'manual';
+}
+
+function setKinematicProgress(fraction, label) {
+  var fill = document.getElementById('kinematic-agent-progress-fill');
+  var labelEl = document.getElementById('kinematic-agent-progress-label');
+  var valueEl = document.getElementById('kinematic-agent-progress-value');
+  if (!fill || !labelEl || !valueEl) {
+    return;
+  }
+  var clamped = Math.max(0, Math.min(Number(fraction) || 0, 1));
+  fill.style.width = String(Math.round(clamped * 100)) + '%';
+  labelEl.textContent = label || 'waiting';
+  valueEl.textContent = String(Math.round(clamped * 100)) + '%';
+}
+
+function formatKinematicNumber(value) {
+  var number = Number(value);
+  return Number.isFinite(number) ? number.toFixed(3) : String(value);
+}
+
+function formatKinematicEstimateRange(jointType, lower, upper) {
+  var minValue = Number(lower);
+  var maxValue = Number(upper);
+  if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) {
+    return '[' + String(lower) + ', ' + String(upper) + ']';
+  }
+  if (jointType === 'prismatic' || jointType === 'slide') {
+    return '[' + formatMillimeters(minValue) + ', ' + formatMillimeters(maxValue) + ']';
+  }
+  if (jointType === 'revolute' || jointType === 'hinge') {
+    return '[' + minValue.toFixed(3) + ', ' + maxValue.toFixed(3) + '] rad';
+  }
+  return '[' + formatKinematicNumber(minValue) + ', ' + formatKinematicNumber(maxValue) + ']';
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch) {
+    return {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[ch];
+  });
+}
+
+function deepCloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function setWorkbenchGlobalOrientation(orientation) {
+  if (orientation === null || typeof orientation !== 'object') {
+    return;
+  }
+  _workbenchGlobalOrientationDegrees = {
+    roll: Number(orientation.roll || 0),
+    pitch: Number(orientation.pitch || 0),
+    yaw: Number(orientation.yaw || 0)
+  };
+  applyWorkbenchGlobalOrientationToRoot();
+}
+
+function applyWorkbenchGlobalOrientationToRoot() {
+  if (!rootGroup) {
+    return;
+  }
+  rootGroup.rotation.set(
+    THREE.MathUtils.degToRad(_workbenchGlobalOrientationDegrees.roll),
+    THREE.MathUtils.degToRad(_workbenchGlobalOrientationDegrees.pitch),
+    THREE.MathUtils.degToRad(_workbenchGlobalOrientationDegrees.yaw),
+    'XYZ'
+  );
+  rootGroup.updateMatrixWorld(true);
+}
+
+window.addEventListener('message', function(event) {
+  if (event.origin !== window.location.origin) {
+    return;
+  }
+  var data = event.data || {};
+  if (data.type !== 'set-global-orientation') {
+    return;
+  }
+  setWorkbenchGlobalOrientation(data.orientation_degrees || {});
+});
+
+function loadManifestIntoDraftAndBuildScene(manifest, options) {
+  if (manifest === null || typeof manifest !== 'object') {
+    throw new Error('Manifest payload must be an object');
+  }
+  _draftManifest = deepCloneJson(manifest);
+  _uiState.mergeSelection = new Set();
+  _uiState.lastMergeSnapshot = null;
+  _uiState.isDirty = false;
+  setSaveStatus('Saved');
+  return rebuildFromDraft(options);
+}
+
+function setSaveStatus(status) {
+  _uiState.saveStatus = status;
+  var label = document.getElementById('save-status-text');
+  if (label) {
+    label.textContent = status;
+  }
+  updateSaveButtonState();
+}
+
+function setExportStatus(status, isError) {
+  _uiState.exportStatusText = typeof status === 'string' ? status : '';
+  _uiState.exportStatusIsError = isError === true;
+  renderExportStatus();
+}
+
+function renderExportStatus() {
+  var label = document.getElementById('export-status-text');
+  if (!label) {
+    return;
+  }
+
+  var text = '';
+  if (_uiState.isExporting) {
+    text = 'Exporting USD...';
+  } else if (_uiState.exportStatusText) {
+    text = _uiState.exportStatusText;
+  } else if (_uiState.isaacReady !== true) {
+    text = _uiState.isaacStatus || 'Isaac Sim 启动中...';
+  }
+
+  label.textContent = text;
+  label.classList.toggle('error', _uiState.exportStatusIsError === true);
+}
+
+function updateExportButtonState() {
+  var exportButton = document.getElementById('export-usd-button');
+  if (!exportButton) {
+    return;
+  }
+
+  var disabled = (
+    _uiState.isExporting ||
+    !assetName ||
+    _draftManifest === null ||
+    _uiState.saveStatus === 'Saving...' ||
+    _uiState.isDirty ||
+    hasUncommittedActiveJointEdit() ||
+    _uiState.isaacReady !== true
+  );
+
+  var buttonText = 'Export USD';
+  if (_uiState.isExporting) {
+    buttonText = 'Exporting USD...';
+  } else if (_uiState.isDirty) {
+    buttonText = 'Save XML first';
+  } else if (_uiState.isaacReady !== true) {
+    buttonText = 'Isaac Sim 启动中...';
+  }
+
+  exportButton.disabled = disabled;
+  exportButton.textContent = buttonText;
+  exportButton.title = _uiState.isaacReady === true ? '' : (_uiState.isaacStatus || 'Isaac Sim 启动中...');
+  renderExportStatus();
+}
+
+function updateSaveButtonState() {
+  var saveButton = document.getElementById('save-xml-button');
+
+  if (saveButton) {
+    saveButton.disabled = (
+      _uiState.saveStatus === 'Saving...' ||
+      !assetName ||
+      _draftManifest === null ||
+      hasUncommittedActiveJointEdit()
+    );
+  }
+  updateExportButtonState();
+  renderMergeEditorCard();
+}
+
+function markDraftDirty() {
+  _uiState.isDirty = true;
+  setSaveStatus('Dirty');
+}
+
+function numericArraysAlmostEqual(left, right, epsilon) {
+  if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+    return false;
+  }
+  for (var i = 0; i < left.length; i++) {
+    if (typeof left[i] !== 'number' || typeof right[i] !== 'number') {
+      return false;
+    }
+    if (Math.abs(left[i] - right[i]) > epsilon) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function hasUncommittedActiveJointEdit() {
+  if (_uiState.activeJointName === null || _uiState.activeJointEditMode === null) {
+    return false;
+  }
+  var joint = getDraftJointByName(_uiState.activeJointName);
+  if (joint === null) {
+    return false;
+  }
+  return (
+    _uiState.activeJointTempType !== joint.type ||
+    !numericArraysAlmostEqual(_uiState.activeJointTempRange, joint.range, 1e-9) ||
+    !numericArraysAlmostEqual(_uiState.activeJointTempAnchor, joint.anchor, 1e-9) ||
+    !numericArraysAlmostEqual(_uiState.activeJointTempAxis, joint.axis, 1e-9)
+  );
+}
+
+function requireDraftManifest() {
+  if (_draftManifest === null || typeof _draftManifest !== 'object') {
+    throw new Error('Draft manifest is not initialized');
+  }
+  return _draftManifest;
+}
+
+function getDraftRootBodyName() {
+  var draftManifest = requireDraftManifest();
+  if (!Array.isArray(draftManifest.bodies)) {
+    throw new Error('Draft manifest bodies are not initialized');
+  }
+  var rootBodies = draftManifest.bodies.filter(function(body) {
+    return body.parent === null || body.parent === '' || body.parent === 'world';
+  });
+  if (rootBodies.length !== 1) {
+    throw new Error('Draft manifest must contain exactly one root body');
+  }
+  return rootBodies[0].name;
+}
+
+function buildSavePayload() {
+  var draftManifest = requireDraftManifest();
+  if (typeof draftManifest.xml_path !== 'string' || draftManifest.xml_path.length === 0) {
+    throw new Error('Draft manifest xml_path must be a non-empty string');
+  }
+  if (!Array.isArray(draftManifest.bodies)) {
+    throw new Error('Draft manifest bodies are not initialized');
+  }
+  if (!Array.isArray(draftManifest.joints)) {
+    throw new Error('Draft manifest joints are not initialized');
+  }
+
+  var rootBodyName = getDraftRootBodyName();
+  var jointIdsByBody = Object.create(null);
+  draftManifest.joints.forEach(function(joint) {
+    if (typeof joint.body !== 'string' || joint.body.length === 0) {
+      throw new Error('Draft joint body must be a non-empty string');
+    }
+    if (!Object.prototype.hasOwnProperty.call(jointIdsByBody, joint.body)) {
+      jointIdsByBody[joint.body] = [];
+    }
+    jointIdsByBody[joint.body].push(joint.name);
+  });
+
+  return {
+    xml_path: draftManifest.xml_path,
+    scene_graph: {
+      root_body: rootBodyName,
+      bodies: draftManifest.bodies.map(function(body) {
+        if (typeof body.id !== 'string' || body.id.length === 0) {
+          throw new Error('Draft body id must be a non-empty string');
+        }
+        if (typeof body.name !== 'string' || body.name.length === 0) {
+          throw new Error('Draft body name must be a non-empty string');
+        }
+        if (!Array.isArray(body.pos) || body.pos.length !== 3) {
+          throw new Error('Draft body ' + body.name + ' pos must be a length-3 array');
+        }
+        if (!Array.isArray(body.quat) || body.quat.length !== 4) {
+          throw new Error('Draft body ' + body.name + ' quat must be a length-4 array');
+        }
+        if (!Array.isArray(body.visual_geoms)) {
+          throw new Error('Draft body ' + body.name + ' visual_geoms must be an array');
+        }
+        if (!Array.isArray(body.collision_geoms)) {
+          throw new Error('Draft body ' + body.name + ' collision_geoms must be an array');
+        }
+        return {
+          id: body.id,
+          name: body.name,
+          parent: (body.parent === '' || body.parent === 'world') ? null : body.parent,
+          pos: deepCloneJson(body.pos),
+          quat: deepCloneJson(body.quat),
+          visual_geoms: deepCloneJson(body.visual_geoms),
+          collision_geoms: deepCloneJson(body.collision_geoms),
+          joint_ids: Object.prototype.hasOwnProperty.call(jointIdsByBody, body.name) ? jointIdsByBody[body.name].slice() : [],
+          merged_from: Array.isArray(body.merged_from) ? deepCloneJson(body.merged_from) : []
+        };
+      }),
+      joints: draftManifest.joints.map(function(joint) {
+        if (typeof joint.name !== 'string' || joint.name.length === 0) {
+          throw new Error('Draft joint name must be a non-empty string');
+        }
+        return {
+          id: typeof joint.id === 'string' && joint.id.length > 0 ? joint.id : joint.name,
+          name: joint.name,
+          body: joint.body,
+          type: joint.type,
+          anchor: deepCloneJson(joint.anchor),
+          axis: deepCloneJson(joint.axis),
+          range: deepCloneJson(joint.range),
+          default: joint.default,
+          order: joint.order
+        };
+      })
+    }
+  };
+}
+
+function handleSaveXml() {
+  if (!assetName) {
+    throw new Error('Select an asset before saving XML');
+  }
+  requireDraftManifest();
+  if (hasUncommittedActiveJointEdit()) {
+    throw new Error('Apply or stop the active temporary joint edit before saving XML');
+  }
+  hideError();
+  setSaveStatus('Saving...');
+
+  return fetch('/api/assets/' + encodeURIComponent(assetName) + '/save-xml', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(buildSavePayload())
+  })
+    .then(function(response) {
+      return response.json().then(function(body) {
+        return {
+          ok: response.ok,
+          body: body
+        };
+      });
+    })
+    .then(function(result) {
+      if (result.body && result.body.status === 'ok') {
+        if (result.body.manifest === null || typeof result.body.manifest !== 'object') {
+          throw new Error('Save response is missing manifest');
+        }
+        return loadManifestIntoDraftAndBuildScene(result.body.manifest, {
+          preserveCamera: true,
+          preserveSelection: true
+        }).then(function() {
+          _uiState.isDirty = false;
+          setSaveStatus('Saved');
+        });
+      }
+
+      setSaveStatus('Save failed');
+      showError('Save failed: ' + String(result.body && result.body.message ? result.body.message : 'Unknown save error'));
+    })
+    .catch(function(err) {
+      setSaveStatus('Save failed');
+      showError('Save failed: ' + String(err && err.message ? err.message : err));
+    });
+}
+
+function clearIsaacStatusPollTimer() {
+  if (_uiState.isaacStatusPollTimerId !== null) {
+    window.clearTimeout(_uiState.isaacStatusPollTimerId);
+    _uiState.isaacStatusPollTimerId = null;
+  }
+}
+
+function scheduleIsaacStatusPoll(delayMs) {
+  clearIsaacStatusPollTimer();
+  if (_uiState.isaacReady === true) {
+    return;
+  }
+  _uiState.isaacStatusPollTimerId = window.setTimeout(function() {
+    _uiState.isaacStatusPollTimerId = null;
+    pollIsaacStatus();
+  }, delayMs);
+}
+
+function setIsaacStatusState(ready, message) {
+  _uiState.isaacReady = ready === true;
+  _uiState.isaacStatus = _uiState.isaacReady === true
+    ? ''
+    : (typeof message === 'string' && message.length > 0 ? message : 'Isaac Sim 启动中...');
+  if (_uiState.isaacReady === true) {
+    clearIsaacStatusPollTimer();
+  }
+  updateExportButtonState();
+}
+
+function pollIsaacStatus() {
+  fetch('/api/isaac-status')
+    .then(function(response) {
+      return response.json().then(function(body) {
+        return {
+          ok: response.ok,
+          body: body
+        };
+      });
+    })
+    .then(function(result) {
+      if (result.body && result.body.ready === true) {
+        setIsaacStatusState(true, '');
+        return;
+      }
+      setIsaacStatusState(false, result.body && result.body.message ? String(result.body.message) : 'Isaac Sim 启动中...');
+      scheduleIsaacStatusPoll(2000);
+    })
+    .catch(function(err) {
+      setIsaacStatusState(false, String(err && err.message ? err.message : err));
+      scheduleIsaacStatusPoll(2000);
+    });
+}
+
+function handleExportUsd() {
+  if (!assetName) {
+    throw new Error('Select an asset before exporting USD');
+  }
+  requireDraftManifest();
+  if (_uiState.isDirty) {
+    throw new Error('Save XML before exporting USD');
+  }
+  if (_uiState.saveStatus === 'Saving...') {
+    throw new Error('Wait for XML save to finish before exporting USD');
+  }
+  if (hasUncommittedActiveJointEdit()) {
+    throw new Error('Apply or stop the active temporary joint edit before exporting USD');
+  }
+  if (_uiState.isaacReady !== true) {
+    throw new Error('Isaac Sim is still starting');
+  }
+  if (_uiState.isExporting) {
+    return;
+  }
+
+  hideError();
+  _uiState.isExporting = true;
+  setExportStatus('', false);
+  updateExportButtonState();
+
+  return fetch('/api/assets/' + encodeURIComponent(assetName) + '/export-usd', {
+    method: 'POST'
+  })
+    .then(function(response) {
+      return response.json().then(function(body) {
+        return {
+          ok: response.ok,
+          statusCode: response.status,
+          body: body
+        };
+      });
+    })
+    .then(function(result) {
+      if (result.ok && result.body && result.body.status === 'ok') {
+        setExportStatus('Exported: ' + String(result.body.output_path).split('/').pop(), false);
+        return;
+      }
+
+      if (result.statusCode === 503) {
+        setIsaacStatusState(false, result.body && result.body.message ? String(result.body.message) : 'Isaac Sim 启动中...');
+        scheduleIsaacStatusPoll(0);
+      }
+
+      setExportStatus('Export failed', true);
+      showError('Export failed: ' + String(result.body && result.body.message ? result.body.message : 'Unknown export error'));
+    })
+    .catch(function(err) {
+      setExportStatus('Export failed', true);
+      showError('Export failed: ' + String(err && err.message ? err.message : err));
+    })
+    .then(function() {
+      _uiState.isExporting = false;
+      updateExportButtonState();
+    });
+}
+
+function rebuildFromDraft(options) {
+  if (_draftManifest === null) {
+    throw new Error('Draft manifest is not initialized');
+  }
+  var preserveCamera = options && options.preserveCamera === true;
+  var preserveSelection = options && options.preserveSelection === true;
+  var selectedBodyName = null;
+  if (options && Object.prototype.hasOwnProperty.call(options, 'selectedBodyName')) {
+    selectedBodyName = options.selectedBodyName;
+  } else if (preserveSelection) {
+    selectedBodyName = _selectedBodyName;
+  }
+  var cameraState = preserveCamera ? captureCameraState() : null;
+
+  stopTransformEditing();
+  return buildScene(deepCloneJson(_draftManifest)).then(function() {
+    if (cameraState !== null) {
+      restoreCameraState(cameraState);
+    }
+    if (selectedBodyName !== null && Object.prototype.hasOwnProperty.call(_mjBodyMap, selectedBodyName)) {
+      setSelectedBody(selectedBodyName);
+      return;
+    }
+    renderJointEditorCard();
+  });
+}
+
+// ============================================================
+// buildScene — port of _buildMjScene with two-layer node model
+// ============================================================
+function buildScene(manifest) {
+  if (manifest === null || typeof manifest !== 'object') {
+    throw new Error('Manifest payload must be an object');
+  }
+  if (!Array.isArray(manifest.bodies)) {
+    throw new Error('Manifest bodies must be an array');
+  }
+  if (!Array.isArray(manifest.joints)) {
+    throw new Error('Manifest joints must be an array');
+  }
+  if (typeof manifest.asset_base_url !== 'string') {
+    throw new Error('Manifest asset_base_url must be a string');
+  }
+
+  var bodies = manifest.bodies;
+  var joints = manifest.joints;
+  var baseUrl = manifest.asset_base_url;
+
+  hideError();
+
+  if (rootGroup) {
+    scene.remove(rootGroup);
+    disposeGroup(rootGroup);
+    rootGroup = null;
+  }
+  resetSceneState();
+
+  if (bodies.length === 0) {
+    showStatus('No body data in manifest');
+    return Promise.resolve();
+  }
+
+  var jointsByBody = Object.create(null);
+  var jointNames = Object.create(null);
+  bodies.forEach(function(body) {
+    validateBodyManifestEntry(body);
+    if (Object.prototype.hasOwnProperty.call(jointsByBody, body.name)) {
+      throw new Error('Duplicate body name in manifest: ' + body.name);
+    }
+    jointsByBody[body.name] = [];
+  });
+
+  joints.forEach(function(joint) {
+    validateJointManifestEntry(joint, jointsByBody);
+    if (Object.prototype.hasOwnProperty.call(jointNames, joint.name)) {
+      throw new Error('Duplicate joint name in manifest: ' + joint.name);
+    }
+    jointNames[joint.name] = true;
+    jointsByBody[joint.body].push(joint);
+  });
+
+  bodies.forEach(function(body) {
+    if (jointsByBody[body.name].length > 1) {
+      throw new Error(
+        'Phase 2 preview currently supports at most one hinge/slide joint per body: ' + body.name
+      );
+    }
+  });
+
+  var loadPromises = bodies.map(function(body) {
+    if (body.mesh_file === null) {
+      return Promise.resolve({
+        name: body.name,
+        primaryMesh: null,
+        extraMeshByFile: Object.create(null)
+      });
+    }
+    return loadBodyPreviewMeshes(body, baseUrl);
+  });
+
+  return Promise.all(loadPromises).then(function(results) {
+    rootGroup = new THREE.Group();
+    rootGroup.name = 'mjcf-root';
+
+    var bodyNodes = Object.create(null);
+    var meshBundleByName = Object.create(null);
+    var helperNodesByJointName = Object.create(null);
+
+    results.forEach(function(result) {
+      meshBundleByName[result.name] = result;
+    });
+
+    bodies.forEach(function(body) {
+      var bodyGroup = new THREE.Group();
+      bodyGroup.name = 'body_' + body.name;
+      bodyGroup.position.copy(readVector3(body.pos, 'Body ' + body.name + ' pos'));
+      bodyGroup.quaternion.copy(readQuaternionWxyz(body.quat, 'Body ' + body.name + ' quat'));
+
+      var helperGroup = new THREE.Group();
+      helperGroup.name = 'helpers_' + body.name;
+      bodyGroup.add(helperGroup);
+
+      var bodyEntry = {
+        bodyGroup: bodyGroup,
+        meshes: [],
+        helperGroup: helperGroup
+      };
+      _mjBodyMap[body.name] = bodyEntry;
+
+      var bodyJoints = jointsByBody[body.name];
+      bodyJoints.forEach(function(joint) {
+        var helperNode = createJointHelperGroup(joint);
+        helperGroup.add(helperNode);
+        helperNodesByJointName[joint.name] = helperNode;
+      });
+
+      var meshBundle = meshBundleByName[body.name];
+      if (!meshBundle) {
+        throw new Error('Missing loaded mesh bundle for body ' + body.name);
+      }
+      var mesh = meshBundle.primaryMesh;
+
+      if (bodyJoints.length === 0) {
+        attachBodyVisualMeshes(body, bodyEntry, bodyGroup, mesh, meshBundle.extraMeshByFile, null, null);
+      }
+
+      if (bodyJoints.length === 1) {
+        var joint = bodyJoints[0];
+        var jointData = getValidatedJointData(joint);
+
+        var jointPivot = new THREE.Group();
+        jointPivot.name = 'pivot_' + joint.name;
+        jointPivot.position.copy(jointData.anchor);
+
+        var jointMeshes = attachBodyVisualMeshes(
+          body,
+          bodyEntry,
+          jointPivot,
+          mesh,
+          meshBundle.extraMeshByFile,
+          joint.type,
+          jointData.anchor
+        );
+
+        bodyGroup.add(jointPivot);
+        _mjJointMap[joint.name] = {
+          node: jointPivot,
+          type: joint.type,
+          axis: jointData.axis.clone(),
+          range: [jointData.range[0], jointData.range[1]],
+          defaultVal: jointData.defaultVal,
+          restPosition: jointPivot.position.clone(),
+          restQuaternion: jointPivot.quaternion.clone(),
+          bodyLocalOriginOffset: getJointedMeshLocalOffset(joint.type, jointData.anchor),
+          bodyName: body.name,
+          helperNode: helperNodesByJointName[joint.name],
+          meshNodes: jointMeshes
+        };
+      }
+
+      bodyNodes[body.name] = bodyGroup;
+    });
+
+    bodies.forEach(function(body) {
+      var node = bodyNodes[body.name];
+      var parentName = body.parent;
+
+      if (parentName === null || parentName === '' || parentName === 'world') {
+        rootGroup.add(node);
+        return;
+      }
+      if (!Object.prototype.hasOwnProperty.call(bodyNodes, parentName)) {
+        throw new Error('Body ' + body.name + ' references unknown parent body: ' + parentName);
+      }
+      bodyNodes[parentName].add(node);
+    });
+
+    rootGroup.updateMatrixWorld(true);
+    buildJointPanel(joints);
+    applyManifestJointDefaults(joints);
+
+    scene.add(rootGroup);
+    applyWorkbenchGlobalOrientationToRoot();
+    autoFrameRootGroup(rootGroup);
+
+    var meshCount = Object.keys(_mjBodyMap).reduce(function(total, bodyName) {
+      return total + _mjBodyMap[bodyName].meshes.length;
+    }, 0);
+    showStatus(assetName + ' — ' + meshCount + ' mesh' + (meshCount !== 1 ? 'es' : '') + ' loaded');
+    updateSelectedBodyLabel();
+  });
+}
+
+function validateBodyManifestEntry(body) {
+  if (body === null || typeof body !== 'object') {
+    throw new Error('Body manifest entry must be an object');
+  }
+  if (typeof body.name !== 'string' || body.name.length === 0) {
+    throw new Error('Body entry is missing a valid name');
+  }
+  if (body.parent !== null && typeof body.parent !== 'string') {
+    throw new Error('Body ' + body.name + ' has invalid parent field');
+  }
+  readVector3(body.pos, 'Body ' + body.name + ' pos');
+  readQuaternionWxyz(body.quat, 'Body ' + body.name + ' quat');
+  if (body.mesh_file !== null && typeof body.mesh_file !== 'string') {
+    throw new Error('Body ' + body.name + ' has invalid mesh_file field');
+  }
+  if (!Array.isArray(body.visual_geoms)) {
+    throw new Error('Body ' + body.name + ' visual_geoms must be an array');
+  }
+  if (!Array.isArray(body.collision_geoms)) {
+    throw new Error('Body ' + body.name + ' collision_geoms must be an array');
+  }
+}
+
+function validateJointManifestEntry(joint, jointsByBody) {
+  if (joint === null || typeof joint !== 'object') {
+    throw new Error('Joint manifest entry must be an object');
+  }
+  if (typeof joint.name !== 'string' || joint.name.length === 0) {
+    throw new Error('Joint entry is missing a valid name');
+  }
+  if (typeof joint.body !== 'string' || joint.body.length === 0) {
+    throw new Error('Joint ' + joint.name + ' is missing a valid body reference');
+  }
+  if (!Object.prototype.hasOwnProperty.call(jointsByBody, joint.body)) {
+    throw new Error('Joint ' + joint.name + ' references unknown body ' + joint.body);
+  }
+  getValidatedJointData(joint);
+}
+
+function getValidatedJointData(joint) {
+  if (joint.type !== 'hinge' && joint.type !== 'slide') {
+    throw new Error('Unsupported joint type in Phase 2 preview: ' + joint.name + ' (' + String(joint.type) + ')');
+  }
+
+  var anchorVec = readVector3(joint.anchor, 'Joint ' + joint.name + ' anchor');
+  var axisVec = readVector3(joint.axis, 'Joint ' + joint.name + ' axis');
+  if (axisVec.lengthSq() === 0) {
+    throw new Error('Joint ' + joint.name + ' axis must have non-zero length');
+  }
+  axisVec.normalize();
+
+  var range = readRangePair(joint.range, 'Joint ' + joint.name + ' range');
+  var defaultVal = readFiniteNumber(joint.default, 'Joint ' + joint.name + ' default');
+  if (defaultVal < range[0] || defaultVal > range[1]) {
+    throw new Error('Joint ' + joint.name + ' default must lie within its range');
+  }
+
+  return {
+    anchor: anchorVec,
+    axis: axisVec,
+    range: range,
+    defaultVal: defaultVal
+  };
+}
+
+function getJointedMeshLocalOffset(jointType, anchorVec) {
+  if (jointType === null) {
+    return new THREE.Vector3(0, 0, 0);
+  }
+  if (jointType === 'hinge' || jointType === 'slide') {
+    return anchorVec.clone().multiplyScalar(-1);
+  }
+  throw new Error('Unsupported jointed mesh offset type: ' + String(jointType));
+}
+
+function readVector3(value, label) {
+  if (!Array.isArray(value)) {
+    throw new Error(label + ' must be an array');
+  }
+  if (value.length !== 3) {
+    throw new Error(label + ' must contain exactly 3 values');
+  }
+  return new THREE.Vector3(
+    readFiniteNumber(value[0], label + '[0]'),
+    readFiniteNumber(value[1], label + '[1]'),
+    readFiniteNumber(value[2], label + '[2]')
+  );
+}
+
+function readRangePair(value, label) {
+  if (!Array.isArray(value)) {
+    throw new Error(label + ' must be an array');
+  }
+  if (value.length !== 2) {
+    throw new Error(label + ' must contain exactly 2 values');
+  }
+  var minValue = readFiniteNumber(value[0], label + '[0]');
+  var maxValue = readFiniteNumber(value[1], label + '[1]');
+  if (minValue > maxValue) {
+    throw new Error(label + ' must satisfy min <= max');
+  }
+  return [minValue, maxValue];
+}
+
+function readFiniteNumber(value, label) {
+  if (typeof value !== 'number' || Number.isFinite(value) === false) {
+    throw new Error(label + ' must be a finite number');
+  }
+  return value;
+}
+
+function loadBodyMesh(body, baseUrl) {
+  return loadMeshTemplate(body.mesh_file, 'body ' + body.name, baseUrl).then(function(mesh) {
+    return { name: body.name, mesh: mesh };
+  });
+}
+
+function loadMeshTemplate(meshFile, label, baseUrl) {
+  if (typeof meshFile !== 'string' || meshFile.length === 0) {
+    throw new Error(label + ' mesh_file must be a non-empty string');
+  }
+  var normalizedMeshFile = normalizeAssetPath(baseUrl, meshFile);
+  var url = buildAssetUrl(baseUrl, meshFile);
+  var meshName = normalizedMeshFile.replace(/\.obj$/i, '');
+  var texUrl = buildAssetUrl(baseUrl, meshName + '_albedo.png');
+
+  return new Promise(function(resolve, reject) {
+    var loader = new THREE.OBJLoader();
+    loader.load(url, function(obj) {
+      var geoms = [];
+      obj.traverse(function(child) {
+        if (child.isMesh && child.geometry) {
+          geoms.push(child.geometry);
+        }
+      });
+      if (geoms.length === 0) {
+        reject(new Error('OBJ file contains no mesh geometry for ' + label + ': ' + url));
+        return;
+      }
+
+      var merged = geoms.length === 1 ? geoms[0] : THREE.BufferGeometryUtils.mergeBufferGeometries(geoms);
+      if (merged === null) {
+        reject(new Error('Failed to merge OBJ geometries for ' + label + ': ' + url));
+        return;
+      }
+      merged.computeBoundingBox();
+      merged.computeBoundingSphere();
+
+      var texLoader = new THREE.TextureLoader();
+      texLoader.load(texUrl, function(texture) {
+        texture.flipY = true;
+        var material = new THREE.MeshStandardMaterial({
+          map: texture,
+          roughness: 0.6,
+          metalness: 0.1
+        });
+        forceOpaquePreviewMaterial(material);
+        resolve(new THREE.Mesh(merged, material));
+      }, undefined, function() {
+        resolve(new THREE.Mesh(merged, createFallbackMeshMaterial(label)));
+      });
+    }, undefined, function() {
+      reject(new Error('Failed to load OBJ for ' + label + ': ' + url));
+    });
+  });
+}
+
+function normalizeAssetPath(baseUrl, assetPath) {
+  var path = String(assetPath || '').replace(/^\.\/+/, '');
+  if (/^(?:https?:)?\/\//i.test(path) || path.charAt(0) === '/') {
+    return path;
+  }
+  if (/\/assets\/?$/.test(String(baseUrl || '')) && path.indexOf('assets/') === 0) {
+    return path.slice('assets/'.length);
+  }
+  return path;
+}
+
+function buildAssetUrl(baseUrl, assetPath) {
+  var path = normalizeAssetPath(baseUrl, assetPath);
+  if (/^(?:https?:)?\/\//i.test(path) || path.charAt(0) === '/') {
+    return path;
+  }
+  return String(baseUrl || '').replace(/\/+$/, '') + '/' + path.replace(/^\/+/, '');
+}
+
+function createFallbackMeshMaterial(label) {
+  var hue = Math.abs(hashString(label || 'mesh')) % 360;
+  var color = new THREE.Color('hsl(' + hue + ', 42%, 64%)');
+  var material = new THREE.MeshStandardMaterial({
+    color: color,
+    roughness: 0.72,
+    metalness: 0.06
+  });
+  forceOpaquePreviewMaterial(material);
+  return material;
+}
+
+function forceOpaquePreviewMaterial(material) {
+  material.transparent = false;
+  material.opacity = 1.0;
+  material.depthWrite = true;
+  material.depthTest = true;
+  material.alphaTest = 0.0;
+  material.side = THREE.DoubleSide;
+  material.needsUpdate = true;
+}
+
+function hashString(value) {
+  var hash = 0;
+  for (var i = 0; i < value.length; i++) {
+    hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+  }
+  return hash;
+}
+
+function createJointHelperGroup(joint) {
+  var jointData = getValidatedJointData(joint);
+  var helperGroup = new THREE.Group();
+  helperGroup.name = 'joint_helper_' + joint.name;
+
+  var anchorSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.005, 16, 12),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false })
+  );
+  anchorSphere.position.copy(jointData.anchor);
+  anchorSphere.renderOrder = 999;
+  helperGroup.add(anchorSphere);
+
+  var axisArrow = new THREE.ArrowHelper(
+    jointData.axis.clone(),
+    jointData.anchor.clone(),
+    0.06,
+    0x33cc66,
+    0.012,
+    0.008
+  );
+  helperGroup.add(axisArrow);
+
+  if (joint.type === 'hinge') {
+    helperGroup.add(createHingeRangeArc(joint.name, jointData.anchor, jointData.axis, jointData.range));
+    return helperGroup;
+  }
+  if (joint.type === 'slide') {
+    helperGroup.add(createSlideRangeRail(joint.name, jointData.anchor, jointData.axis, jointData.range));
+    return helperGroup;
+  }
+
+  throw new Error('Unsupported joint helper type: ' + joint.name + ' (' + String(joint.type) + ')');
+}
+
+function createHingeRangeArc(jointName, anchorVec, axisVec, range) {
+  var basis = buildPerpendicularBasis(axisVec, jointName);
+  var points = [];
+  var radius = 0.04;
+  var segmentCount = 48;
+
+  for (var i = 0; i <= segmentCount; i++) {
+    var alpha = i / segmentCount;
+    var angle = range[0] + (range[1] - range[0]) * alpha;
+    var point = anchorVec.clone()
+      .add(basis.tangent.clone().multiplyScalar(Math.cos(angle) * radius))
+      .add(basis.bitangent.clone().multiplyScalar(Math.sin(angle) * radius));
+    points.push(point);
+  }
+
+  // range arc
+  var hingeArcGeometry = new THREE.BufferGeometry().setFromPoints(points);
+  var hingeArc = new THREE.Line(
+    hingeArcGeometry,
+    new THREE.LineBasicMaterial({ color: 0x33cc66, transparent: true, opacity: 0.95 })
+  );
+  hingeArc.name = 'hingeArc_' + jointName;
+  return hingeArc;
+}
+
+function createSlideRangeRail(jointName, anchorVec, axisVec, range) {
+  var startPoint = anchorVec.clone().addScaledVector(axisVec, range[0]);
+  var endPoint = anchorVec.clone().addScaledVector(axisVec, range[1]);
+  var slideRailGroup = new THREE.Group();
+  slideRailGroup.name = 'slideRail_' + jointName;
+
+  // range rail
+  var slideRailGeometry = new THREE.BufferGeometry().setFromPoints([startPoint, endPoint]);
+  var slideRail = new THREE.Line(
+    slideRailGeometry,
+    new THREE.LineBasicMaterial({ color: 0x33cc66, transparent: true, opacity: 0.95 })
+  );
+  slideRail.name = 'slideRailLine_' + jointName;
+  slideRailGroup.add(slideRail);
+
+  var minMarker = new THREE.Mesh(
+    new THREE.SphereGeometry(0.004, 16, 12),
+    new THREE.MeshBasicMaterial({ color: 0xff6b4a, depthTest: false })
+  );
+  minMarker.position.copy(startPoint);
+  minMarker.renderOrder = 998;
+  slideRailGroup.add(minMarker);
+
+  var maxMarker = new THREE.Mesh(
+    new THREE.SphereGeometry(0.004, 16, 12),
+    new THREE.MeshBasicMaterial({ color: 0x4fb3ff, depthTest: false })
+  );
+  maxMarker.position.copy(endPoint);
+  maxMarker.renderOrder = 998;
+  slideRailGroup.add(maxMarker);
+
+  return slideRailGroup;
+}
+
+function buildPerpendicularBasis(axisVec, jointName) {
+  var referenceVec = Math.abs(axisVec.z) < 0.9
+    ? new THREE.Vector3(0, 0, 1)
+    : new THREE.Vector3(1, 0, 0);
+  var tangentVec = new THREE.Vector3().crossVectors(axisVec, referenceVec);
+  if (tangentVec.lengthSq() === 0) {
+    throw new Error('Failed to build hinge arc basis for joint ' + jointName);
+  }
+  tangentVec.normalize();
+  var bitangentVec = new THREE.Vector3().crossVectors(axisVec, tangentVec);
+  bitangentVec.normalize();
+  return {
+    tangent: tangentVec,
+    bitangent: bitangentVec
+  };
+}
+
+function getBodyVisualGeoms(body) {
+  if (!Array.isArray(body.visual_geoms)) {
+    throw new Error('Body ' + body.name + ' is missing visual_geoms');
+  }
+  return body.visual_geoms;
+}
+
+function validateVisualGeomEntry(bodyName, geom, index) {
+  if (geom === null || typeof geom !== 'object') {
+    throw new Error('Body ' + bodyName + ' visual_geoms[' + index + '] must be an object');
+  }
+  if (typeof geom.name !== 'string' || geom.name.length === 0) {
+    throw new Error('Body ' + bodyName + ' visual_geoms[' + index + '] is missing a valid name');
+  }
+  if (typeof geom.mesh_file !== 'string' || geom.mesh_file.length === 0) {
+    throw new Error('Geom ' + geom.name + ' is missing mesh_file');
+  }
+  readVector3(geom.pos, 'Geom ' + geom.name + ' pos');
+  readQuaternionWxyz(geom.quat, 'Geom ' + geom.name + ' quat');
+  readVector3(geom.mesh_pos, 'Geom ' + geom.name + ' mesh_pos');
+  readQuaternionWxyz(geom.mesh_quat, 'Geom ' + geom.name + ' mesh_quat');
+}
+
+function clonePreviewMesh(templateMesh, bodyName, geomName) {
+  var clone = templateMesh.clone();
+  clone.name = 'mesh_' + bodyName + '_' + geomName;
+  return clone;
+}
+
+function loadBodyPreviewMeshes(body, baseUrl) {
+  if (body.mesh_file === null) {
+    return Promise.resolve({
+      name: body.name,
+      primaryMesh: null,
+      extraMeshByFile: Object.create(null)
+    });
+  }
+  if (typeof body.mesh_file !== 'string' || body.mesh_file.length === 0) {
+    throw new Error('Body ' + body.name + ' has invalid mesh_file');
+  }
+
+  var primaryPromise = loadMeshTemplate(body.mesh_file, 'body ' + body.name, baseUrl);
+  var extraFiles = [];
+  getBodyVisualGeoms(body).forEach(function(geom, index) {
+    validateVisualGeomEntry(body.name, geom, index);
+    if (geom.mesh_file !== body.mesh_file && extraFiles.indexOf(geom.mesh_file) === -1) {
+      extraFiles.push(geom.mesh_file);
+    }
+  });
+
+  var extraPromises = extraFiles.map(function(meshFile) {
+    return loadMeshTemplate(meshFile, 'geom template ' + meshFile + ' for body ' + body.name, baseUrl).then(function(mesh) {
+      return {
+        meshFile: meshFile,
+        mesh: mesh
+      };
+    });
+  });
+
+  return Promise.all([primaryPromise].concat(extraPromises)).then(function(entries) {
+    var primaryMesh = entries[0];
+    primaryMesh.name = 'mesh_' + body.name;
+    var extraMeshByFile = Object.create(null);
+    for (var i = 1; i < entries.length; i++) {
+      extraMeshByFile[entries[i].meshFile] = entries[i].mesh;
+    }
+    return {
+      name: body.name,
+      primaryMesh: primaryMesh,
+      extraMeshByFile: extraMeshByFile
+    };
+  });
+}
+
+function positionBodyVisualMesh(mesh, geom, jointType, jointAnchor) {
+  applyPreviewMeshLocalPose(mesh, jointType, jointAnchor);
+}
+
+function applyPreviewMeshLocalPose(mesh, jointType, jointAnchor) {
+  mesh.position.copy(getJointedMeshLocalOffset(jointType, jointAnchor));
+  mesh.quaternion.identity();
+}
+
+function attachBodyVisualMeshes(body, bodyEntry, parentNode, primaryMesh, extraMeshByFile, jointType, jointAnchor) {
+  var visualGeoms = getBodyVisualGeoms(body);
+  if (visualGeoms.length === 0) {
+    if (primaryMesh !== null) {
+      throw new Error('Body ' + body.name + ' has body.mesh_file but no visual_geoms');
+    }
+    return [];
+  }
+
+  var attachedMeshes = [];
+  var primaryConsumed = false;
+  visualGeoms.forEach(function(geom, index) {
+    validateVisualGeomEntry(body.name, geom, index);
+    var mesh;
+    if (!primaryConsumed && geom.mesh_file === body.mesh_file) {
+      mesh = primaryMesh;
+      primaryConsumed = true;
+    } else if (geom.mesh_file === body.mesh_file) {
+      if (primaryMesh === null) {
+        throw new Error('Body ' + body.name + ' is missing primary mesh template');
+      }
+      mesh = clonePreviewMesh(primaryMesh, body.name, geom.name);
+    } else {
+      if (!Object.prototype.hasOwnProperty.call(extraMeshByFile, geom.mesh_file)) {
+        throw new Error('Missing mesh template for geom ' + geom.name + ' (' + geom.mesh_file + ')');
+      }
+      mesh = clonePreviewMesh(extraMeshByFile[geom.mesh_file], body.name, geom.name);
+    }
+    positionBodyVisualMesh(mesh, geom, jointType, jointAnchor);
+    attachMeshToBody(mesh, body.name, parentNode, bodyEntry);
+    attachedMeshes.push(mesh);
+  });
+
+  if (primaryMesh !== null && primaryConsumed === false) {
+    throw new Error('Primary mesh for body ' + body.name + ' was not used by visual_geoms');
+  }
+
+  return attachedMeshes;
+}
+
+function attachMeshToBody(mesh, bodyName, parentNode, bodyEntry) {
+  ensureOwnedMeshMaterials(mesh);
+  mesh.userData.materialState = captureMeshMaterialState(mesh, bodyName);
+  parentNode.add(mesh);
+  bodyEntry.meshes.push(mesh);
+}
+
+function ensureOwnedMeshMaterials(mesh) {
+  var materials = getMeshMaterials(mesh);
+  var ownedMaterials = materials.map(function(material, index) {
+    if (material === null || material.isMaterial !== true) {
+      throw new Error('Mesh material is invalid for body ' + mesh.name + ' at index ' + index);
+    }
+    if (Object.prototype.hasOwnProperty.call(_materialOwnerIds, material.uuid)) {
+      var clonedMaterial = material.clone();
+      _materialOwnerIds[clonedMaterial.uuid] = mesh.uuid + ':' + index;
+      return clonedMaterial;
+    }
+    _materialOwnerIds[material.uuid] = mesh.uuid + ':' + index;
+    return material;
+  });
+  mesh.material = Array.isArray(mesh.material) ? ownedMaterials : ownedMaterials[0];
+}
+
+function captureMeshMaterialState(mesh, bodyName) {
+  return getMeshMaterials(mesh).map(function(material, index) {
+    if (material.emissive === undefined || typeof material.emissiveIntensity !== 'number') {
+      throw new Error('Mesh material does not support emissive highlight for body ' + bodyName + ' at index ' + index);
+    }
+    return {
+      emissive: material.emissive.clone(),
+      emissiveIntensity: material.emissiveIntensity
+    };
+  });
+}
+
+function getMeshMaterials(mesh) {
+  if (Array.isArray(mesh.material)) {
+    if (mesh.material.length === 0) {
+      throw new Error('Mesh ' + mesh.name + ' has no materials');
+    }
+    return mesh.material;
+  }
+  if (!mesh.material) {
+    throw new Error('Mesh ' + mesh.name + ' has no material');
+  }
+  return [mesh.material];
+}
+
+function setSelectedBody(bodyName) {
+  if (bodyName !== null && !Object.prototype.hasOwnProperty.call(_mjBodyMap, bodyName)) {
+    throw new Error('Unknown body selection: ' + bodyName);
+  }
+  if (_selectedBodyName === bodyName) {
+    updateSelectedBodyLabel();
+    updateJointBodyListSelection();
+    renderJointEditorCard();
+    renderMergeEditorCard();
+    return;
+  }
+
+  if (_selectedBodyName !== null) {
+    applyBodyHighlight(_selectedBodyName, false);
+  }
+  if (_selectedBodyName !== bodyName) {
+    stopTransformEditing();
+  }
+
+  _selectedBodyName = bodyName;
+
+  if (_selectedBodyName !== null) {
+    applyBodyHighlight(_selectedBodyName, true);
+  }
+
+  updateSelectedBodyLabel();
+  updateJointBodyListSelection();
+  renderJointEditorCard();
+  renderMergeEditorCard();
+}
+
+function applyBodyHighlight(bodyName, isSelected) {
+  var bodyEntry = _mjBodyMap[bodyName];
+  if (!bodyEntry) {
+    throw new Error('Cannot highlight unknown body ' + bodyName);
+  }
+
+  bodyEntry.meshes.forEach(function(mesh) {
+    var materials = getMeshMaterials(mesh);
+    var states = mesh.userData.materialState;
+    if (!Array.isArray(states) || states.length !== materials.length) {
+      throw new Error('Material state mismatch for body ' + bodyName);
+    }
+
+    materials.forEach(function(material, index) {
+      var originalState = states[index];
+      if (isSelected) {
+        material.emissive.copy(_selectionEmissiveColor);
+        material.emissiveIntensity = 0.7;
+        return;
+      }
+      material.emissive.copy(originalState.emissive);
+      material.emissiveIntensity = originalState.emissiveIntensity;
+    });
+  });
+}
+
+function updateSelectedBodyLabel() {
+  var selectedText = _selectedBodyName === null ? 'none' : _selectedBodyName;
+  document.getElementById('selected-body-text').textContent = 'Selected: ' + selectedText;
+}
+
+function buildJointPanel(manifestJoints) {
+  if (!Array.isArray(manifestJoints)) {
+    throw new Error('Joint panel requires manifest.joints to be an array');
+  }
+
+  var panel = document.getElementById('joint-panel');
+  var panelBody = document.getElementById('joint-panel-body');
+  panelBody.innerHTML = '';
+  _jointSliderMap = Object.create(null);
+  _jointBodyListItemMap = Object.create(null);
+
+  var fragment = document.createDocumentFragment();
+  var bodySection = document.createElement('div');
+  bodySection.className = 'panel-section';
+
+  var bodySectionTitle = document.createElement('div');
+  bodySectionTitle.className = 'panel-section-title';
+  bodySectionTitle.textContent = 'Bodies';
+  bodySection.appendChild(bodySectionTitle);
+
+  var bodyList = document.createElement('div');
+  bodyList.id = 'joint-body-list';
+
+  normalizeMergeSelection();
+  getJointPanelBodies().forEach(function(body) {
+    if (!Object.prototype.hasOwnProperty.call(_mjBodyMap, body.name)) {
+      throw new Error('Joint panel cannot find body metadata for ' + body.name);
+    }
+
+    var bodyRow = document.createElement('div');
+    bodyRow.className = 'joint-body-row';
+
+    var mergeToggle = document.createElement('input');
+    mergeToggle.type = 'checkbox';
+    mergeToggle.className = 'joint-body-merge-toggle';
+    mergeToggle.checked = _uiState.mergeSelection.has(body.name);
+    mergeToggle.title = 'Select ' + body.name + ' for merge';
+    mergeToggle.addEventListener('click', function(event) {
+      event.stopPropagation();
+    });
+    mergeToggle.addEventListener('change', function(event) {
+      try {
+        handleMergeSelectionToggle(body.name, event.currentTarget.checked);
+      } catch (err) {
+        showError(String(err && err.message ? err.message : err));
+      }
+    });
+    bodyRow.appendChild(mergeToggle);
+
+    var bodyButton = document.createElement('button');
+    bodyButton.type = 'button';
+    bodyButton.className = 'joint-body-button';
+    bodyButton.dataset.body = body.name;
+    bodyButton.addEventListener('click', handleJointBodyListClick);
+
+    var bodyNameLabel = document.createElement('div');
+    bodyNameLabel.className = 'joint-body-name';
+    bodyNameLabel.textContent = body.name;
+    bodyButton.appendChild(bodyNameLabel);
+
+    var bodyMetaLabel = document.createElement('div');
+    bodyMetaLabel.className = 'joint-body-meta';
+    bodyMetaLabel.textContent = getBodyJointMetaText(body.name);
+    bodyButton.appendChild(bodyMetaLabel);
+
+    _jointBodyListItemMap[body.name] = bodyButton;
+    bodyRow.appendChild(bodyButton);
+    bodyList.appendChild(bodyRow);
+  });
+
+  bodySection.appendChild(bodyList);
+  fragment.appendChild(bodySection);
+
+  var sliderSection = document.createElement('div');
+  sliderSection.className = 'panel-section';
+
+  var sliderSectionTitle = document.createElement('div');
+  sliderSectionTitle.className = 'panel-section-title';
+  sliderSectionTitle.textContent = 'Joint Controls';
+  sliderSection.appendChild(sliderSectionTitle);
+
+  if (manifestJoints.length === 0) {
+    var sliderEmptyState = document.createElement('div');
+    sliderEmptyState.id = 'joint-panel-empty';
+    sliderEmptyState.textContent = 'No previewable hinge or slide joints were found in this manifest.';
+    sliderSection.appendChild(sliderEmptyState);
+  } else {
+    manifestJoints.forEach(function(joint) {
+      var jointData = getValidatedJointData(joint);
+      if (!Object.prototype.hasOwnProperty.call(_mjJointMap, joint.name)) {
+        throw new Error('Joint panel cannot find preview metadata for joint ' + joint.name);
+      }
+
+      var row = document.createElement('div');
+      row.className = 'joint-slider-row';
+
+      var topRow = document.createElement('div');
+      topRow.className = 'joint-slider-top';
+
+      var titleWrap = document.createElement('div');
+      titleWrap.className = 'joint-slider-title';
+
+      var nameLabel = document.createElement('div');
+      nameLabel.className = 'joint-slider-name';
+      nameLabel.textContent = joint.name;
+      titleWrap.appendChild(nameLabel);
+
+      var typeBadge = document.createElement('span');
+      typeBadge.className = 'joint-type-badge ' + joint.type;
+      typeBadge.textContent = joint.type;
+      titleWrap.appendChild(typeBadge);
+
+      var valueLabel = document.createElement('div');
+      valueLabel.className = 'joint-slider-value';
+
+      topRow.appendChild(titleWrap);
+      topRow.appendChild(valueLabel);
+      row.appendChild(topRow);
+
+      var rangeLabel = document.createElement('div');
+      rangeLabel.className = 'joint-slider-range';
+      rangeLabel.textContent = formatJointRangeLabel(joint.type, jointData.range[0], jointData.range[1]);
+      row.appendChild(rangeLabel);
+
+      var slider = document.createElement('input');
+      slider.type = 'range';
+      slider.className = 'joint-slider';
+      slider.min = String(joint.range[0]);
+      slider.max = String(joint.range[1]);
+      slider.value = String(joint.default);
+      slider.step = joint.type === 'hinge' ? '0.01' : slideSliderStep(joint.range);
+      slider.dataset.joint = joint.name;
+      slider.addEventListener('input', handleJointSliderInput);
+      row.appendChild(slider);
+
+      _jointSliderMap[joint.name] = {
+        input: slider,
+        valueLabel: valueLabel,
+        typeBadge: typeBadge,
+        rangeLabel: rangeLabel
+      };
+
+      updateJointSliderValueLabel(joint.name, jointData.defaultVal);
+      sliderSection.appendChild(row);
+    });
+  }
+
+  fragment.appendChild(sliderSection);
+
+  var editorSection = document.createElement('div');
+  editorSection.className = 'panel-section';
+
+  var editorSectionTitle = document.createElement('div');
+  editorSectionTitle.className = 'panel-section-title';
+  editorSectionTitle.textContent = 'Joint Editor';
+  editorSection.appendChild(editorSectionTitle);
+
+  var editorHost = document.createElement('div');
+  editorHost.id = 'joint-editor-card-host';
+  editorSection.appendChild(editorHost);
+  fragment.appendChild(editorSection);
+
+  var mergeSection = document.createElement('div');
+  mergeSection.className = 'panel-section';
+
+  var mergeSectionTitle = document.createElement('div');
+  mergeSectionTitle.className = 'panel-section-title';
+  mergeSectionTitle.textContent = 'Merge';
+  mergeSection.appendChild(mergeSectionTitle);
+
+  var mergeHost = document.createElement('div');
+  mergeHost.id = 'merge-editor-card-host';
+  mergeSection.appendChild(mergeHost);
+  fragment.appendChild(mergeSection);
+
+  panelBody.appendChild(fragment);
+  panel.hidden = false;
+  updateJointBodyListSelection();
+  renderJointEditorCard();
+  renderMergeEditorCard();
+}
+
+function applyManifestJointDefaults(manifestJoints) {
+  if (!Array.isArray(manifestJoints)) {
+    throw new Error('Joint defaults require manifest.joints to be an array');
+  }
+
+  manifestJoints.forEach(function(joint) {
+    if (!Object.prototype.hasOwnProperty.call(_jointSliderMap, joint.name)) {
+      throw new Error('Missing slider UI for joint ' + joint.name);
+    }
+    _jointSliderMap[joint.name].input.value = String(joint.default);
+    applyJointPreview(joint.name, joint.default);
+    updateJointSliderValueLabel(joint.name, joint.default);
+  });
+}
+
+function handleJointSliderInput(event) {
+  var slider = event.target;
+  var jointName = slider.dataset.joint;
+  if (typeof jointName !== 'string' || jointName.length === 0) {
+    throw new Error('Joint slider is missing a valid joint name');
+  }
+
+  var value = Number(slider.value);
+  if (Number.isFinite(value) === false) {
+    throw new Error('Joint slider value must be finite for joint ' + jointName);
+  }
+
+  applyJointPreview(jointName, value);
+  updateJointSliderValueLabel(jointName, value);
+}
+
+function handleJointBodyListClick(event) {
+  var button = event.currentTarget;
+  if (!button || !button.dataset || typeof button.dataset.body !== 'string' || button.dataset.body.length === 0) {
+    throw new Error('Joint body list item is missing a valid body name');
+  }
+  setSelectedBody(button.dataset.body);
+}
+
+function handleMergeSelectionToggle(bodyName, isSelected) {
+  normalizeMergeSelection();
+  if (isSelected) {
+    _uiState.mergeSelection.add(bodyName);
+  } else {
+    _uiState.mergeSelection.delete(bodyName);
+  }
+  renderMergeEditorCard();
+}
+
+function getJointPanelBodies() {
+  if (_draftManifest !== null && Array.isArray(_draftManifest.bodies)) {
+    return _draftManifest.bodies;
+  }
+  return Object.keys(_mjBodyMap).map(function(bodyName) {
+    return { name: bodyName };
+  });
+}
+
+function getBodyJointMetaText(bodyName) {
+  var joint = getOnlyJointForBody(bodyName);
+  if (joint === null) {
+    return 'no joint';
+  }
+  return joint.name + ' · ' + joint.type;
+}
+
+function getDisplayedJointEditorState(joint) {
+  if (
+    _uiState.activeJointName === joint.name &&
+    _uiState.activeJointEditMode !== null &&
+    typeof _uiState.activeJointTempType === 'string' &&
+    Array.isArray(_uiState.activeJointTempRange)
+  ) {
+    return {
+      type: _uiState.activeJointTempType,
+      range: deepCloneJson(_uiState.activeJointTempRange)
+    };
+  }
+  return {
+    type: joint.type,
+    range: deepCloneJson(joint.range)
+  };
+}
+
+function getDisplayedAnchorEditorState(joint) {
+  if (
+    _uiState.activeJointName === joint.name &&
+    _uiState.activeJointEditMode === 'anchor' &&
+    Array.isArray(_uiState.activeJointTempAnchor)
+  ) {
+    return deepCloneJson(_uiState.activeJointTempAnchor);
+  }
+  return deepCloneJson(joint.anchor);
+}
+
+function getDisplayedAxisEditorState(joint) {
+  if (
+    _uiState.activeJointName === joint.name &&
+    _uiState.activeJointEditMode === 'axis' &&
+    Array.isArray(_uiState.activeJointTempAxis)
+  ) {
+    return deepCloneJson(_uiState.activeJointTempAxis);
+  }
+  return deepCloneJson(joint.axis);
+}
+
+function normalizeMergeSelection() {
+  if (!(_uiState.mergeSelection instanceof Set)) {
+    _uiState.mergeSelection = new Set();
+  }
+  if (_draftManifest === null || !Array.isArray(_draftManifest.bodies)) {
+    _uiState.mergeSelection.clear();
+    return;
+  }
+  var validBodyNames = collectDraftBodyNameSet();
+  Array.from(_uiState.mergeSelection).forEach(function(bodyName) {
+    if (!Object.prototype.hasOwnProperty.call(validBodyNames, bodyName)) {
+      _uiState.mergeSelection.delete(bodyName);
+    }
+  });
+}
+
+function getOrderedMergeSelectionBodies() {
+  normalizeMergeSelection();
+  if (_draftManifest === null || !Array.isArray(_draftManifest.bodies)) {
+    throw new Error('Draft manifest bodies are not initialized');
+  }
+  return _draftManifest.bodies.filter(function(body) {
+    return _uiState.mergeSelection.has(body.name);
+  });
+}
+
+function getDraftJointsForBody(bodyName) {
+  if (_draftManifest === null || !Array.isArray(_draftManifest.joints)) {
+    throw new Error('Draft manifest joints are not initialized');
+  }
+  return _draftManifest.joints.filter(function(joint) {
+    return joint.body === bodyName;
+  });
+}
+
+function getMergeEligibility() {
+  var selectedBodies = getOrderedMergeSelectionBodies();
+  if (selectedBodies.length < 2) {
+    return {
+      ok: false,
+      message: 'Select at least two sibling leaf bodies to merge.',
+      bodies: selectedBodies,
+      selectedJoints: [],
+      retainedJoint: null,
+      discardedJoints: [],
+      commonParent: null
+    };
+  }
+
+  var commonParent = selectedBodies[0].parent;
+  var sourceJoints = [];
+  for (var i = 0; i < selectedBodies.length; i++) {
+    var body = selectedBodies[i];
+    if (!isLeafDraftBody(body.name)) {
+      return {
+        ok: false,
+        message: 'Only leaf bodies can be merged: ' + body.name,
+        bodies: selectedBodies,
+        selectedJoints: [],
+        retainedJoint: null,
+        discardedJoints: [],
+        commonParent: commonParent
+      };
+    }
+    if (body.parent !== commonParent) {
+      return {
+        ok: false,
+        message: 'Merged bodies must share the same parent.',
+        bodies: selectedBodies,
+        selectedJoints: [],
+        retainedJoint: null,
+        discardedJoints: [],
+        commonParent: commonParent
+      };
+    }
+    var bodyJoints = getDraftJointsForBody(body.name);
+    if (bodyJoints.length > 1) {
+      return {
+        ok: false,
+        message: 'Only one joint per selected body is supported: ' + body.name,
+        bodies: selectedBodies,
+        selectedJoints: [],
+        retainedJoint: null,
+        discardedJoints: [],
+        commonParent: commonParent
+      };
+    }
+    if (bodyJoints.length === 1) {
+      sourceJoints.push(bodyJoints[0]);
+    }
+  }
+  var retainedJoint = sourceJoints.length > 0 ? sourceJoints[0] : null;
+  var discardedJoints = retainedJoint === null ? [] : sourceJoints.slice(1);
+
+  return {
+    ok: true,
+    message: retainedJoint === null
+      ? 'Ready to merge ' + selectedBodies.length + ' sibling leaf bodies.'
+      : (
+        'Ready to merge ' + selectedBodies.length + ' sibling leaf bodies. ' +
+        'Retaining joint ' + retainedJoint.name +
+        (discardedJoints.length > 0 ? '; discarding ' + discardedJoints.map(function(joint) { return joint.name; }).join(', ') + '.' : '.')
+      ),
+    bodies: selectedBodies,
+    selectedJoints: sourceJoints,
+    retainedJoint: retainedJoint,
+    discardedJoints: discardedJoints,
+    commonParent: commonParent
+  };
+}
+
+function getMergeTargetCandidates() {
+  normalizeMergeSelection();
+  if (_draftManifest === null || !Array.isArray(_draftManifest.bodies)) {
+    throw new Error('Draft manifest bodies are not initialized');
+  }
+  return _draftManifest.bodies.filter(function(body) {
+    return !_uiState.mergeSelection.has(body.name);
+  });
+}
+
+function getDefaultMergeTargetName(candidates) {
+  if (
+    _selectedBodyName !== null &&
+    !_uiState.mergeSelection.has(_selectedBodyName) &&
+    candidates.some(function(body) { return body.name === _selectedBodyName; })
+  ) {
+    return _selectedBodyName;
+  }
+  return candidates.length > 0 ? candidates[0].name : '';
+}
+
+function getMergeIntoTargetEligibility(targetBodyName) {
+  var selectedBodies = getOrderedMergeSelectionBodies();
+  var targetBody = targetBodyName ? getDraftBodyByName(targetBodyName) : null;
+  if (selectedBodies.length < 1) {
+    return {
+      ok: false,
+      message: 'Select one or more leaf mesh bodies to merge into a target body.',
+      bodies: selectedBodies,
+      targetBody: targetBody
+    };
+  }
+  if (targetBody === null) {
+    return {
+      ok: false,
+      message: 'Choose a target body for the merge.',
+      bodies: selectedBodies,
+      targetBody: targetBody
+    };
+  }
+  if (_uiState.mergeSelection.has(targetBody.name)) {
+    return {
+      ok: false,
+      message: 'Target body cannot also be selected as a source.',
+      bodies: selectedBodies,
+      targetBody: targetBody
+    };
+  }
+  for (var i = 0; i < selectedBodies.length; i++) {
+    var body = selectedBodies[i];
+    if (!isLeafDraftBody(body.name)) {
+      return {
+        ok: false,
+        message: 'Only leaf mesh bodies can be merged into a target: ' + body.name,
+        bodies: selectedBodies,
+        targetBody: targetBody
+      };
+    }
+    if (getDraftJointsForBody(body.name).length > 0) {
+      return {
+        ok: false,
+        message: 'Source body has a joint; delete or move the joint before merging: ' + body.name,
+        bodies: selectedBodies,
+        targetBody: targetBody
+      };
+    }
+  }
+  return {
+    ok: true,
+    message: 'Ready to merge ' + selectedBodies.length + ' mesh body/bodies into ' + targetBody.name + '.',
+    bodies: selectedBodies,
+    targetBody: targetBody
+  };
+}
+
+function renderMergeEditorCard() {
+  var host = document.getElementById('merge-editor-card-host');
+  if (!host) {
+    return;
+  }
+  host.innerHTML = '';
+
+  var card = document.createElement('div');
+  card.className = 'joint-editor-card';
+
+  var selectedBodies = getOrderedMergeSelectionBodies();
+  var eligibility = getMergeEligibility();
+  var targetCandidates = getMergeTargetCandidates();
+  var defaultTargetName = getDefaultMergeTargetName(targetCandidates);
+  var mergeIntoEligibility = getMergeIntoTargetEligibility(defaultTargetName);
+  var hasPendingJointEdit = hasUncommittedActiveJointEdit();
+  var hasMergeSnapshot = _uiState.lastMergeSnapshot !== null;
+
+  var summary = document.createElement('div');
+  summary.className = 'joint-editor-selected';
+  summary.textContent = 'Selected for merge: ' + selectedBodies.length;
+  card.appendChild(summary);
+
+  var names = document.createElement('div');
+  names.className = 'joint-editor-copy';
+  names.textContent = selectedBodies.length === 0
+    ? 'Use the body-list checkboxes to choose sibling leaf bodies.'
+    : selectedBodies.map(function(body) { return body.name; }).join(', ');
+  card.appendChild(names);
+
+  var feedback = document.createElement('div');
+  feedback.className = 'joint-editor-copy';
+  feedback.textContent = hasPendingJointEdit
+    ? 'Apply or stop the active temporary joint edit before merging.'
+    : eligibility.message;
+  card.appendChild(feedback);
+
+  var targetLabel = document.createElement('label');
+  targetLabel.setAttribute('for', 'merge-target-select');
+  targetLabel.textContent = 'Merge into target';
+  card.appendChild(targetLabel);
+
+  var targetSelect = document.createElement('select');
+  targetSelect.id = 'merge-target-select';
+  targetSelect.disabled = hasPendingJointEdit || targetCandidates.length === 0;
+  targetCandidates.forEach(function(body) {
+    var option = document.createElement('option');
+    option.value = body.name;
+    option.textContent = body.name;
+    if (body.name === defaultTargetName) {
+      option.selected = true;
+    }
+    targetSelect.appendChild(option);
+  });
+  card.appendChild(targetSelect);
+
+  var mergeIntoFeedback = document.createElement('div');
+  mergeIntoFeedback.className = 'joint-editor-copy';
+  mergeIntoFeedback.textContent = hasPendingJointEdit
+    ? 'Apply or stop the active temporary joint edit before merging into a target.'
+    : mergeIntoEligibility.message;
+  card.appendChild(mergeIntoFeedback);
+
+  var actions = document.createElement('div');
+  actions.className = 'joint-editor-actions';
+
+  var mergeIntoButton = document.createElement('button');
+  mergeIntoButton.type = 'button';
+  mergeIntoButton.textContent = 'Merge Into Target';
+  mergeIntoButton.disabled = hasPendingJointEdit || !mergeIntoEligibility.ok;
+  mergeIntoButton.addEventListener('click', function() {
+    try {
+      handleMergeIntoTargetBody(targetSelect.value);
+    } catch (err) {
+      showError(String(err && err.message ? err.message : err));
+    }
+  });
+  actions.appendChild(mergeIntoButton);
+
+  var mergeButton = document.createElement('button');
+  mergeButton.type = 'button';
+  mergeButton.textContent = 'Merge Bodies';
+  mergeButton.disabled = hasPendingJointEdit || !eligibility.ok;
+  mergeButton.addEventListener('click', function() {
+    try {
+      handleMergeSelectedBodies();
+    } catch (err) {
+      showError(String(err && err.message ? err.message : err));
+    }
+  });
+  actions.appendChild(mergeButton);
+
+  if (hasMergeSnapshot) {
+    var revertButton = document.createElement('button');
+    revertButton.type = 'button';
+    revertButton.textContent = 'Revert Merge';
+    revertButton.disabled = hasPendingJointEdit;
+    revertButton.addEventListener('click', function() {
+      try {
+        handleRevertMerge();
+      } catch (err) {
+        showError(String(err && err.message ? err.message : err));
+      }
+    });
+    actions.appendChild(revertButton);
+  }
+
+  card.appendChild(actions);
+  host.appendChild(card);
+}
+
+function applyJointTransformAxisFilter() {
+  var transformControls = _uiState.transformControls;
+  if (!transformControls) {
+    return;
+  }
+  var filter = _uiState.jointTransformAxisFilter;
+  transformControls.showX = filter === 'all' || filter === 'x';
+  transformControls.showY = filter === 'all' || filter === 'y';
+  transformControls.showZ = filter === 'all' || filter === 'z';
+}
+
+function resetJointTransformAxisFilter() {
+  _uiState.jointTransformAxisFilter = 'all';
+  applyJointTransformAxisFilter();
+}
+
+function setJointTransformAxisFilter(filter) {
+  if (filter !== 'all' && filter !== 'x' && filter !== 'y' && filter !== 'z') {
+    throw new Error('Unsupported joint transform axis filter: ' + String(filter));
+  }
+  _uiState.jointTransformAxisFilter = filter;
+  applyJointTransformAxisFilter();
+  if (_uiState.activeJointEditMode === 'anchor' && _uiState.activeJointHandle !== null) {
+    syncActiveAnchorDragVisuals();
+  }
+  renderJointEditorCard();
+}
+
+function getPointerNdc(event) {
+  var rect = renderer.domElement.getBoundingClientRect();
+  return new THREE.Vector2(
+    ((event.clientX - rect.left) / rect.width) * 2 - 1,
+    -((event.clientY - rect.top) / rect.height) * 2 + 1
+  );
+}
+
+function getPointerRay(event) {
+  var ndc = getPointerNdc(event);
+  _anchorDragRaycaster.setFromCamera(ndc, camera);
+  return _anchorDragRaycaster.ray;
+}
+
+function getAnchorDragAxisLocal(filter) {
+  if (filter === 'x') {
+    return new THREE.Vector3(1, 0, 0);
+  }
+  if (filter === 'y') {
+    return new THREE.Vector3(0, 1, 0);
+  }
+  if (filter === 'z') {
+    return new THREE.Vector3(0, 0, 1);
+  }
+  if (filter === 'all') {
+    return null;
+  }
+  throw new Error('Unsupported anchor drag axis filter: ' + String(filter));
+}
+
+function buildAnchorDragPlane(anchorWorld, axisWorld) {
+  var planeNormal;
+  if (axisWorld === null) {
+    planeNormal = camera.getWorldDirection(new THREE.Vector3()).normalize();
+  } else {
+    var cameraForward = camera.getWorldDirection(new THREE.Vector3()).normalize();
+    var cameraUp = camera.up.clone().normalize();
+    var cameraRight = new THREE.Vector3().crossVectors(cameraForward, cameraUp);
+    if (cameraRight.lengthSq() > 1e-8) {
+      cameraRight.normalize();
+    }
+
+    planeNormal = cameraForward.projectOnPlane(axisWorld);
+    if (planeNormal.lengthSq() < 1e-8 && cameraRight.lengthSq() > 1e-8) {
+      planeNormal = cameraRight.clone().projectOnPlane(axisWorld);
+    }
+    if (planeNormal.lengthSq() < 1e-8) {
+      planeNormal = cameraUp.projectOnPlane(axisWorld);
+    }
+    if (planeNormal.lengthSq() < 1e-8) {
+      planeNormal = new THREE.Vector3(1, 0, 0).projectOnPlane(axisWorld);
+    }
+    if (planeNormal.lengthSq() < 1e-8) {
+      planeNormal = new THREE.Vector3(0, 1, 0).projectOnPlane(axisWorld);
+    }
+    if (planeNormal.lengthSq() < 1e-8) {
+      throw new Error('Failed to build a usable anchor drag plane');
+    }
+    planeNormal.normalize();
+  }
+  return new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, anchorWorld);
+}
+
+function solveRayAxisClosestDistance(ray, axisOriginWorld, axisDirectionWorld) {
+  var rayDirection = ray.direction.clone().normalize();
+  var axisDirection = axisDirectionWorld.clone().normalize();
+  var offset = ray.origin.clone().sub(axisOriginWorld);
+  var a = rayDirection.dot(rayDirection);
+  var b = rayDirection.dot(axisDirection);
+  var c = axisDirection.dot(axisDirection);
+  var d = rayDirection.dot(offset);
+  var e = axisDirection.dot(offset);
+  var denominator = a * c - b * b;
+
+  if (Math.abs(denominator) < 1e-8) {
+    return NaN;
+  }
+
+  return (a * e - b * d) / denominator;
+}
+
+function buildAnchorAxisScreenScale(anchorWorld, axisWorld) {
+  var anchorScreen = anchorWorld.clone().project(camera);
+  var axisEndScreen = anchorWorld.clone().add(axisWorld.clone()).project(camera);
+  var axisScreenVector = axisEndScreen.sub(anchorScreen);
+  var axisScreenLength = axisScreenVector.length();
+  if (axisScreenLength < 1e-4) {
+    var cameraQuaternion = camera.getWorldQuaternion(new THREE.Quaternion());
+    var cameraRightWorld = new THREE.Vector3(1, 0, 0).applyQuaternion(cameraQuaternion).normalize();
+    var cameraUpWorld = new THREE.Vector3(0, 1, 0).applyQuaternion(cameraQuaternion).normalize();
+    var useVerticalFallback = Math.abs(axisWorld.dot(cameraUpWorld)) <= Math.abs(axisWorld.dot(cameraRightWorld));
+
+    if (camera.isPerspectiveCamera === true) {
+      var anchorCamera = anchorWorld.clone().applyMatrix4(camera.matrixWorldInverse);
+      var depth = Math.max(Math.abs(anchorCamera.z), 1e-3);
+      var verticalUnitsPerNdc = depth * Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
+      var horizontalUnitsPerNdc = verticalUnitsPerNdc * camera.aspect;
+      return {
+        direction: new THREE.Vector2(useVerticalFallback ? 0 : 1, useVerticalFallback ? 1 : 0),
+        unitsPerNdc: Math.max(useVerticalFallback ? verticalUnitsPerNdc : horizontalUnitsPerNdc, 1e-4)
+      };
+    }
+
+    if (camera.isOrthographicCamera === true) {
+      var verticalOrthoUnitsPerNdc = (camera.top - camera.bottom) * 0.5 / camera.zoom;
+      var horizontalOrthoUnitsPerNdc = (camera.right - camera.left) * 0.5 / camera.zoom;
+      return {
+        direction: new THREE.Vector2(useVerticalFallback ? 0 : 1, useVerticalFallback ? 1 : 0),
+        unitsPerNdc: Math.max(useVerticalFallback ? verticalOrthoUnitsPerNdc : horizontalOrthoUnitsPerNdc, 1e-4)
+      };
+    }
+
+    return {
+      direction: new THREE.Vector2(useVerticalFallback ? 0 : 1, useVerticalFallback ? 1 : 0),
+      unitsPerNdc: 1
+    };
+  }
+  return {
+    direction: axisScreenVector.normalize(),
+    unitsPerNdc: axisScreenLength
+  };
+}
+
+function updateAnchorEditorInputsFromTempState() {
+  if (_uiState.activeJointEditMode !== 'anchor' || !Array.isArray(_uiState.activeJointTempAnchor)) {
+    return;
+  }
+  var inputX = document.getElementById('joint-editor-anchor-x');
+  var inputY = document.getElementById('joint-editor-anchor-y');
+  var inputZ = document.getElementById('joint-editor-anchor-z');
+  if (!inputX || !inputY || !inputZ) {
+    return;
+  }
+  inputX.value = String(_uiState.activeJointTempAnchor[0]);
+  inputY.value = String(_uiState.activeJointTempAnchor[1]);
+  inputZ.value = String(_uiState.activeJointTempAnchor[2]);
+}
+
+function updateAxisEditorInputsFromTempState() {
+  if (_uiState.activeJointEditMode !== 'axis' || !Array.isArray(_uiState.activeJointTempAxis)) {
+    return;
+  }
+  var inputX = document.getElementById('joint-editor-axis-x');
+  var inputY = document.getElementById('joint-editor-axis-y');
+  var inputZ = document.getElementById('joint-editor-axis-z');
+  if (!inputX || !inputY || !inputZ) {
+    return;
+  }
+  inputX.value = String(Number(_uiState.activeJointTempAxis[0].toFixed(4)));
+  inputY.value = String(Number(_uiState.activeJointTempAxis[1].toFixed(4)));
+  inputZ.value = String(Number(_uiState.activeJointTempAxis[2].toFixed(4)));
+}
+
+function commitActiveAxisInputsToTempState() {
+  if (_uiState.activeJointEditMode !== 'axis') {
+    return;
+  }
+  var inputX = document.getElementById('joint-editor-axis-x');
+  var inputY = document.getElementById('joint-editor-axis-y');
+  var inputZ = document.getElementById('joint-editor-axis-z');
+  if (!inputX || !inputY || !inputZ) {
+    return;
+  }
+  if (inputX.value.trim() === '' || inputY.value.trim() === '' || inputZ.value.trim() === '') {
+    throw new Error('Axis X/Y/Z must be complete numbers before commit');
+  }
+  var nextX = Number(inputX.value);
+  var nextY = Number(inputY.value);
+  var nextZ = Number(inputZ.value);
+  if (!Number.isFinite(nextX) || !Number.isFinite(nextY) || !Number.isFinite(nextZ)) {
+    throw new Error('Axis X/Y/Z must be finite numbers');
+  }
+  var len = Math.sqrt(nextX * nextX + nextY * nextY + nextZ * nextZ);
+  if (len < 1e-9) {
+    throw new Error('Axis must be non-zero');
+  }
+  // Normalize
+  nextX /= len;
+  nextY /= len;
+  nextZ /= len;
+  _uiState.activeJointTempAxis = [nextX, nextY, nextZ];
+  // Sync handle quaternion to match the new axis direction
+  if (_uiState.activeJointHandle) {
+    var quat = new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 0, 1),
+      new THREE.Vector3(nextX, nextY, nextZ)
+    );
+    _uiState.activeJointHandle.quaternion.copy(quat);
+  }
+  applyActiveJointTemporaryStateToScene();
+  updateSaveButtonState();
+  updateAxisEditorInputsFromTempState();
+}
+
+function applyActiveAnchorHandleToTempState() {
+  if (_uiState.activeJointEditMode !== 'anchor' || _uiState.activeJointHandle === null) {
+    return;
+  }
+  updateTemporaryJointEditFromHandle();
+}
+
+function clearAnchorDragVisuals(handle) {
+  var staleChildren = [];
+  handle.children.forEach(function(child) {
+    if (child.userData && child.userData.anchorDragVisual === true) {
+      staleChildren.push(child);
+    }
+  });
+  staleChildren.forEach(function(child) {
+    handle.remove(child);
+    disposeGroup(child);
+  });
+}
+
+function buildAxisAlignedAnchorGuide(axisName) {
+  var axisVector = getAnchorDragAxisLocal(axisName);
+  var railLength = 0.18;
+  var proxyHalfLength = railLength + 0.04;
+  var proxyThickness = 0.09;
+  var railGroup = new THREE.Group();
+  railGroup.userData.anchorDragVisual = true;
+
+  var railGeometry = new THREE.BufferGeometry().setFromPoints([
+    axisVector.clone().multiplyScalar(-railLength),
+    axisVector.clone().multiplyScalar(railLength)
+  ]);
+  var rail = new THREE.Line(
+    railGeometry,
+    new THREE.LineBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.95, depthTest: false })
+  );
+  rail.renderOrder = 1001;
+  rail.userData.anchorDragVisual = true;
+  railGroup.add(rail);
+
+  var proxy = new THREE.Mesh(
+    new THREE.BoxGeometry(
+      axisName === 'x' ? proxyHalfLength * 2.0 : proxyThickness,
+      axisName === 'y' ? proxyHalfLength * 2.0 : proxyThickness,
+      axisName === 'z' ? proxyHalfLength * 2.0 : proxyThickness
+    ),
+    new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.02, depthTest: false })
+  );
+  proxy.renderOrder = 999;
+  proxy.userData.anchorDragVisual = true;
+  proxy.userData.anchorDragTarget = true;
+  railGroup.add(proxy);
+
+  return railGroup;
+}
+
+function syncActiveAnchorDragVisuals() {
+  if (_uiState.activeJointEditMode !== 'anchor' || _uiState.activeJointHandle === null) {
+    return;
+  }
+  var handle = _uiState.activeJointHandle;
+  clearAnchorDragVisuals(handle);
+
+  var marker = new THREE.Mesh(
+    new THREE.SphereGeometry(0.014, 16, 12),
+    new THREE.MeshBasicMaterial({ color: 0xffd27a, depthTest: false })
+  );
+  marker.renderOrder = 1000;
+  marker.userData.anchorDragVisual = true;
+  marker.userData.anchorDragTarget = true;
+  handle.add(marker);
+
+  if (_uiState.jointTransformAxisFilter === 'all') {
+    var dragProxy = new THREE.Mesh(
+      new THREE.SphereGeometry(0.055, 16, 12),
+      new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.01, depthTest: false })
+    );
+    dragProxy.renderOrder = 999;
+    dragProxy.userData.anchorDragVisual = true;
+    dragProxy.userData.anchorDragTarget = true;
+    handle.add(dragProxy);
+    return;
+  }
+
+  handle.add(buildAxisAlignedAnchorGuide(_uiState.jointTransformAxisFilter));
+}
+
+function beginAnchorPointerDrag(event) {
+  if (event.button !== 0) {
+    return;
+  }
+  if (_uiState.activeJointEditMode !== 'anchor' || _uiState.activeJointHandle === null) {
+    return;
+  }
+
+  var dragTargets = [];
+  _uiState.activeJointHandle.traverse(function(node) {
+    if (node.isMesh === true && node.userData && node.userData.anchorDragTarget === true) {
+      dragTargets.push(node);
+    }
+  });
+  if (dragTargets.length === 0) {
+    throw new Error('Active anchor edit handle is missing a drag target');
+  }
+
+  var ray = getPointerRay(event);
+  var intersections = _anchorDragRaycaster.intersectObjects(dragTargets, true);
+  if (intersections.length === 0) {
+    return;
+  }
+
+  var parentObject = _uiState.activeJointHandle.parent;
+  if (!parentObject) {
+    throw new Error('Active anchor edit handle is missing a parent object');
+  }
+
+  var anchorWorld = _uiState.activeJointHandle.getWorldPosition(new THREE.Vector3());
+  var axisLocal = getAnchorDragAxisLocal(_uiState.jointTransformAxisFilter);
+  var axisWorld = null;
+  if (axisLocal !== null) {
+    axisWorld = axisLocal.clone().applyQuaternion(parentObject.getWorldQuaternion(new THREE.Quaternion())).normalize();
+  }
+
+  _uiState.activeAnchorDrag = {
+    pointerId: event.pointerId,
+    plane: axisWorld === null ? buildAnchorDragPlane(anchorWorld, axisWorld) : null,
+    parentObject: parentObject,
+    initialHandlePositionLocal: _uiState.activeJointHandle.position.clone(),
+    startPointWorld: axisWorld === null ? ray.intersectPlane(buildAnchorDragPlane(anchorWorld, axisWorld), new THREE.Vector3()) : null,
+    axisOriginWorld: anchorWorld.clone(),
+    startAxisDistance: axisWorld === null ? null : solveRayAxisClosestDistance(ray, anchorWorld, axisWorld),
+    startPointerNdc: getPointerNdc(event),
+    axisScreenScale: axisWorld === null ? null : buildAnchorAxisScreenScale(anchorWorld, axisWorld),
+    axisLocal: axisLocal,
+    axisWorld: axisWorld
+  };
+  if (axisWorld === null && _uiState.activeAnchorDrag.startPointWorld === null) {
+    _uiState.activeAnchorDrag = null;
+    return;
+  }
+  controls.enabled = false;
+  if (renderer.domElement.setPointerCapture) {
+    renderer.domElement.setPointerCapture(event.pointerId);
+  }
+  event.preventDefault();
+}
+
+function updateAnchorPointerDrag(event) {
+  if (_uiState.activeAnchorDrag === null || _uiState.activeAnchorDrag.pointerId !== event.pointerId) {
+    return;
+  }
+  if (_uiState.activeJointEditMode !== 'anchor' || _uiState.activeJointHandle === null) {
+    stopAnchorPointerDrag(event.pointerId);
+    return;
+  }
+
+  var ray = getPointerRay(event);
+
+  if (_uiState.activeAnchorDrag.axisLocal === null) {
+    var hitPointWorld = ray.intersectPlane(_uiState.activeAnchorDrag.plane, new THREE.Vector3());
+    if (hitPointWorld === null) {
+      return;
+    }
+    var nextLocalPoint = _uiState.activeAnchorDrag.parentObject.worldToLocal(hitPointWorld.clone());
+    _uiState.activeJointHandle.position.copy(nextLocalPoint);
+  } else {
+    var distanceAlongAxis;
+    if (_uiState.activeAnchorDrag.axisScreenScale !== null) {
+      var pointerDeltaNdc = getPointerNdc(event).sub(_uiState.activeAnchorDrag.startPointerNdc);
+      distanceAlongAxis = pointerDeltaNdc.dot(_uiState.activeAnchorDrag.axisScreenScale.direction) /
+        _uiState.activeAnchorDrag.axisScreenScale.unitsPerNdc;
+    } else {
+      var currentAxisDistance = solveRayAxisClosestDistance(
+        ray,
+        _uiState.activeAnchorDrag.axisOriginWorld,
+        _uiState.activeAnchorDrag.axisWorld
+      );
+      if (Number.isFinite(currentAxisDistance)) {
+        distanceAlongAxis = currentAxisDistance - _uiState.activeAnchorDrag.startAxisDistance;
+      } else {
+        distanceAlongAxis = NaN;
+      }
+    }
+    if (Number.isFinite(distanceAlongAxis) === false) {
+      return;
+    }
+    _uiState.activeJointHandle.position.copy(_uiState.activeAnchorDrag.initialHandlePositionLocal)
+      .addScaledVector(_uiState.activeAnchorDrag.axisLocal, distanceAlongAxis);
+  }
+
+  applyActiveAnchorHandleToTempState();
+  event.preventDefault();
+}
+
+function stopAnchorPointerDrag(pointerId) {
+  if (_uiState.activeAnchorDrag === null) {
+    return;
+  }
+  if (pointerId !== undefined && pointerId !== _uiState.activeAnchorDrag.pointerId) {
+    return;
+  }
+  if (renderer.domElement.releasePointerCapture) {
+    try {
+      renderer.domElement.releasePointerCapture(_uiState.activeAnchorDrag.pointerId);
+    } catch (err) {
+      // Ignore invalid release attempts when the browser already cleared capture.
+    }
+  }
+  _uiState.activeAnchorDrag = null;
+  if (_uiState.activeBodyEditMode === null) {
+    controls.enabled = true;
+  }
+}
+
+function updateActiveAnchorFromInputs() {
+  if (_uiState.activeJointEditMode !== 'anchor' || _uiState.activeJointHandle === null) {
+    return;
+  }
+  var inputX = document.getElementById('joint-editor-anchor-x');
+  var inputY = document.getElementById('joint-editor-anchor-y');
+  var inputZ = document.getElementById('joint-editor-anchor-z');
+  if (!inputX || !inputY || !inputZ) {
+    return;
+  }
+  if (inputX.value === '' || inputY.value === '' || inputZ.value === '') {
+    return;
+  }
+  var nextX = Number(inputX.value);
+  var nextY = Number(inputY.value);
+  var nextZ = Number(inputZ.value);
+  if (!Number.isFinite(nextX) || !Number.isFinite(nextY) || !Number.isFinite(nextZ)) {
+    return;
+  }
+  _uiState.activeJointHandle.position.set(nextX, nextY, nextZ);
+  applyActiveAnchorHandleToTempState();
+}
+
+function commitActiveAnchorInputsToTempState() {
+  if (_uiState.activeJointEditMode !== 'anchor' || _uiState.activeJointHandle === null) {
+    return;
+  }
+  var inputX = document.getElementById('joint-editor-anchor-x');
+  var inputY = document.getElementById('joint-editor-anchor-y');
+  var inputZ = document.getElementById('joint-editor-anchor-z');
+  if (!inputX || !inputY || !inputZ) {
+    return;
+  }
+  if (inputX.value.trim() === '' || inputY.value.trim() === '' || inputZ.value.trim() === '') {
+    throw new Error('Anchor X/Y/Z must be complete numbers before commit');
+  }
+  var nextX = Number(inputX.value);
+  var nextY = Number(inputY.value);
+  var nextZ = Number(inputZ.value);
+  if (!Number.isFinite(nextX) || !Number.isFinite(nextY) || !Number.isFinite(nextZ)) {
+    throw new Error('Anchor X/Y/Z must be finite numbers');
+  }
+  _uiState.activeJointHandle.position.set(nextX, nextY, nextZ);
+  applyActiveAnchorHandleToTempState();
+}
+
+function vector3ToArray(vector) {
+  if (!vector || vector.isVector3 !== true) {
+    throw new Error('Expected a THREE.Vector3');
+  }
+  return [vector.x, vector.y, vector.z];
+}
+
+function updateJointBodyMetaText(bodyName) {
+  if (!Object.prototype.hasOwnProperty.call(_jointBodyListItemMap, bodyName)) {
+    return;
+  }
+  var label = _jointBodyListItemMap[bodyName].querySelector('.joint-body-meta');
+  if (!label) {
+    throw new Error('Body list item is missing a metadata label for ' + bodyName);
+  }
+  label.textContent = getBodyJointMetaText(bodyName);
+}
+
+function getJointCurrentPreviewValue(jointName) {
+  var previewEntry = getJointPreviewEntry(jointName);
+  if (!Object.prototype.hasOwnProperty.call(_jointSliderMap, jointName)) {
+    return previewEntry.defaultVal;
+  }
+  var value = Number(_jointSliderMap[jointName].input.value);
+  if (Number.isFinite(value) === false) {
+    throw new Error('Joint slider value must be finite for joint ' + jointName);
+  }
+  return value;
+}
+
+function buildEditableJointState(jointName, anchorArray, axisArray, type, range, defaultValue) {
+  return {
+    name: jointName,
+    type: type,
+    anchor: deepCloneJson(anchorArray),
+    axis: deepCloneJson(axisArray),
+    range: deepCloneJson(range),
+    default: defaultValue
+  };
+}
+
+function buildDraftJointEditableState(joint) {
+  if (joint === null || typeof joint !== 'object') {
+    throw new Error('Joint editable state requires a joint object');
+  }
+  return buildEditableJointState(joint.name, joint.anchor, joint.axis, joint.type, joint.range, joint.default);
+}
+
+function replaceJointHelperNode(jointName, jointState) {
+  var previewEntry = getJointPreviewEntry(jointName);
+  if (!previewEntry.helperNode || !previewEntry.helperNode.parent) {
+    throw new Error('Joint helper node is missing for joint ' + jointName);
+  }
+
+  var parent = previewEntry.helperNode.parent;
+  var previousHelperNode = previewEntry.helperNode;
+  var nextHelperNode = createJointHelperGroup(jointState);
+  parent.remove(previousHelperNode);
+  disposeGroup(previousHelperNode);
+  parent.add(nextHelperNode);
+  previewEntry.helperNode = nextHelperNode;
+}
+
+function syncJointSliderUi(jointName, jointType, jointRange, previewValue) {
+  if (!Object.prototype.hasOwnProperty.call(_jointSliderMap, jointName)) {
+    throw new Error('Joint slider UI is missing for joint ' + jointName);
+  }
+  var sliderEntry = _jointSliderMap[jointName];
+  sliderEntry.input.min = String(jointRange[0]);
+  sliderEntry.input.max = String(jointRange[1]);
+  sliderEntry.input.step = jointType === 'hinge' ? '0.01' : slideSliderStep(jointRange);
+  sliderEntry.input.value = String(previewValue);
+  sliderEntry.typeBadge.className = 'joint-type-badge ' + jointType;
+  sliderEntry.typeBadge.textContent = jointType;
+  sliderEntry.rangeLabel.textContent = formatJointRangeLabel(jointType, jointRange[0], jointRange[1]);
+  updateJointSliderValueLabel(jointName, previewValue);
+}
+
+function applyJointStateToScene(jointName, jointState, previewValue) {
+  var previewEntry = getJointPreviewEntry(jointName);
+  var jointData = getValidatedJointData(jointState);
+  if (previewValue < jointData.range[0] || previewValue > jointData.range[1]) {
+    throw new Error('Current joint preview value must remain inside the edited range');
+  }
+
+  previewEntry.type = jointState.type;
+  previewEntry.axis.copy(jointData.axis);
+  previewEntry.range = [jointData.range[0], jointData.range[1]];
+  previewEntry.defaultVal = jointData.defaultVal;
+  previewEntry.restPosition.copy(jointData.anchor);
+  previewEntry.restQuaternion.identity();
+  // Preserve the body-origin offset so live anchor edits move the whole joint subtree.
+  previewEntry.meshNodes.forEach(function(meshNode) {
+    meshNode.position.copy(previewEntry.bodyLocalOriginOffset);
+    meshNode.quaternion.identity();
+  });
+
+  replaceJointHelperNode(jointName, buildEditableJointState(
+    jointName,
+    vector3ToArray(jointData.anchor),
+    vector3ToArray(jointData.axis),
+    jointState.type,
+    jointData.range,
+    jointData.defaultVal
+  ));
+  applyJointPreview(jointName, previewValue);
+  syncJointSliderUi(jointName, jointState.type, jointData.range, previewValue);
+  updateJointBodyMetaText(previewEntry.bodyName);
+}
+
+function getActiveJointTemporaryState() {
+  if (_uiState.activeJointName === null) {
+    return null;
+  }
+  if (
+    typeof _uiState.activeJointTempType !== 'string' ||
+    !Array.isArray(_uiState.activeJointTempRange) ||
+    !Array.isArray(_uiState.activeJointTempAnchor) ||
+    !Array.isArray(_uiState.activeJointTempAxis)
+  ) {
+    throw new Error('Active joint temp state is incomplete');
+  }
+  return {
+    type: _uiState.activeJointTempType,
+    range: deepCloneJson(_uiState.activeJointTempRange),
+    anchor: deepCloneJson(_uiState.activeJointTempAnchor),
+    axis: deepCloneJson(_uiState.activeJointTempAxis)
+  };
+}
+
+function syncActiveJointHandleFromTempState() {
+  if (_uiState.activeJointHandle === null) {
+    throw new Error('Active joint handle is missing');
+  }
+  var tempState = getActiveJointTemporaryState();
+  if (tempState === null) {
+    throw new Error('No temporary joint edit is active');
+  }
+  _uiState.activeJointHandle.position.copy(readVector3(tempState.anchor, 'Active joint temp anchor'));
+  _uiState.activeJointHandle.quaternion.copy(
+    new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 0, 1),
+      readVector3(tempState.axis, 'Active joint temp axis').normalize()
+    )
+  );
+}
+
+function applyActiveJointTemporaryStateToScene() {
+  if (_uiState.activeJointName === null) {
+    return;
+  }
+  var joint = getDraftJointByName(_uiState.activeJointName);
+  if (joint === null) {
+    throw new Error('Active joint edit target is missing from draft manifest');
+  }
+  var tempState = getActiveJointTemporaryState();
+  if (tempState === null) {
+    throw new Error('No temporary joint edit is active');
+  }
+  applyJointStateToScene(
+    joint.name,
+    buildEditableJointState(joint.name, tempState.anchor, tempState.axis, tempState.type, tempState.range, joint.default),
+    getJointCurrentPreviewValue(joint.name)
+  );
+}
+
+function restoreCommittedJointScene(jointName) {
+  var joint = getDraftJointByName(jointName);
+  if (joint === null) {
+    throw new Error('Cannot restore committed joint state for missing joint ' + jointName);
+  }
+  applyJointStateToScene(
+    joint.name,
+    buildEditableJointState(joint.name, joint.anchor, joint.axis, joint.type, joint.range, joint.default),
+    getJointCurrentPreviewValue(joint.name)
+  );
+}
+
+function renderJointEditorCard() {
+  var host = document.getElementById('joint-editor-card-host');
+  if (!host) {
+    return;
+  }
+  host.innerHTML = '';
+
+  var card = document.createElement('div');
+  card.className = 'joint-editor-card';
+
+  var selectedBodyCopy = document.createElement('div');
+  selectedBodyCopy.className = 'joint-editor-copy';
+  selectedBodyCopy.textContent = 'Selected body';
+  card.appendChild(selectedBodyCopy);
+
+  var selectedBodyName = document.createElement('div');
+  selectedBodyName.className = 'joint-editor-selected';
+  selectedBodyName.textContent = _selectedBodyName === null ? 'None' : _selectedBodyName;
+  card.appendChild(selectedBodyName);
+
+  if (_selectedBodyName === null) {
+    card.appendChild(createJointEditorEmptyState('Select a body to edit its only joint.'));
+    host.appendChild(card);
+    return;
+  }
+
+  var draftBody = getDraftBodyByName(_selectedBodyName);
+  if (draftBody === null) {
+    throw new Error('Selected body is missing from draft manifest: ' + _selectedBodyName);
+  }
+
+  var bodyActions = document.createElement('div');
+  bodyActions.className = 'joint-editor-actions';
+
+  if (_uiState.lastMergeSnapshot !== null) {
+    var revertMergeButton = document.createElement('button');
+    revertMergeButton.type = 'button';
+    revertMergeButton.textContent = 'Revert Merge';
+    revertMergeButton.disabled = hasUncommittedActiveJointEdit();
+    revertMergeButton.addEventListener('click', function() {
+      try {
+        handleRevertMerge();
+      } catch (err) {
+        showError(String(err && err.message ? err.message : err));
+      }
+    });
+    bodyActions.appendChild(revertMergeButton);
+  }
+
+  var moveBodyButton = document.createElement('button');
+  moveBodyButton.type = 'button';
+  moveBodyButton.textContent = 'Move Body';
+  moveBodyButton.addEventListener('click', function() {
+    try {
+      attachBodyEditHandle('translate');
+    } catch (err) {
+      showError(String(err && err.message ? err.message : err));
+    }
+  });
+  bodyActions.appendChild(moveBodyButton);
+
+  var rotateBodyButton = document.createElement('button');
+  rotateBodyButton.type = 'button';
+  rotateBodyButton.textContent = 'Rotate Body';
+  rotateBodyButton.addEventListener('click', function() {
+    try {
+      attachBodyEditHandle('rotate');
+    } catch (err) {
+      showError(String(err && err.message ? err.message : err));
+    }
+  });
+  bodyActions.appendChild(rotateBodyButton);
+
+  var stopBodyEditButton = document.createElement('button');
+  stopBodyEditButton.type = 'button';
+  stopBodyEditButton.textContent = 'Stop Editing';
+  stopBodyEditButton.addEventListener('click', function() {
+    stopTransformEditing();
+    renderJointEditorCard();
+  });
+  bodyActions.appendChild(stopBodyEditButton);
+
+  var addChildBodyButton = document.createElement('button');
+  addChildBodyButton.type = 'button';
+  addChildBodyButton.textContent = 'Add Child Body';
+  addChildBodyButton.addEventListener('click', function() {
+    try {
+      handleBodyEditorAddChild();
+    } catch (err) {
+      showError(String(err && err.message ? err.message : err));
+    }
+  });
+  bodyActions.appendChild(addChildBodyButton);
+
+  var deleteBodyButton = document.createElement('button');
+  deleteBodyButton.type = 'button';
+  deleteBodyButton.textContent = 'Delete Body';
+  deleteBodyButton.addEventListener('click', function() {
+    try {
+      handleBodyEditorDelete();
+    } catch (err) {
+      showError(String(err && err.message ? err.message : err));
+    }
+  });
+  bodyActions.appendChild(deleteBodyButton);
+  card.appendChild(bodyActions);
+
+  var draftJoint = getOnlyJointForBody(_selectedBodyName);
+  if (draftJoint === null) {
+    card.appendChild(createJointEditorEmptyState('The selected body has no joint. Add one to start editing.'));
+    var addActions = document.createElement('div');
+    addActions.className = 'joint-editor-actions';
+    var addButton = document.createElement('button');
+    addButton.type = 'button';
+    addButton.textContent = 'Add Joint';
+    addButton.addEventListener('click', handleJointEditorAddJoint);
+    addActions.appendChild(addButton);
+    card.appendChild(addActions);
+    host.appendChild(card);
+    return;
+  }
+
+  var grid = document.createElement('div');
+  grid.className = 'joint-editor-grid';
+  var displayedJointState = getDisplayedJointEditorState(draftJoint);
+
+  var typeField = document.createElement('div');
+  typeField.className = 'joint-editor-field full';
+  var typeLabel = document.createElement('label');
+  typeLabel.textContent = 'type';
+  var typeSelect = document.createElement('select');
+  typeSelect.id = 'joint-editor-type';
+  ['hinge', 'slide'].forEach(function(type) {
+    var opt = document.createElement('option');
+    opt.value = type;
+    opt.textContent = type;
+    if (displayedJointState.type === type) {
+      opt.selected = true;
+    }
+    typeSelect.appendChild(opt);
+  });
+  typeField.appendChild(typeLabel);
+  typeField.appendChild(typeSelect);
+  grid.appendChild(typeField);
+
+  var minField = document.createElement('div');
+  minField.className = 'joint-editor-field';
+  var minLabel = document.createElement('label');
+  minLabel.textContent = 'range min';
+  var minInput = document.createElement('input');
+  minInput.type = 'number';
+  minInput.step = displayedJointState.type === 'hinge' ? '0.01' : '0.001';
+  minInput.id = 'joint-editor-range-min';
+  minInput.value = String(displayedJointState.range[0]);
+  minField.appendChild(minLabel);
+  minField.appendChild(minInput);
+  grid.appendChild(minField);
+
+  var maxField = document.createElement('div');
+  maxField.className = 'joint-editor-field';
+  var maxLabel = document.createElement('label');
+  maxLabel.textContent = 'range max';
+  var maxInput = document.createElement('input');
+  maxInput.type = 'number';
+  maxInput.step = displayedJointState.type === 'hinge' ? '0.01' : '0.001';
+  maxInput.id = 'joint-editor-range-max';
+  maxInput.value = String(displayedJointState.range[1]);
+  maxField.appendChild(maxLabel);
+  maxField.appendChild(maxInput);
+  grid.appendChild(maxField);
+
+  if (_uiState.activeJointEditMode === 'anchor' && _uiState.activeJointName === draftJoint.name) {
+    var displayedAnchor = getDisplayedAnchorEditorState(draftJoint);
+    var commitAnchorField = function(event) {
+      try {
+        commitActiveAnchorInputsToTempState();
+      } catch (err) {
+        showError(String(err && err.message ? err.message : err));
+      }
+    };
+    var handleAnchorFieldKeydown = function(event) {
+      if (event.key !== 'Enter') {
+        return;
+      }
+      event.preventDefault();
+      commitAnchorField(event);
+    };
+
+    var anchorXField = document.createElement('div');
+    anchorXField.className = 'joint-editor-field';
+    var anchorXLabel = document.createElement('label');
+    anchorXLabel.textContent = 'anchor x';
+    var anchorXInput = document.createElement('input');
+    anchorXInput.type = 'number';
+    anchorXInput.step = '0.001';
+    anchorXInput.id = 'joint-editor-anchor-x';
+    anchorXInput.value = String(displayedAnchor[0]);
+    anchorXInput.addEventListener('change', commitAnchorField);
+    anchorXInput.addEventListener('blur', commitAnchorField);
+    anchorXInput.addEventListener('keydown', handleAnchorFieldKeydown);
+    anchorXField.appendChild(anchorXLabel);
+    anchorXField.appendChild(anchorXInput);
+    grid.appendChild(anchorXField);
+
+    var anchorYField = document.createElement('div');
+    anchorYField.className = 'joint-editor-field';
+    var anchorYLabel = document.createElement('label');
+    anchorYLabel.textContent = 'anchor y';
+    var anchorYInput = document.createElement('input');
+    anchorYInput.type = 'number';
+    anchorYInput.step = '0.001';
+    anchorYInput.id = 'joint-editor-anchor-y';
+    anchorYInput.value = String(displayedAnchor[1]);
+    anchorYInput.addEventListener('change', commitAnchorField);
+    anchorYInput.addEventListener('blur', commitAnchorField);
+    anchorYInput.addEventListener('keydown', handleAnchorFieldKeydown);
+    anchorYField.appendChild(anchorYLabel);
+    anchorYField.appendChild(anchorYInput);
+    grid.appendChild(anchorYField);
+
+    var anchorZField = document.createElement('div');
+    anchorZField.className = 'joint-editor-field full';
+    var anchorZLabel = document.createElement('label');
+    anchorZLabel.textContent = 'anchor z';
+    var anchorZInput = document.createElement('input');
+    anchorZInput.type = 'number';
+    anchorZInput.step = '0.001';
+    anchorZInput.id = 'joint-editor-anchor-z';
+    anchorZInput.value = String(displayedAnchor[2]);
+    anchorZInput.addEventListener('change', commitAnchorField);
+    anchorZInput.addEventListener('blur', commitAnchorField);
+    anchorZInput.addEventListener('keydown', handleAnchorFieldKeydown);
+    anchorZField.appendChild(anchorZLabel);
+    anchorZField.appendChild(anchorZInput);
+    grid.appendChild(anchorZField);
+  }
+
+  if (_uiState.activeJointEditMode === 'axis' && _uiState.activeJointName === draftJoint.name) {
+    var displayedAxis = getDisplayedAxisEditorState(draftJoint);
+    var commitAxisField = function(event) {
+      try {
+        commitActiveAxisInputsToTempState();
+      } catch (err) {
+        showError(String(err && err.message ? err.message : err));
+      }
+    };
+    var handleAxisFieldKeydown = function(event) {
+      if (event.key !== 'Enter') {
+        return;
+      }
+      event.preventDefault();
+      commitAxisField(event);
+    };
+
+    var axisXField = document.createElement('div');
+    axisXField.className = 'joint-editor-field';
+    var axisXLabel = document.createElement('label');
+    axisXLabel.textContent = 'axis x';
+    var axisXInput = document.createElement('input');
+    axisXInput.type = 'number';
+    axisXInput.step = '0.01';
+    axisXInput.id = 'joint-editor-axis-x';
+    axisXInput.value = String(displayedAxis[0]);
+    axisXInput.addEventListener('change', commitAxisField);
+    axisXInput.addEventListener('blur', commitAxisField);
+    axisXInput.addEventListener('keydown', handleAxisFieldKeydown);
+    axisXField.appendChild(axisXLabel);
+    axisXField.appendChild(axisXInput);
+    grid.appendChild(axisXField);
+
+    var axisYField = document.createElement('div');
+    axisYField.className = 'joint-editor-field';
+    var axisYLabel = document.createElement('label');
+    axisYLabel.textContent = 'axis y';
+    var axisYInput = document.createElement('input');
+    axisYInput.type = 'number';
+    axisYInput.step = '0.01';
+    axisYInput.id = 'joint-editor-axis-y';
+    axisYInput.value = String(displayedAxis[1]);
+    axisYInput.addEventListener('change', commitAxisField);
+    axisYInput.addEventListener('blur', commitAxisField);
+    axisYInput.addEventListener('keydown', handleAxisFieldKeydown);
+    axisYField.appendChild(axisYLabel);
+    axisYField.appendChild(axisYInput);
+    grid.appendChild(axisYField);
+
+    var axisZField = document.createElement('div');
+    axisZField.className = 'joint-editor-field full';
+    var axisZLabel = document.createElement('label');
+    axisZLabel.textContent = 'axis z';
+    var axisZInput = document.createElement('input');
+    axisZInput.type = 'number';
+    axisZInput.step = '0.01';
+    axisZInput.id = 'joint-editor-axis-z';
+    axisZInput.value = String(displayedAxis[2]);
+    axisZInput.addEventListener('change', commitAxisField);
+    axisZInput.addEventListener('blur', commitAxisField);
+    axisZInput.addEventListener('keydown', handleAxisFieldKeydown);
+    axisZField.appendChild(axisZLabel);
+    axisZField.appendChild(axisZInput);
+    grid.appendChild(axisZField);
+  }
+
+  card.appendChild(grid);
+
+  var meta = document.createElement('div');
+  meta.className = 'joint-editor-copy';
+  meta.textContent = 'Joint: ' + draftJoint.name +
+    (_uiState.activeJointName === draftJoint.name && _uiState.activeJointEditMode !== null
+      ? ' · Editing ' + _uiState.activeJointEditMode
+      : '') +
+    (_uiState.isDirty ? ' · Draft is dirty' : '');
+  card.appendChild(meta);
+
+  var actions = document.createElement('div');
+  actions.className = 'joint-editor-actions';
+
+  if (_uiState.activeJointEditMode !== null && _uiState.activeJointName === draftJoint.name) {
+    ['all', 'x', 'y', 'z'].forEach(function(filter) {
+      var filterButton = document.createElement('button');
+      filterButton.type = 'button';
+      filterButton.textContent = filter.toUpperCase();
+      if (_uiState.jointTransformAxisFilter === filter) {
+        filterButton.classList.add('active');
+      }
+      filterButton.addEventListener('click', function() {
+        try {
+          setJointTransformAxisFilter(filter);
+        } catch (err) {
+          showError(String(err && err.message ? err.message : err));
+        }
+      });
+      actions.appendChild(filterButton);
+    });
+  }
+
+  var editAnchorButton = document.createElement('button');
+  editAnchorButton.type = 'button';
+  editAnchorButton.id = 'joint-editor-edit-anchor';
+  editAnchorButton.textContent = 'Edit Anchor';
+  editAnchorButton.addEventListener('click', function() {
+    try {
+      attachJointEditHandle('anchor');
+    } catch (err) {
+      showError(String(err && err.message ? err.message : err));
+    }
+  });
+  actions.appendChild(editAnchorButton);
+
+  var editAxisButton = document.createElement('button');
+  editAxisButton.type = 'button';
+  editAxisButton.id = 'joint-editor-edit-axis';
+  editAxisButton.textContent = 'Edit Axis';
+  editAxisButton.addEventListener('click', function() {
+    try {
+      attachJointEditHandle('axis');
+    } catch (err) {
+      showError(String(err && err.message ? err.message : err));
+    }
+  });
+  actions.appendChild(editAxisButton);
+
+  var stopEditButton = document.createElement('button');
+  stopEditButton.type = 'button';
+  stopEditButton.id = 'joint-editor-stop-edit';
+  stopEditButton.textContent = 'Stop Editing';
+  stopEditButton.addEventListener('click', function() {
+    stopTransformEditing();
+    renderJointEditorCard();
+  });
+  actions.appendChild(stopEditButton);
+
+  var applyButton = document.createElement('button');
+  applyButton.type = 'button';
+  applyButton.textContent = 'Apply';
+  applyButton.addEventListener('click', function() {
+    try {
+      handleJointEditorApply();
+    } catch (err) {
+      showError(String(err && err.message ? err.message : err));
+    }
+  });
+  actions.appendChild(applyButton);
+
+  var resetButton = document.createElement('button');
+  resetButton.type = 'button';
+  resetButton.textContent = 'Reset';
+  resetButton.addEventListener('click', function() {
+    try {
+      handleJointEditorReset();
+    } catch (err) {
+      showError(String(err && err.message ? err.message : err));
+    }
+  });
+  actions.appendChild(resetButton);
+
+  var deleteButton = document.createElement('button');
+  deleteButton.type = 'button';
+  deleteButton.textContent = 'Delete Joint';
+  deleteButton.addEventListener('click', function() {
+    try {
+      handleJointEditorDeleteJoint();
+    } catch (err) {
+      showError(String(err && err.message ? err.message : err));
+    }
+  });
+  actions.appendChild(deleteButton);
+
+  card.appendChild(actions);
+  host.appendChild(card);
+}
+
+function createJointEditorEmptyState(message) {
+  var emptyState = document.createElement('div');
+  emptyState.className = 'joint-editor-copy';
+  emptyState.textContent = message;
+  return emptyState;
+}
+
+function getDraftBodyByName(bodyName) {
+  if (_draftManifest === null || !Array.isArray(_draftManifest.bodies)) {
+    throw new Error('Draft manifest bodies are not initialized');
+  }
+  for (var i = 0; i < _draftManifest.bodies.length; i++) {
+    if (_draftManifest.bodies[i].name === bodyName) {
+      return _draftManifest.bodies[i];
+    }
+  }
+  return null;
+}
+
+function getDraftJointByName(jointName) {
+  if (_draftManifest === null || !Array.isArray(_draftManifest.joints)) {
+    throw new Error('Draft manifest joints are not initialized');
+  }
+  for (var i = 0; i < _draftManifest.joints.length; i++) {
+    if (_draftManifest.joints[i].name === jointName) {
+      return _draftManifest.joints[i];
+    }
+  }
+  return null;
+}
+
+function getOnlyJointForBody(bodyName) {
+  if (_draftManifest === null || !Array.isArray(_draftManifest.joints)) {
+    throw new Error('Draft manifest joints are not initialized');
+  }
+  var joints = _draftManifest.joints.filter(function(joint) {
+    return joint.body === bodyName;
+  });
+  if (joints.length === 0) {
+    return null;
+  }
+  if (joints.length !== 1) {
+    throw new Error('Phase 3 editor supports exactly one joint per body: ' + bodyName);
+  }
+  return joints[0];
+}
+
+function collectDraftJointNameSet() {
+  var names = Object.create(null);
+  if (_draftManifest === null || !Array.isArray(_draftManifest.joints)) {
+    throw new Error('Draft manifest joints are not initialized');
+  }
+  _draftManifest.joints.forEach(function(joint) {
+    names[joint.name] = true;
+  });
+  return names;
+}
+
+function createUniqueJointNameForBody(bodyName) {
+  var baseName = bodyName + '_joint';
+  var names = collectDraftJointNameSet();
+  if (!Object.prototype.hasOwnProperty.call(names, baseName)) {
+    return baseName;
+  }
+  var suffix = 1;
+  while (Object.prototype.hasOwnProperty.call(names, baseName + '_' + suffix)) {
+    suffix += 1;
+  }
+  return baseName + '_' + suffix;
+}
+
+function collectDraftBodyNameSet() {
+  var names = Object.create(null);
+  if (_draftManifest === null || !Array.isArray(_draftManifest.bodies)) {
+    throw new Error('Draft manifest bodies are not initialized');
+  }
+  _draftManifest.bodies.forEach(function(body) {
+    names[body.name] = true;
+  });
+  return names;
+}
+
+function createUniqueChildBodyName(bodyName) {
+  var baseName = bodyName + '_child';
+  var names = collectDraftBodyNameSet();
+  if (!Object.prototype.hasOwnProperty.call(names, baseName)) {
+    return baseName;
+  }
+  var suffix = 1;
+  while (Object.prototype.hasOwnProperty.call(names, baseName + '_' + suffix)) {
+    suffix += 1;
+  }
+  return baseName + '_' + suffix;
+}
+
+function createUniqueMergedBodyName() {
+  var baseName = 'merged_body';
+  var names = collectDraftBodyNameSet();
+  if (!Object.prototype.hasOwnProperty.call(names, baseName)) {
+    return baseName;
+  }
+  var suffix = 1;
+  while (Object.prototype.hasOwnProperty.call(names, baseName + '_' + suffix)) {
+    suffix += 1;
+  }
+  return baseName + '_' + suffix;
+}
+
+function readQuaternionWxyz(value, label) {
+  if (!Array.isArray(value)) {
+    throw new Error(label + ' must be an array');
+  }
+  if (value.length !== 4) {
+    throw new Error(label + ' must contain exactly 4 values');
+  }
+  return new THREE.Quaternion(
+    readFiniteNumber(value[1], label + '[1]'),
+    readFiniteNumber(value[2], label + '[2]'),
+    readFiniteNumber(value[3], label + '[3]'),
+    readFiniteNumber(value[0], label + '[0]')
+  );
+}
+
+function vectorToArray(vector) {
+  return [vector.x, vector.y, vector.z];
+}
+
+function quaternionToWxyzArray(quaternion) {
+  return [quaternion.w, quaternion.x, quaternion.y, quaternion.z];
+}
+
+function composeMatrixFromPose(pos, quat, label) {
+  return new THREE.Matrix4().compose(
+    readVector3(pos, label + ' pos'),
+    readQuaternionWxyz(quat, label + ' quat'),
+    new THREE.Vector3(1, 1, 1)
+  );
+}
+
+function decomposeMatrixToPose(matrix) {
+  var pos = new THREE.Vector3();
+  var quat = new THREE.Quaternion();
+  var scale = new THREE.Vector3();
+  matrix.decompose(pos, quat, scale);
+  return {
+    pos: vectorToArray(pos),
+    quat: quaternionToWxyzArray(quat)
+  };
+}
+
+function getDraftBodyWorldMatrix(bodyName) {
+  var body = getDraftBodyByName(bodyName);
+  if (body === null) {
+    throw new Error('Unknown draft body: ' + bodyName);
+  }
+  var localMatrix = composeMatrixFromPose(body.pos, body.quat, 'Body ' + bodyName);
+  if (body.parent === null || body.parent === '' || body.parent === 'world') {
+    return localMatrix;
+  }
+  return new THREE.Matrix4().multiplyMatrices(getDraftBodyWorldMatrix(body.parent), localMatrix);
+}
+
+function getWorldQuaternionFromMatrix(matrix) {
+  var pos = new THREE.Vector3();
+  var quat = new THREE.Quaternion();
+  var scale = new THREE.Vector3();
+  matrix.decompose(pos, quat, scale);
+  return quat;
+}
+
+function transformGeomIntoMergedBody(geom, oldBodyWorldMatrix, newBodyWorldInverse, label) {
+  if (geom === null || typeof geom !== 'object') {
+    throw new Error(label + ' must be an object');
+  }
+  var clonedGeom = deepCloneJson(geom);
+  var geomLocalMatrix = composeMatrixFromPose(geom.pos, geom.quat, label);
+  var geomNewLocalMatrix = new THREE.Matrix4()
+    .multiplyMatrices(newBodyWorldInverse, oldBodyWorldMatrix)
+    .multiply(geomLocalMatrix);
+  var geomPose = decomposeMatrixToPose(geomNewLocalMatrix);
+  clonedGeom.pos = geomPose.pos;
+  clonedGeom.quat = geomPose.quat;
+  return clonedGeom;
+}
+
+function collectMergedFromNames(bodies) {
+  var names = [];
+  var seen = Object.create(null);
+  bodies.forEach(function(body) {
+    var sourceNames = Array.isArray(body.merged_from) && body.merged_from.length > 0 ? body.merged_from : [body.name];
+    sourceNames.forEach(function(name) {
+      if (typeof name === 'string' && name.length > 0 && !Object.prototype.hasOwnProperty.call(seen, name)) {
+        seen[name] = true;
+        names.push(name);
+      }
+    });
+  });
+  return names;
+}
+
+function syncBodyPrimaryMeshFile(body) {
+  if (!Array.isArray(body.visual_geoms) || body.visual_geoms.length === 0) {
+    body.mesh_file = null;
+    return;
+  }
+  if (typeof body.visual_geoms[0].mesh_file !== 'string' || body.visual_geoms[0].mesh_file.length === 0) {
+    throw new Error('Merged body ' + body.name + ' visual_geoms[0] is missing mesh_file');
+  }
+  body.mesh_file = body.visual_geoms[0].mesh_file;
+}
+
+function captureMergeSnapshot() {
+  requireDraftManifest();
+  normalizeMergeSelection();
+  return {
+    draftManifest: deepCloneJson(_draftManifest),
+    selectedBodyName: _selectedBodyName,
+    mergeSelection: Array.from(_uiState.mergeSelection),
+    isDirty: _uiState.isDirty,
+    saveStatus: _uiState.saveStatus
+  };
+}
+
+function restoreMergeSnapshot(snapshot) {
+  if (snapshot === null || typeof snapshot !== 'object') {
+    throw new Error('Merge snapshot is missing');
+  }
+  _draftManifest = deepCloneJson(snapshot.draftManifest);
+  _uiState.mergeSelection = new Set(Array.isArray(snapshot.mergeSelection) ? snapshot.mergeSelection : []);
+  _uiState.isDirty = snapshot.isDirty === true;
+  _uiState.lastMergeSnapshot = null;
+  return rebuildFromDraft({
+    preserveCamera: true,
+    selectedBodyName: snapshot.selectedBodyName
+  }).then(function() {
+    setSaveStatus(typeof snapshot.saveStatus === 'string' ? snapshot.saveStatus : (_uiState.isDirty ? 'Dirty' : 'Saved'));
+  });
+}
+
+function isRootDraftBody(body) {
+  return body.parent === null || body.parent === '' || body.parent === 'world';
+}
+
+function isLeafDraftBody(bodyName) {
+  if (_draftManifest === null || !Array.isArray(_draftManifest.bodies)) {
+    throw new Error('Draft manifest bodies are not initialized');
+  }
+  return _draftManifest.bodies.every(function(body) {
+    return body.parent !== bodyName;
+  });
+}
+
+function reindexDraftJointOrders() {
+  if (_draftManifest === null || !Array.isArray(_draftManifest.joints)) {
+    throw new Error('Draft manifest joints are not initialized');
+  }
+  _draftManifest.joints.sort(function(a, b) {
+    return a.order - b.order;
+  });
+  _draftManifest.joints.forEach(function(joint, index) {
+    joint.order = index;
+  });
+}
+
+function readEditorNumberInput(id, label) {
+  var input = document.getElementById(id);
+  if (!input) {
+    throw new Error('Missing editor input: ' + id);
+  }
+  var value = Number(input.value);
+  if (Number.isFinite(value) === false) {
+    throw new Error(label + ' must be a finite number');
+  }
+  return value;
+}
+
+function validateDraftJointEdit(type, minValue, maxValue, defaultValue) {
+  if (type !== 'hinge' && type !== 'slide') {
+    throw new Error('Joint type must be hinge or slide');
+  }
+  if (Number.isFinite(minValue) === false || Number.isFinite(maxValue) === false) {
+    throw new Error('Joint range values must be finite numbers');
+  }
+  if (minValue > maxValue) {
+    throw new Error('Joint range must satisfy min <= max');
+  }
+  if (Number.isFinite(defaultValue) === false) {
+    throw new Error('Joint default must be a finite number');
+  }
+  if (defaultValue < minValue || defaultValue > maxValue) {
+    throw new Error('Joint default must remain inside the edited range');
+  }
+}
+
+function handleJointEditorApply() {
+  if (_selectedBodyName === null) {
+    throw new Error('Select a body before applying joint edits');
+  }
+  var joint = getOnlyJointForBody(_selectedBodyName);
+  if (joint === null) {
+    throw new Error('Selected body has no editable joint');
+  }
+
+  var typeInput = document.getElementById('joint-editor-type');
+  if (!typeInput) {
+    throw new Error('Missing editor input: joint-editor-type');
+  }
+  var nextType = typeInput.value;
+  var nextMin = readEditorNumberInput('joint-editor-range-min', 'Joint range min');
+  var nextMax = readEditorNumberInput('joint-editor-range-max', 'Joint range max');
+  validateDraftJointEdit(nextType, nextMin, nextMax, joint.default);
+  if (_uiState.activeJointName === joint.name && _uiState.activeJointEditMode === 'anchor') {
+    commitActiveAnchorInputsToTempState();
+  }
+  var previewValue = getJointCurrentPreviewValue(joint.name);
+  if (previewValue < nextMin || previewValue > nextMax) {
+    throw new Error('Current joint preview value must remain inside the edited range before Apply');
+  }
+
+  var nextAnchor = deepCloneJson(joint.anchor);
+  var nextAxis = deepCloneJson(joint.axis);
+  if (_uiState.activeJointName === joint.name && _uiState.activeJointEditMode !== null) {
+    var tempState = getActiveJointTemporaryState();
+    if (tempState === null) {
+      throw new Error('Active joint edit is missing temporary values');
+    }
+    nextAnchor = tempState.anchor;
+    nextAxis = tempState.axis;
+  }
+
+  joint.type = nextType;
+  joint.range = [nextMin, nextMax];
+  joint.anchor = deepCloneJson(nextAnchor);
+  joint.axis = deepCloneJson(nextAxis);
+  if (_uiState.activeJointName === joint.name && _uiState.activeJointEditMode !== null) {
+    _uiState.activeJointTempType = joint.type;
+    _uiState.activeJointTempRange = deepCloneJson(joint.range);
+    _uiState.activeJointTempAnchor = deepCloneJson(joint.anchor);
+    _uiState.activeJointTempAxis = deepCloneJson(joint.axis);
+    syncActiveJointHandleFromTempState();
+  }
+  applyJointStateToScene(
+    joint.name,
+    buildEditableJointState(joint.name, joint.anchor, joint.axis, joint.type, joint.range, joint.default),
+    previewValue
+  );
+  updateSaveButtonState();
+  markDraftDirty();
+  renderJointEditorCard();
+}
+
+function handleJointEditorAddJoint() {
+  if (_selectedBodyName === null) {
+    throw new Error('Select a body before adding a joint');
+  }
+  if (getOnlyJointForBody(_selectedBodyName) !== null) {
+    throw new Error('Selected body already has a joint');
+  }
+
+  var jointName = createUniqueJointNameForBody(_selectedBodyName);
+  _draftManifest.joints.push({
+    name: jointName,
+    body: _selectedBodyName,
+    type: 'hinge',
+    anchor: [0, 0, 0],
+    axis: [0, 0, 1],
+    range: [-Math.PI, Math.PI],
+    default: 0,
+    order: _draftManifest.joints.length
+  });
+  reindexDraftJointOrders();
+  markDraftDirty();
+  return rebuildFromDraft({ preserveCamera: true, preserveSelection: true });
+}
+
+function handleJointEditorDeleteJoint() {
+  if (_selectedBodyName === null) {
+    throw new Error('Select a body before deleting a joint');
+  }
+  var joint = getOnlyJointForBody(_selectedBodyName);
+  if (joint === null) {
+    throw new Error('Selected body has no joint to delete');
+  }
+
+  _draftManifest.joints = _draftManifest.joints.filter(function(entry) {
+    return entry.name !== joint.name;
+  });
+  reindexDraftJointOrders();
+  markDraftDirty();
+  return rebuildFromDraft({ preserveCamera: true, preserveSelection: true });
+}
+
+function handleBodyEditorAddChild() {
+  if (_selectedBodyName === null) {
+    throw new Error('Select a body before adding a child body');
+  }
+  var childBodyName = createUniqueChildBodyName(_selectedBodyName);
+  _draftManifest.bodies.push({
+    id: childBodyName,
+    name: childBodyName,
+    parent: _selectedBodyName,
+    pos: [0, 0, 0],
+    quat: [1, 0, 0, 0],
+    joint_ids: [],
+    mesh_file: null,
+    visual_geoms: [],
+    collision_geoms: [],
+    merged_from: []
+  });
+  markDraftDirty();
+  return rebuildFromDraft({
+    preserveCamera: true,
+    selectedBodyName: childBodyName
+  });
+}
+
+function handleBodyEditorDelete() {
+  if (_selectedBodyName === null) {
+    throw new Error('Select a body before deleting it');
+  }
+  var body = getDraftBodyByName(_selectedBodyName);
+  if (body === null) {
+    throw new Error('Selected body is missing from draft manifest: ' + _selectedBodyName);
+  }
+  if (isRootDraftBody(body)) {
+    throw new Error('Cannot delete the root body');
+  }
+  if (!isLeafDraftBody(body.name)) {
+    throw new Error('Cannot delete a body that still has child bodies');
+  }
+
+  var parentBodyName = body.parent;
+  _draftManifest.bodies = _draftManifest.bodies.filter(function(entry) {
+    return entry.name !== body.name;
+  });
+  _draftManifest.joints = _draftManifest.joints.filter(function(joint) {
+    return joint.body !== body.name;
+  });
+  reindexDraftJointOrders();
+  markDraftDirty();
+  return rebuildFromDraft({
+    preserveCamera: true,
+    selectedBodyName: parentBodyName
+  });
+}
+
+function appendUniqueMergedFromNames(targetBody, sourceBodies) {
+  if (!Array.isArray(targetBody.merged_from)) {
+    targetBody.merged_from = [];
+  }
+  var seen = Object.create(null);
+  targetBody.merged_from.forEach(function(name) {
+    if (typeof name === 'string' && name.length > 0) {
+      seen[name] = true;
+    }
+  });
+  collectMergedFromNames(sourceBodies).forEach(function(name) {
+    if (!Object.prototype.hasOwnProperty.call(seen, name)) {
+      seen[name] = true;
+      targetBody.merged_from.push(name);
+    }
+  });
+}
+
+function handleMergeIntoTargetBody(targetBodyName) {
+  if (hasUncommittedActiveJointEdit()) {
+    throw new Error('Apply or stop the active temporary joint edit before merging into a target body');
+  }
+  var eligibility = getMergeIntoTargetEligibility(targetBodyName);
+  if (!eligibility.ok) {
+    throw new Error(eligibility.message);
+  }
+
+  var sourceBodies = eligibility.bodies;
+  var targetBody = eligibility.targetBody;
+  var targetWorldMatrix = getDraftBodyWorldMatrix(targetBody.name);
+  var targetWorldInverse = new THREE.Matrix4().copy(targetWorldMatrix).invert();
+  var mergeSnapshot = captureMergeSnapshot();
+
+  sourceBodies.forEach(function(body) {
+    var oldBodyWorldMatrix = getDraftBodyWorldMatrix(body.name);
+    body.visual_geoms.forEach(function(geom, index) {
+      targetBody.visual_geoms.push(transformGeomIntoMergedBody(
+        geom,
+        oldBodyWorldMatrix,
+        targetWorldInverse,
+        'Body ' + body.name + ' visual_geoms[' + index + ']'
+      ));
+    });
+    body.collision_geoms.forEach(function(geom, index) {
+      targetBody.collision_geoms.push(transformGeomIntoMergedBody(
+        geom,
+        oldBodyWorldMatrix,
+        targetWorldInverse,
+        'Body ' + body.name + ' collision_geoms[' + index + ']'
+      ));
+    });
+  });
+  appendUniqueMergedFromNames(targetBody, sourceBodies);
+  syncBodyPrimaryMeshFile(targetBody);
+
+  var sourceBodyNameSet = Object.create(null);
+  sourceBodies.forEach(function(body) {
+    sourceBodyNameSet[body.name] = true;
+  });
+  _draftManifest.bodies = _draftManifest.bodies.filter(function(body) {
+    return !Object.prototype.hasOwnProperty.call(sourceBodyNameSet, body.name);
+  });
+  _draftManifest.joints = _draftManifest.joints.filter(function(joint) {
+    return !Object.prototype.hasOwnProperty.call(sourceBodyNameSet, joint.body);
+  });
+
+  reindexDraftJointOrders();
+  _uiState.mergeSelection = new Set();
+  _uiState.lastMergeSnapshot = mergeSnapshot;
+  markDraftDirty();
+  return rebuildFromDraft({
+    preserveCamera: true,
+    selectedBodyName: targetBody.name
+  });
+}
+
+function handleMergeSelectedBodies() {
+  if (hasUncommittedActiveJointEdit()) {
+    throw new Error('Apply or stop the active temporary joint edit before merging bodies');
+  }
+  var eligibility = getMergeEligibility();
+  if (!eligibility.ok) {
+    throw new Error(eligibility.message);
+  }
+
+  var selectedBodies = eligibility.bodies;
+  var commonParent = eligibility.commonParent;
+  var movedJoint = eligibility.retainedJoint;
+  var discardedJoints = eligibility.discardedJoints;
+  var firstBody = selectedBodies[0];
+  var newBodyName = createUniqueMergedBodyName();
+  var newBodyWorldMatrix = getDraftBodyWorldMatrix(firstBody.name);
+  var newBodyWorldInverse = new THREE.Matrix4().copy(newBodyWorldMatrix).invert();
+  var parentWorldMatrix = (commonParent === null || commonParent === '' || commonParent === 'world')
+    ? new THREE.Matrix4().identity()
+    : getDraftBodyWorldMatrix(commonParent);
+  var newBodyLocalMatrix = new THREE.Matrix4().copy(parentWorldMatrix).invert().multiply(newBodyWorldMatrix);
+  var newBodyPose = decomposeMatrixToPose(newBodyLocalMatrix);
+  var mergeSnapshot = captureMergeSnapshot();
+  var retainedJointForPreview = null;
+
+  var newBody = {
+    id: newBodyName,
+    name: newBodyName,
+    parent: commonParent,
+    pos: newBodyPose.pos,
+    quat: newBodyPose.quat,
+    joint_ids: movedJoint ? [movedJoint.name] : [],
+    mesh_file: null,
+    visual_geoms: [],
+    collision_geoms: [],
+    merged_from: collectMergedFromNames(selectedBodies)
+  };
+
+  if (movedJoint !== null) {
+    var previewAnchor = readVector3(movedJoint.anchor, 'Joint ' + movedJoint.name + ' anchor');
+    var previewAxis = readVector3(movedJoint.axis, 'Joint ' + movedJoint.name + ' axis');
+    if (previewAxis.lengthSq() === 0) {
+      throw new Error('Merged joint preview axis became zero-length: ' + movedJoint.name);
+    }
+    previewAxis.normalize();
+    var oldJointBodyWorldMatrix = getDraftBodyWorldMatrix(movedJoint.body);
+    var oldJointBodyWorldQuat = getWorldQuaternionFromMatrix(oldJointBodyWorldMatrix);
+    var newBodyWorldQuat = getWorldQuaternionFromMatrix(newBodyWorldMatrix);
+    var anchorWorld = previewAnchor.clone().applyMatrix4(oldJointBodyWorldMatrix);
+    var anchorNew = anchorWorld.clone().applyMatrix4(newBodyWorldInverse);
+    var axisWorld = previewAxis.clone().applyQuaternion(oldJointBodyWorldQuat);
+    var axisNew = axisWorld.clone().applyQuaternion(newBodyWorldQuat.clone().invert());
+    if (axisNew.lengthSq() === 0) {
+      throw new Error('Merged joint axis became zero-length: ' + movedJoint.name);
+    }
+    axisNew.normalize();
+
+    retainedJointForPreview = {
+      name: movedJoint.name,
+      type: movedJoint.type,
+      anchor: vectorToArray(anchorNew),
+      axis: vectorToArray(axisNew),
+      range: deepCloneJson(movedJoint.range),
+      default: movedJoint.default
+    };
+  }
+
+  selectedBodies.forEach(function(body) {
+    var oldBodyWorldMatrix = getDraftBodyWorldMatrix(body.name);
+    body.visual_geoms.forEach(function(geom, index) {
+      newBody.visual_geoms.push(transformGeomIntoMergedBody(
+        geom,
+        oldBodyWorldMatrix,
+        newBodyWorldInverse,
+        'Body ' + body.name + ' visual_geoms[' + index + ']'
+      ));
+    });
+    body.collision_geoms.forEach(function(geom, index) {
+      newBody.collision_geoms.push(transformGeomIntoMergedBody(
+        geom,
+        oldBodyWorldMatrix,
+        newBodyWorldInverse,
+        'Body ' + body.name + ' collision_geoms[' + index + ']'
+      ));
+    });
+  });
+  syncBodyPrimaryMeshFile(newBody);
+
+  if (movedJoint !== null) {
+    movedJoint.body = newBodyName;
+    movedJoint.anchor = deepCloneJson(retainedJointForPreview.anchor);
+    movedJoint.axis = deepCloneJson(retainedJointForPreview.axis);
+  }
+  if (discardedJoints.length > 0) {
+    var discardedJointNames = Object.create(null);
+    discardedJoints.forEach(function(joint) {
+      discardedJointNames[joint.name] = true;
+    });
+    _draftManifest.joints = _draftManifest.joints.filter(function(joint) {
+      return !Object.prototype.hasOwnProperty.call(discardedJointNames, joint.name);
+    });
+  }
+
+  var sourceBodyNameSet = Object.create(null);
+  selectedBodies.forEach(function(body) {
+    sourceBodyNameSet[body.name] = true;
+  });
+
+  var insertIndex = _draftManifest.bodies.findIndex(function(body) {
+    return body.name === firstBody.name;
+  });
+  if (insertIndex < 0) {
+    throw new Error('Failed to find insertion point for merged body');
+  }
+
+  var nextBodies = _draftManifest.bodies.filter(function(body) {
+    return !Object.prototype.hasOwnProperty.call(sourceBodyNameSet, body.name);
+  });
+  nextBodies.splice(insertIndex, 0, newBody);
+  _draftManifest.bodies = nextBodies;
+  reindexDraftJointOrders();
+  _uiState.mergeSelection = new Set();
+  _uiState.lastMergeSnapshot = mergeSnapshot;
+  markDraftDirty();
+  return rebuildFromDraft({
+    preserveCamera: true,
+    selectedBodyName: newBodyName
+  });
+}
+
+function handleRevertMerge() {
+  if (hasUncommittedActiveJointEdit()) {
+    throw new Error('Apply or stop the active temporary joint edit before reverting a merge');
+  }
+  if (_uiState.lastMergeSnapshot === null) {
+    throw new Error('No merge is available to revert');
+  }
+  return restoreMergeSnapshot(_uiState.lastMergeSnapshot);
+}
+
+function handleJointEditorReset() {
+  if (_selectedBodyName === null) {
+    renderJointEditorCard();
+    return;
+  }
+  var joint = getOnlyJointForBody(_selectedBodyName);
+  if (joint === null) {
+    renderJointEditorCard();
+    return;
+  }
+
+  var typeInput = document.getElementById('joint-editor-type');
+  if (typeInput) {
+    typeInput.value = joint.type;
+  }
+  var minInput = document.getElementById('joint-editor-range-min');
+  if (minInput) {
+    minInput.value = String(joint.range[0]);
+  }
+  var maxInput = document.getElementById('joint-editor-range-max');
+  if (maxInput) {
+    maxInput.value = String(joint.range[1]);
+  }
+
+  if (_uiState.activeJointName === joint.name && _uiState.activeJointEditMode !== null) {
+    if (_uiState.activeJointSnapshot === null) {
+      throw new Error('Active joint edit is missing a reset snapshot');
+    }
+    if (typeInput) {
+      typeInput.value = _uiState.activeJointSnapshot.type;
+    }
+    if (minInput) {
+      minInput.value = String(_uiState.activeJointSnapshot.range[0]);
+    }
+    if (maxInput) {
+      maxInput.value = String(_uiState.activeJointSnapshot.range[1]);
+    }
+    _uiState.activeJointTempType = _uiState.activeJointSnapshot.type;
+    _uiState.activeJointTempRange = deepCloneJson(_uiState.activeJointSnapshot.range);
+    _uiState.activeJointTempAnchor = deepCloneJson(_uiState.activeJointSnapshot.anchor);
+    _uiState.activeJointTempAxis = deepCloneJson(_uiState.activeJointSnapshot.axis);
+    syncActiveJointHandleFromTempState();
+    applyActiveJointTemporaryStateToScene();
+    updateSaveButtonState();
+    renderJointEditorCard();
+    return;
+  }
+
+  updateSaveButtonState();
+  renderJointEditorCard();
+}
+
+function attachBodyEditHandle(mode) {
+  if (mode !== 'translate' && mode !== 'rotate') {
+    throw new Error('Unsupported body edit mode: ' + String(mode));
+  }
+  if (_selectedBodyName === null) {
+    throw new Error('Select a body before editing it');
+  }
+
+  var draftBody = getDraftBodyByName(_selectedBodyName);
+  if (draftBody === null) {
+    throw new Error('Selected body is missing from draft manifest: ' + _selectedBodyName);
+  }
+  if (isRootDraftBody(draftBody)) {
+    throw new Error('Cannot move the root body with the conservative editor');
+  }
+  if (typeof draftBody.parent !== 'string' || draftBody.parent.length === 0) {
+    throw new Error('Selected body is missing a valid parent for translation editing');
+  }
+
+  var parentBodyEntry = _mjBodyMap[draftBody.parent];
+  if (!parentBodyEntry || !parentBodyEntry.bodyGroup) {
+    throw new Error('Parent body is missing a bodyGroup for translation editing');
+  }
+
+  stopTransformEditing();
+  resetJointTransformAxisFilter();
+
+  var handle = new THREE.Group();
+  handle.name = 'body_edit_handle_' + draftBody.name;
+  var marker = new THREE.Mesh(
+    mode === 'rotate' ? new THREE.SphereGeometry(0.016, 16, 12) : new THREE.BoxGeometry(0.02, 0.02, 0.02),
+    new THREE.MeshBasicMaterial({ color: mode === 'rotate' ? 0xffd27a : 0x7ad8ff, depthTest: false })
+  );
+  marker.renderOrder = 1000;
+  handle.add(marker);
+  handle.position.copy(readVector3(draftBody.pos, 'Body ' + draftBody.name + ' pos'));
+  handle.quaternion.copy(readQuaternionWxyz(draftBody.quat, 'Body ' + draftBody.name + ' quat'));
+  parentBodyEntry.bodyGroup.add(handle);
+
+  _uiState.activeBodyEditMode = mode;
+  _uiState.activeBodyName = draftBody.name;
+  _uiState.activeBodyHandle = handle;
+  _uiState.transformControls.setMode(mode);
+  _uiState.transformControls.visible = true;
+  _uiState.transformControls.attach(handle);
+  renderJointEditorCard();
+}
+
+function attachJointEditHandle(mode) {
+  if (mode !== 'anchor' && mode !== 'axis') {
+    throw new Error('Unsupported joint edit mode: ' + String(mode));
+  }
+  if (_selectedBodyName === null) {
+    throw new Error('Select a body before editing a joint');
+  }
+  var joint = getOnlyJointForBody(_selectedBodyName);
+  if (joint === null) {
+    throw new Error('Selected body has no joint to edit');
+  }
+  var bodyEntry = _mjBodyMap[_selectedBodyName];
+  if (!bodyEntry || !bodyEntry.bodyGroup) {
+    throw new Error('Selected body is missing a bodyGroup for joint editing');
+  }
+  var nextSnapshot = buildDraftJointEditableState(joint);
+  var nextTempType = joint.type;
+  var nextTempRange = deepCloneJson(joint.range);
+  var nextTempAnchor = deepCloneJson(joint.anchor);
+  var nextTempAxis = deepCloneJson(joint.axis);
+  if (_uiState.activeJointName === joint.name && _uiState.activeJointSnapshot !== null) {
+    nextSnapshot = deepCloneJson(_uiState.activeJointSnapshot);
+    if (typeof _uiState.activeJointTempType === 'string') {
+      nextTempType = _uiState.activeJointTempType;
+    }
+    if (Array.isArray(_uiState.activeJointTempRange)) {
+      nextTempRange = deepCloneJson(_uiState.activeJointTempRange);
+    }
+    if (Array.isArray(_uiState.activeJointTempAnchor)) {
+      nextTempAnchor = deepCloneJson(_uiState.activeJointTempAnchor);
+    }
+    if (Array.isArray(_uiState.activeJointTempAxis)) {
+      nextTempAxis = deepCloneJson(_uiState.activeJointTempAxis);
+    }
+    detachTransformHandlesOnly();
+  } else {
+    stopTransformEditing();
+  }
+
+  var handle = new THREE.Group();
+  handle.name = 'joint_edit_handle_' + joint.name;
+
+  var anchor = readVector3(nextTempAnchor, 'Joint ' + joint.name + ' temp anchor');
+  var axis = readVector3(nextTempAxis, 'Joint ' + joint.name + ' temp axis');
+  if (axis.lengthSq() === 0) {
+    throw new Error('Joint ' + joint.name + ' axis must have non-zero length');
+  }
+  axis.normalize();
+
+  handle.position.copy(anchor);
+  if (mode === 'axis') {
+    handle.quaternion.copy(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), axis));
+  } else {
+    handle.quaternion.identity();
+  }
+  bodyEntry.bodyGroup.add(handle);
+
+  _uiState.activeJointEditMode = mode;
+  _uiState.activeJointName = joint.name;
+  _uiState.activeJointSnapshot = nextSnapshot;
+  _uiState.activeJointTempType = nextTempType;
+  _uiState.activeJointTempRange = deepCloneJson(nextTempRange);
+  _uiState.activeJointTempAnchor = deepCloneJson(nextTempAnchor);
+  _uiState.activeJointTempAxis = deepCloneJson(nextTempAxis);
+  _uiState.activeJointHandle = handle;
+  if (mode === 'axis') {
+    clearAnchorDragVisuals(handle);
+    _uiState.transformControls.setMode('rotate');
+    _uiState.transformControls.visible = true;
+    applyJointTransformAxisFilter();
+    _uiState.transformControls.attach(handle);
+  } else {
+    syncActiveAnchorDragVisuals();
+    _uiState.transformControls.detach();
+    _uiState.transformControls.visible = false;
+  }
+  applyActiveJointTemporaryStateToScene();
+  updateSaveButtonState();
+  renderJointEditorCard();
+}
+
+function commitActiveEditHandle() {
+  if (_uiState.activeBodyEditMode !== null) {
+    return commitBodyEditHandle();
+  }
+  return commitJointEditHandle();
+}
+
+function commitBodyEditHandle() {
+  if (_uiState.activeBodyEditMode === null || _uiState.activeBodyName === null || _uiState.activeBodyHandle === null) {
+    return;
+  }
+  if (_uiState.activeBodyEditMode !== 'translate' && _uiState.activeBodyEditMode !== 'rotate') {
+    throw new Error('Unsupported active body edit mode: ' + String(_uiState.activeBodyEditMode));
+  }
+
+  var body = getDraftBodyByName(_uiState.activeBodyName);
+  if (body === null) {
+    throw new Error('Active body edit target is missing from draft manifest');
+  }
+  if (isRootDraftBody(body)) {
+    throw new Error('Cannot move the root body with the conservative editor');
+  }
+
+  body.pos = [
+    _uiState.activeBodyHandle.position.x,
+    _uiState.activeBodyHandle.position.y,
+    _uiState.activeBodyHandle.position.z
+  ];
+  body.quat = quaternionToWxyzArray(_uiState.activeBodyHandle.quaternion.clone().normalize());
+  markDraftDirty();
+  return rebuildFromDraft({ preserveCamera: true, preserveSelection: true });
+}
+
+function commitJointEditHandle() {
+  return;
+}
+
+function updateTemporaryJointEditFromHandle() {
+  if (_uiState.activeJointEditMode === null || _uiState.activeJointName === null || _uiState.activeJointHandle === null) {
+    return;
+  }
+  if (_uiState.activeJointEditMode === 'anchor') {
+    _uiState.activeJointTempAnchor = [
+      _uiState.activeJointHandle.position.x,
+      _uiState.activeJointHandle.position.y,
+      _uiState.activeJointHandle.position.z
+    ];
+  } else if (_uiState.activeJointEditMode === 'axis') {
+    var nextAxis = new THREE.Vector3(0, 0, 1).applyQuaternion(_uiState.activeJointHandle.quaternion);
+    if (nextAxis.lengthSq() === 0) {
+      throw new Error('Edited joint axis must remain non-zero');
+    }
+    nextAxis.normalize();
+    _uiState.activeJointTempAxis = [nextAxis.x, nextAxis.y, nextAxis.z];
+  } else {
+    throw new Error('Unsupported active joint edit mode: ' + String(_uiState.activeJointEditMode));
+  }
+  applyActiveJointTemporaryStateToScene();
+  updateSaveButtonState();
+  if (_uiState.activeJointEditMode === 'anchor') {
+    updateAnchorEditorInputsFromTempState();
+  } else if (_uiState.activeJointEditMode === 'axis') {
+    updateAxisEditorInputsFromTempState();
+  }
+}
+
+function detachTransformHandlesOnly() {
+  stopAnchorPointerDrag();
+  var transformControls = _uiState.transformControls;
+  if (transformControls) {
+    transformControls.detach();
+    transformControls.visible = false;
+  }
+  if (_uiState.activeBodyHandle && _uiState.activeBodyHandle.parent) {
+    _uiState.activeBodyHandle.parent.remove(_uiState.activeBodyHandle);
+  }
+  if (_uiState.activeJointHandle && _uiState.activeJointHandle.parent) {
+    _uiState.activeJointHandle.parent.remove(_uiState.activeJointHandle);
+  }
+  _uiState.activeBodyHandle = null;
+  _uiState.activeJointHandle = null;
+  if (controls) {
+    controls.enabled = true;
+  }
+}
+
+function stopTransformEditing(options) {
+  var restoreJointScene = !options || options.restoreJointScene !== false;
+  if (restoreJointScene && _uiState.activeJointName !== null && getDraftJointByName(_uiState.activeJointName) !== null) {
+    restoreCommittedJointScene(_uiState.activeJointName);
+  }
+  detachTransformHandlesOnly();
+  _uiState.activeBodyEditMode = null;
+  _uiState.activeBodyName = null;
+  _uiState.activeJointEditMode = null;
+  _uiState.activeJointName = null;
+  _uiState.activeJointSnapshot = null;
+  _uiState.activeJointTempType = null;
+  _uiState.activeJointTempRange = null;
+  _uiState.activeJointTempAnchor = null;
+  _uiState.activeJointTempAxis = null;
+  resetJointTransformAxisFilter();
+  updateSaveButtonState();
+}
+
+function applyJointPreview(jointName, value) {
+  var joint = getJointPreviewEntry(jointName);
+  if (Number.isFinite(value) === false) {
+    throw new Error('Joint preview value must be finite for joint ' + jointName);
+  }
+
+  if (joint.type === 'hinge') {
+    joint.node.position.copy(joint.restPosition);
+    joint.node.quaternion.copy(joint.restQuaternion);
+    joint.node.setRotationFromAxisAngle(joint.axis, value);
+  } else if (joint.type === 'slide') {
+    var restAnchor = joint.restPosition;
+    joint.node.quaternion.copy(joint.restQuaternion);
+    joint.node.position.copy(restAnchor).addScaledVector(joint.axis, value);
+  } else {
+    throw new Error('Unsupported joint preview type: ' + jointName + ' (' + String(joint.type) + ')');
+  }
+
+  syncJointChildBodyPreviewTransforms(joint);
+}
+
+function syncJointChildBodyPreviewTransforms(joint) {
+  if (typeof joint.bodyName !== 'string' || joint.bodyName.length === 0) {
+    throw new Error('Joint preview bodyName is invalid');
+  }
+  if (!joint.node.parent || joint.node.parent.isObject3D !== true) {
+    throw new Error('Joint preview parent bodyGroup is missing for body ' + joint.bodyName);
+  }
+
+  joint.node.updateMatrix();
+  var jointBodyMotionMatrix = new THREE.Matrix4().multiplyMatrices(
+    joint.node.matrix,
+    new THREE.Matrix4().makeTranslation(
+      joint.bodyLocalOriginOffset.x,
+      joint.bodyLocalOriginOffset.y,
+      joint.bodyLocalOriginOffset.z
+    )
+  );
+
+  requireDraftManifest().bodies.forEach(function(body) {
+    if (body.parent !== joint.bodyName) {
+      return;
+    }
+
+    var bodyEntry = _mjBodyMap[body.name];
+    if (!bodyEntry || !bodyEntry.bodyGroup) {
+      throw new Error('Preview bodyGroup is missing for child body ' + body.name);
+    }
+
+    var previewLocalMatrix = new THREE.Matrix4().multiplyMatrices(
+      jointBodyMotionMatrix,
+      composeMatrixFromPose(body.pos, body.quat, 'Body ' + body.name)
+    );
+    var previewPos = new THREE.Vector3();
+    var previewQuat = new THREE.Quaternion();
+    var previewScale = new THREE.Vector3();
+    previewLocalMatrix.decompose(previewPos, previewQuat, previewScale);
+    bodyEntry.bodyGroup.position.copy(previewPos);
+    bodyEntry.bodyGroup.quaternion.copy(previewQuat);
+  });
+
+  joint.node.parent.updateMatrixWorld(true);
+}
+
+function getJointPreviewEntry(jointName) {
+  if (!Object.prototype.hasOwnProperty.call(_mjJointMap, jointName)) {
+    throw new Error('Joint preview metadata is missing for joint ' + jointName);
+  }
+
+  var joint = _mjJointMap[jointName];
+  if (!joint.node || joint.node.isObject3D !== true) {
+    throw new Error('Joint preview node is invalid for joint ' + jointName);
+  }
+  if (!joint.axis || joint.axis.isVector3 !== true) {
+    throw new Error('Joint preview axis is invalid for joint ' + jointName);
+  }
+  if (!joint.restPosition || joint.restPosition.isVector3 !== true) {
+    throw new Error('Joint restPosition is invalid for joint ' + jointName);
+  }
+  if (!joint.restQuaternion || joint.restQuaternion.isQuaternion !== true) {
+    throw new Error('Joint restQuaternion is invalid for joint ' + jointName);
+  }
+  if (!joint.bodyLocalOriginOffset || joint.bodyLocalOriginOffset.isVector3 !== true) {
+    throw new Error('Joint bodyLocalOriginOffset is invalid for joint ' + jointName);
+  }
+
+  return joint;
+}
+
+function updateJointSliderValueLabel(jointName, value) {
+  if (!Object.prototype.hasOwnProperty.call(_jointSliderMap, jointName)) {
+    throw new Error('Joint slider label is missing for joint ' + jointName);
+  }
+
+  var joint = getJointPreviewEntry(jointName);
+  _jointSliderMap[jointName].valueLabel.textContent = formatJointValueLabel(joint.type, value);
+}
+
+function formatJointValueLabel(jointType, value) {
+  if (jointType === 'hinge') {
+    return value.toFixed(3) + ' rad / ' + radiansToDegrees(value).toFixed(1) + ' deg';
+  }
+  if (jointType === 'slide') {
+    return formatMillimeters(value) + ' / ' + value.toFixed(6) + ' m';
+  }
+  throw new Error('Unsupported joint value label type: ' + String(jointType));
+}
+
+function formatJointRangeLabel(jointType, minValue, maxValue) {
+  if (jointType === 'hinge') {
+    return (
+      'Range: ' + minValue.toFixed(3) + ' to ' + maxValue.toFixed(3) + ' rad' +
+      ' (' + radiansToDegrees(minValue).toFixed(1) + ' to ' + radiansToDegrees(maxValue).toFixed(1) + ' deg)'
+    );
+  }
+  if (jointType === 'slide') {
+    return (
+      'Range: ' + formatMillimeters(minValue) + ' to ' + formatMillimeters(maxValue) +
+      ' (' + minValue.toFixed(6) + ' to ' + maxValue.toFixed(6) + ' m)'
+    );
+  }
+  throw new Error('Unsupported joint range label type: ' + String(jointType));
+}
+
+function formatMillimeters(valueMeters) {
+  var mm = Number(valueMeters) * 1000;
+  if (!Number.isFinite(mm)) {
+    return String(valueMeters) + ' m';
+  }
+  var abs = Math.abs(mm);
+  var digits = abs >= 10 ? 1 : (abs >= 1 ? 2 : 3);
+  return mm.toFixed(digits) + ' mm';
+}
+
+function slideSliderStep(range) {
+  if (!Array.isArray(range) || range.length !== 2) {
+    return '0.001';
+  }
+  var span = Math.abs(Number(range[1]) - Number(range[0]));
+  if (!Number.isFinite(span) || span <= 0) {
+    return '0.0001';
+  }
+  return String(Math.max(span / 200, 0.00001));
+}
+
+function radiansToDegrees(value) {
+  if (Number.isFinite(value) === false) {
+    throw new Error('Cannot convert non-finite radians value to degrees');
+  }
+  return value * 180 / Math.PI;
+}
+
+function resetJointPanelState() {
+  var panel = document.getElementById('joint-panel');
+  var panelBody = document.getElementById('joint-panel-body');
+  panel.hidden = true;
+  panelBody.innerHTML = '';
+  _jointSliderMap = Object.create(null);
+  _jointBodyListItemMap = Object.create(null);
+}
+
+function updateJointBodyListSelection() {
+  Object.keys(_jointBodyListItemMap).forEach(function(bodyName) {
+    _jointBodyListItemMap[bodyName].classList.toggle('selected', bodyName === _selectedBodyName);
+  });
+}
+
+function resetSceneState() {
+  stopTransformEditing();
+  _mjJointMap = Object.create(null);
+  _mjBodyMap = Object.create(null);
+  _selectedBodyName = null;
+  _materialOwnerIds = Object.create(null);
+  resetJointPanelState();
+  updateSelectedBodyLabel();
+}
+
+function autoFrameRootGroup(group) {
+  var box = new THREE.Box3().setFromObject(group);
+  if (box.isEmpty()) {
+    return;
+  }
+
+  var center = new THREE.Vector3();
+  box.getCenter(center);
+  var size = box.getSize(new THREE.Vector3());
+  var maxDim = Math.max(size.x, size.y, size.z);
+  var dist = maxDim * 2.0;
+
+  camera.position.set(
+    center.x + dist * 0.5,
+    center.y + dist * 0.4,
+    center.z + dist * 0.5
+  );
+  controls.target.copy(center);
+  controls.update();
+}
+
+function captureCameraState() {
+  return {
+    position: camera.position.clone(),
+    target: controls.target.clone()
+  };
+}
+
+function restoreCameraState(cameraState) {
+  camera.position.copy(cameraState.position);
+  controls.target.copy(cameraState.target);
+  controls.update();
+}
+
+// ============================================================
+// Drag-Drop XML Reload
+// ============================================================
+(function initDragDrop() {
+  var dropZone = document.getElementById('drop-zone');
+  var dragCounter = 0;
+
+  document.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  document.addEventListener('dragenter', function(e) {
+    e.preventDefault();
+    dragCounter++;
+    dropZone.classList.add('visible');
+  });
+
+  document.addEventListener('dragleave', function(e) {
+    dragCounter--;
+    if (dragCounter <= 0) {
+      dragCounter = 0;
+      dropZone.classList.remove('visible');
+    }
+  });
+
+  document.addEventListener('drop', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter = 0;
+    dropZone.classList.remove('visible');
+
+    if (!assetName) {
+      showError('Select an asset first before dropping XML');
+      return;
+    }
+
+    var file = e.dataTransfer.files[0];
+    if (!file) return;
+
+    var ext = file.name.split('.').pop().toLowerCase();
+    if (ext !== 'xml' && ext !== 'mjcf') {
+      showError('Only .xml or .mjcf files are supported');
+      return;
+    }
+
+    uploadAndReload(file);
+  });
+
+  // File input path
+  var fileInput = document.getElementById('file-input');
+  fileInput.addEventListener('change', function(e) {
+    if (e.target.files.length > 0 && assetName) {
+      uploadAndReload(e.target.files[0]);
+      fileInput.value = ''; // reset
+    }
+  });
+})();
+
+function uploadAndReload(file) {
+  showStatus('Uploading ' + file.name + '...');
+  hideError();
+
+  var formData = new FormData();
+  formData.append('file', file);
+
+  fetch('/api/assets/' + encodeURIComponent(assetName) + '/preview-from-xml', {
+    method: 'POST',
+    body: formData
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(manifest) {
+      if (manifest.status !== 'ok') {
+        showError('XML reload error: ' + String(manifest.message));
+        return;
+      }
+      return loadManifestIntoDraftAndBuildScene(manifest, { preserveCamera: true, preserveSelection: true });
+    })
+    .catch(function(err) {
+      showError('Upload failed: ' + err);
+    });
+}
+
+// ============================================================
+// UI Helpers
+// ============================================================
+function showStatus(msg) {
+  document.getElementById('status-text').textContent = msg;
+}
+
+function showError(msg) {
+  var bar = document.getElementById('error-bar');
+  bar.textContent = msg;
+  bar.style.display = 'block';
+  setTimeout(function() { bar.style.display = 'none'; }, 8000);
+}
+
+function hideError() {
+  document.getElementById('error-bar').style.display = 'none';
+}
+
+function disposeGroup(group) {
+  group.traverse(function(child) {
+    if (child.geometry) {
+      child.geometry.dispose();
+    }
+    if (child.material) {
+      if (Array.isArray(child.material)) {
+        child.material.forEach(disposeMaterial);
+        return;
+      }
+      disposeMaterial(child.material);
+    }
+  });
+}
+
+function disposeMaterial(material) {
+  if (material.map) {
+    material.map.dispose();
+  }
+  material.dispose();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+{
+  "object_id": "ra_036",
+  "initial_joints": {
+    "part_03": {
+      "type": "revolute",
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "limit": null,
+      "parent": "body",
+      "moving_parts": [
+        "part_03"
+      ]
+    },
+    "part_05": {
+      "type": "revolute",
+      "axis": [
+        0,
+        0,
+        1
+      ],
+      "limit": null,
+      "parent": "body",
+      "moving_parts": [
+        "part_05"
+      ]
+    },
+    "part_07": {
+      "type": "prismatic",
+      "axis": [
+        1,
+        0,
+        0
+      ],
+      "limit": [
+        0,
+        300
+      ],
+      "parent": "body",
+      "moving_parts": [
+        "part_07"
+      ]
+    }
+  }
+}

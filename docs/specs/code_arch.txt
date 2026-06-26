@@ -1,0 +1,34 @@
+arts-reconstruction/
+├── run_pipeline.sh                            # 主入口
+│
+├── pipeline/                                  
+│   ├── 01_ss_flow_mv.py            # 多图ss flow
+|   ├── 01_ss_decode.py            # 解成稀疏占据
+│   ├── 02_part_flow.py                   # part_flow 
+│   ├── 03_slat_flow.py                  # Blender 子进程脚本（被 02 调用）
+│   ├── 03_final_decode.py                         # 解成emsh和gs
+│  
+│
+├── scripts/                                # bash集合
+│   ├── train
+|         ├── ss_flow_mv_train.bash     # 要求适配多卡和集群
+|         ├── slat_flow_mv_train.bash     # 要求适配多卡和集群
+|         ├── ss_flow_art_train.bash / slat_flow_art_train.bash / part_promptable_seg/run_train.bash
+|   ├── eval
+|   ├── inference
+│
+├── Trellis-arts/                                     # 主要模型和config
+│   ├── models/
+|         ├── part_flow
+│   ├── configs/
+|          ├── generation/   # 原来的
+|          ├── vae/   # 原来的
+|          ├── part_flow/   # 我的
+|          ├── ss_flow_mv/   # 我的
+|          ├── slat_flow_mv/   # 我的
+│   ├── train_arts.py    # 整合几个训练模型 是bash起的入口
+│   └── inference.py     # 整合几个模型推理 是推理bash的入口
+│
+└── docs/
+    ├── PIPELINE.md              # 7 步流程详解
+    └── DATA_FORMATS.md          # finaljson + partseg + 各类输出格式说明

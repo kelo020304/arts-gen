@@ -1,0 +1,1768 @@
+{
+  "iterations": [
+    {
+      "asset_dir": "kin_test/ra_063_agent_run_20260528_113756/object_assets/ks_ra_063_5e10801e_iter_000",
+      "asset_name": "ks_ra_063_5e10801e_iter_000",
+      "asset_root": "kin_test/ra_063_agent_run_20260528_113756/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "confidence": 0.25,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+          "upper": 0.0
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.25,
+          "joint_name": "part_01",
+          "lower": -6.283185307179586,
+          "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.25,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+          "upper": 0.03
+        }
+      ],
+      "iteration": 0,
+      "joint_states": {
+        "part_00": {
+          "errors": [
+            "rough VLM initial guess"
+          ],
+          "status": "need_fix"
+        },
+        "part_01": {
+          "errors": [
+            "rough VLM initial guess"
+          ],
+          "status": "need_fix"
+        },
+        "part_02": {
+          "errors": [
+            "rough VLM initial guess"
+          ],
+          "status": "need_fix"
+        }
+      },
+      "motion_search": [],
+      "object_id": "ra_063",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "vlm_initial",
+      "run_dir": "kin_test/ra_063_agent_run_20260528_113756",
+      "xml_path": "kin_test/ra_063_agent_run_20260528_113756/object_assets/ks_ra_063_5e10801e_iter_000/mjcf/ks_ra_063_5e10801e_iter_000.xml"
+    },
+    {
+      "asset_dir": "kin_test/ra_063_agent_run_20260528_113756/object_assets/ks_ra_063_5e10801e_iter_001",
+      "asset_name": "ks_ra_063_5e10801e_iter_001",
+      "asset_root": "kin_test/ra_063_agent_run_20260528_113756/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.0,
+            0.08715574274765817,
+            0.9961946980917455
+          ],
+          "confidence": 0.42,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Previous/current axis was [0.0, 0.0, 1.0]; evidence target is [0.0, 1.0, 0.0], so this iteration rotates the current unit axis toward the target by no more than 5 degrees. Revolute limits changed by at most one allowed 10 degree step. need_fix: temperature knob should have positive finite sweep; bounded action increased upper by +10 degrees.",
+          "upper": 0.17453292519943295
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.9961946980917455,
+            0.08715574274765817,
+            0.0
+          ],
+          "confidence": 0.42,
+          "joint_name": "part_01",
+          "lower": -6.1086523819801535,
+          "reason": "State per joint: need_fix. Previous/current axis was [1.0, 0.0, 0.0]; evidence target is [0.0, 1.0, 0.0], so this iteration rotates the current unit axis toward the target by no more than 5 degrees. Revolute limits changed by at most one allowed 10 degree step. need_fix: timer knob should not require large negative sweep; bounded action raised lower by +10 degrees.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.9961946980917455,
+            -0.08715574274765817,
+            0.0
+          ],
+          "confidence": 0.45,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Previous/current axis was [1.0, 0.0, 0.0]; evidence target is [0.0, -1.0, 0.0], so this iteration rotates the current unit axis toward the target by no more than 5 degrees. Prismatic limits changed by at most one allowed 10 mm step. need_fix: pull-out drawer/pan visual cue suggests longer travel; bounded action increased upper by +10 mm.",
+          "upper": 0.04
+        }
+      ],
+      "iteration": 1,
+      "joint_states": {
+        "part_00": {
+          "errors": [],
+          "status": "correct"
+        },
+        "part_01": {
+          "errors": [
+            "candidate motion invalid at q=-5.33416 under continuous-axis action validation"
+          ],
+          "status": "need_fix"
+        },
+        "part_02": {
+          "errors": [],
+          "status": "correct"
+        }
+      },
+      "motion_search": [
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.01090830782496456,
+              "valid": true
+            },
+            {
+              "q": 0.02181661564992912,
+              "valid": true
+            },
+            {
+              "q": 0.032724923474893676,
+              "valid": true
+            },
+            {
+              "q": 0.04363323129985824,
+              "valid": true
+            },
+            {
+              "q": 0.0545415391248228,
+              "valid": true
+            },
+            {
+              "q": 0.06544984694978735,
+              "valid": true
+            },
+            {
+              "q": 0.07635815477475191,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971647,
+              "valid": true
+            },
+            {
+              "q": 0.09817477042468103,
+              "valid": true
+            },
+            {
+              "q": 0.1090830782496456,
+              "valid": true
+            },
+            {
+              "q": 0.11999138607461016,
+              "valid": true
+            },
+            {
+              "q": 0.1308996938995747,
+              "valid": true
+            },
+            {
+              "q": 0.14180800172453928,
+              "valid": true
+            },
+            {
+              "q": 0.15271630954950383,
+              "valid": true
+            },
+            {
+              "q": 0.1636246173744684,
+              "valid": true
+            },
+            {
+              "q": 0.17453292519943295,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+Z",
+          "estimate_axis_world": [
+            0.0,
+            0.08715574274765817,
+            0.9961946980917455
+          ],
+          "joint_name": "part_00",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.0,
+            0.08715574274765817,
+            0.9961946980917455
+          ],
+          "selected_limit": 0.17453292519943295,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": -6.1086523819801535,
+              "valid": true
+            },
+            {
+              "q": -5.3341625264076695,
+              "valid": false
+            },
+            {
+              "q": -4.559672670835186,
+              "valid": false
+            },
+            {
+              "q": -3.7851828152627025,
+              "valid": false
+            },
+            {
+              "q": -3.0106929596902186,
+              "valid": false
+            },
+            {
+              "q": -2.2362031041177346,
+              "valid": false
+            },
+            {
+              "q": -1.4617132485452515,
+              "valid": false
+            },
+            {
+              "q": -0.6872233929727676,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971638,
+              "valid": true
+            },
+            {
+              "q": 0.8617563181722003,
+              "valid": true
+            },
+            {
+              "q": 1.6362461737446843,
+              "valid": false
+            },
+            {
+              "q": 2.4107360293171674,
+              "valid": false
+            },
+            {
+              "q": 3.1852258848896504,
+              "valid": false
+            },
+            {
+              "q": 3.9597157404621353,
+              "valid": false
+            },
+            {
+              "q": 4.734205596034618,
+              "valid": false
+            },
+            {
+              "q": 5.508695451607103,
+              "valid": true
+            },
+            {
+              "q": 6.283185307179586,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            0.9961946980917455,
+            0.08715574274765817,
+            0.0
+          ],
+          "joint_name": "part_01",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.9961946980917455,
+            0.08715574274765817,
+            0.0
+          ],
+          "selected_limit": 6.283185307179586,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.0025,
+              "valid": true
+            },
+            {
+              "q": 0.005,
+              "valid": true
+            },
+            {
+              "q": 0.0075,
+              "valid": true
+            },
+            {
+              "q": 0.01,
+              "valid": true
+            },
+            {
+              "q": 0.0125,
+              "valid": true
+            },
+            {
+              "q": 0.015,
+              "valid": true
+            },
+            {
+              "q": 0.0175,
+              "valid": true
+            },
+            {
+              "q": 0.02,
+              "valid": true
+            },
+            {
+              "q": 0.0225,
+              "valid": true
+            },
+            {
+              "q": 0.025,
+              "valid": true
+            },
+            {
+              "q": 0.0275,
+              "valid": true
+            },
+            {
+              "q": 0.03,
+              "valid": true
+            },
+            {
+              "q": 0.0325,
+              "valid": true
+            },
+            {
+              "q": 0.035,
+              "valid": true
+            },
+            {
+              "q": 0.0375,
+              "valid": true
+            },
+            {
+              "q": 0.04,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            0.9961946980917455,
+            -0.08715574274765817,
+            0.0
+          ],
+          "joint_name": "part_02",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.9961946980917455,
+            -0.08715574274765817,
+            0.0
+          ],
+          "selected_limit": 0.04,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        }
+      ],
+      "object_id": "ra_063",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "candidate",
+      "run_dir": "kin_test/ra_063_agent_run_20260528_113756",
+      "xml_path": "kin_test/ra_063_agent_run_20260528_113756/object_assets/ks_ra_063_5e10801e_iter_001/mjcf/ks_ra_063_5e10801e_iter_001.xml"
+    },
+    {
+      "asset_dir": "kin_test/ra_063_agent_run_20260528_113756/object_assets/ks_ra_063_5e10801e_iter_002",
+      "asset_name": "ks_ra_063_5e10801e_iter_002",
+      "asset_root": "kin_test/ra_063_agent_run_20260528_113756/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.0,
+            0.17364817766693036,
+            0.9848077530122081
+          ],
+          "confidence": 0.48,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Previous estimate reconstructed as axis=[0.0, 0.08715574274765817, 0.9961946980917455], lower=0.0, upper=0.17453292519943295. Evidence target axis=[0.0, 1.0, 0.0]. This iteration: need_fix: continued the bounded continuous-axis correction by rotating the previous unit axis toward the evidence target by no more than 5 degrees; need_fix: temperature knob still needs positive sweep; increased the previous upper limit by one allowed +10 degree step. Limit action uses the allowed ladder only: revolute step is 10 degrees in radians, prismatic step is 10 mm in meters.",
+          "upper": 0.3490658503988659
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.9848077530122081,
+            0.17364817766693036,
+            0.0
+          ],
+          "confidence": 0.48,
+          "joint_name": "part_01",
+          "lower": -5.934119456780721,
+          "reason": "State per joint: need_fix. Previous estimate reconstructed as axis=[0.9961946980917455, 0.08715574274765817, 0.0], lower=-6.1086523819801535, upper=6.283185307179586. Evidence target axis=[0.0, 1.0, 0.0]. This iteration: need_fix: continued the bounded continuous-axis correction by rotating the previous unit axis toward the evidence target by no more than 5 degrees; need_fix: timer knob negative sweep remains too large; raised the previous lower limit by one allowed +10 degree step. Limit action uses the allowed ladder only: revolute step is 10 degrees in radians, prismatic step is 10 mm in meters.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.9848077530122081,
+            -0.17364817766693036,
+            0.0
+          ],
+          "confidence": 0.48,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Previous estimate reconstructed as axis=[0.9961946980917455, -0.08715574274765817, 0.0], lower=0.0, upper=0.04. Evidence target axis=[0.0, -1.0, 0.0]. This iteration: need_fix: continued the bounded continuous-axis correction by rotating the previous unit axis toward the evidence target by no more than 5 degrees; need_fix: pull-out drawer/pan travel remains short; increased the previous upper limit by one allowed +10 mm step. Limit action uses the allowed ladder only: revolute step is 10 degrees in radians, prismatic step is 10 mm in meters.",
+          "upper": 0.05
+        }
+      ],
+      "iteration": 2,
+      "joint_states": {
+        "part_00": {
+          "errors": [],
+          "status": "correct"
+        },
+        "part_01": {
+          "errors": [
+            "candidate motion invalid at q=-5.17054 under continuous-axis action validation"
+          ],
+          "status": "need_fix"
+        },
+        "part_02": {
+          "errors": [],
+          "status": "correct"
+        }
+      },
+      "motion_search": [
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.02181661564992912,
+              "valid": true
+            },
+            {
+              "q": 0.04363323129985824,
+              "valid": true
+            },
+            {
+              "q": 0.06544984694978735,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971647,
+              "valid": true
+            },
+            {
+              "q": 0.1090830782496456,
+              "valid": true
+            },
+            {
+              "q": 0.1308996938995747,
+              "valid": true
+            },
+            {
+              "q": 0.15271630954950383,
+              "valid": true
+            },
+            {
+              "q": 0.17453292519943295,
+              "valid": true
+            },
+            {
+              "q": 0.19634954084936207,
+              "valid": true
+            },
+            {
+              "q": 0.2181661564992912,
+              "valid": true
+            },
+            {
+              "q": 0.2399827721492203,
+              "valid": true
+            },
+            {
+              "q": 0.2617993877991494,
+              "valid": true
+            },
+            {
+              "q": 0.28361600344907856,
+              "valid": true
+            },
+            {
+              "q": 0.30543261909900765,
+              "valid": true
+            },
+            {
+              "q": 0.3272492347489368,
+              "valid": true
+            },
+            {
+              "q": 0.3490658503988659,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+Z",
+          "estimate_axis_world": [
+            0.0,
+            0.17364817766693036,
+            0.9848077530122081
+          ],
+          "joint_name": "part_00",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.0,
+            0.17364817766693036,
+            0.9848077530122081
+          ],
+          "selected_limit": 0.3490658503988659,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": -5.934119456780721,
+              "valid": true
+            },
+            {
+              "q": -5.170537909033202,
+              "valid": false
+            },
+            {
+              "q": -4.406956361285682,
+              "valid": false
+            },
+            {
+              "q": -3.643374813538163,
+              "valid": false
+            },
+            {
+              "q": -2.879793265790644,
+              "valid": false
+            },
+            {
+              "q": -2.116211718043125,
+              "valid": false
+            },
+            {
+              "q": -1.3526301702956056,
+              "valid": false
+            },
+            {
+              "q": -0.589048622548086,
+              "valid": true
+            },
+            {
+              "q": 0.17453292519943275,
+              "valid": true
+            },
+            {
+              "q": 0.9381144729469515,
+              "valid": false
+            },
+            {
+              "q": 1.7016960206944711,
+              "valid": false
+            },
+            {
+              "q": 2.4652775684419908,
+              "valid": false
+            },
+            {
+              "q": 3.2288591161895095,
+              "valid": false
+            },
+            {
+              "q": 3.9924406639370282,
+              "valid": false
+            },
+            {
+              "q": 4.756022211684549,
+              "valid": false
+            },
+            {
+              "q": 5.5196037594320675,
+              "valid": true
+            },
+            {
+              "q": 6.283185307179586,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            0.9848077530122081,
+            0.17364817766693036,
+            0.0
+          ],
+          "joint_name": "part_01",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.9848077530122081,
+            0.17364817766693036,
+            0.0
+          ],
+          "selected_limit": 6.283185307179586,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.003125,
+              "valid": true
+            },
+            {
+              "q": 0.00625,
+              "valid": true
+            },
+            {
+              "q": 0.009375000000000001,
+              "valid": true
+            },
+            {
+              "q": 0.0125,
+              "valid": true
+            },
+            {
+              "q": 0.015625,
+              "valid": true
+            },
+            {
+              "q": 0.018750000000000003,
+              "valid": true
+            },
+            {
+              "q": 0.021875000000000002,
+              "valid": true
+            },
+            {
+              "q": 0.025,
+              "valid": true
+            },
+            {
+              "q": 0.028125,
+              "valid": true
+            },
+            {
+              "q": 0.03125,
+              "valid": true
+            },
+            {
+              "q": 0.034375,
+              "valid": true
+            },
+            {
+              "q": 0.037500000000000006,
+              "valid": true
+            },
+            {
+              "q": 0.040625,
+              "valid": true
+            },
+            {
+              "q": 0.043750000000000004,
+              "valid": true
+            },
+            {
+              "q": 0.046875,
+              "valid": true
+            },
+            {
+              "q": 0.05,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            0.9848077530122081,
+            -0.17364817766693036,
+            0.0
+          ],
+          "joint_name": "part_02",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.9848077530122081,
+            -0.17364817766693036,
+            0.0
+          ],
+          "selected_limit": 0.05,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        }
+      ],
+      "object_id": "ra_063",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "candidate",
+      "run_dir": "kin_test/ra_063_agent_run_20260528_113756",
+      "xml_path": "kin_test/ra_063_agent_run_20260528_113756/object_assets/ks_ra_063_5e10801e_iter_002/mjcf/ks_ra_063_5e10801e_iter_002.xml"
+    },
+    {
+      "asset_dir": "kin_test/ra_063_agent_run_20260528_113756/object_assets/ks_ra_063_5e10801e_iter_003",
+      "asset_name": "ks_ra_063_5e10801e_iter_003",
+      "asset_root": "kin_test/ra_063_agent_run_20260528_113756/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.0,
+            0.2588190451025208,
+            0.9659258262890684
+          ],
+          "confidence": 0.48,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Previous estimate reconstructed as axis=[0.0, 0.17364817766693036, 0.9848077530122081], lower=0.0, upper=0.3490658503988659. Evidence target axis=[0.0, 1.0, 0.0]. This iteration: need_fix: rotated the previous unit axis toward the evidence target by no more than the allowed 5 degree continuous-axis action; need_fix: temperature knob still needs more positive sweep, so increased the previous upper limit by one allowed +10 degree step, expressed in radians. Each joint independently either stayed unchanged or took one bounded action: axis rotation <=5 degrees, and limit changes only from the allowed ladder.",
+          "upper": 0.5235987755982988
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.9659258262890684,
+            0.2588190451025208,
+            0.0
+          ],
+          "confidence": 0.48,
+          "joint_name": "part_01",
+          "lower": -5.759586531581288,
+          "reason": "State per joint: need_fix. Previous estimate reconstructed as axis=[0.9848077530122081, 0.17364817766693036, 0.0], lower=-5.934119456780721, upper=6.283185307179586. Evidence target axis=[0.0, 1.0, 0.0]. This iteration: need_fix: rotated the previous unit axis toward the evidence target by no more than the allowed 5 degree continuous-axis action; need_fix: timer knob negative sweep is still too large, so raised the previous lower limit by one allowed +10 degree step, expressed in radians. Each joint independently either stayed unchanged or took one bounded action: axis rotation <=5 degrees, and limit changes only from the allowed ladder.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.9659258262890684,
+            -0.2588190451025208,
+            0.0
+          ],
+          "confidence": 0.48,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Previous estimate reconstructed as axis=[0.9848077530122081, -0.17364817766693036, 0.0], lower=0.0, upper=0.05. Evidence target axis=[0.0, -1.0, 0.0]. This iteration: need_fix: rotated the previous unit axis toward the evidence target by no more than the allowed 5 degree continuous-axis action; need_fix: pull-out drawer/pan travel remains short, so increased the previous upper limit by one allowed +10 mm step, expressed in meters. Each joint independently either stayed unchanged or took one bounded action: axis rotation <=5 degrees, and limit changes only from the allowed ladder.",
+          "upper": 0.060000000000000005
+        }
+      ],
+      "iteration": 3,
+      "joint_states": {
+        "part_00": {
+          "errors": [],
+          "status": "correct"
+        },
+        "part_01": {
+          "errors": [
+            "candidate motion invalid at q=-5.00691 under continuous-axis action validation"
+          ],
+          "status": "need_fix"
+        },
+        "part_02": {
+          "errors": [],
+          "status": "correct"
+        }
+      },
+      "motion_search": [
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.032724923474893676,
+              "valid": true
+            },
+            {
+              "q": 0.06544984694978735,
+              "valid": true
+            },
+            {
+              "q": 0.09817477042468103,
+              "valid": true
+            },
+            {
+              "q": 0.1308996938995747,
+              "valid": true
+            },
+            {
+              "q": 0.16362461737446837,
+              "valid": true
+            },
+            {
+              "q": 0.19634954084936207,
+              "valid": true
+            },
+            {
+              "q": 0.22907446432425574,
+              "valid": true
+            },
+            {
+              "q": 0.2617993877991494,
+              "valid": true
+            },
+            {
+              "q": 0.2945243112740431,
+              "valid": true
+            },
+            {
+              "q": 0.32724923474893675,
+              "valid": true
+            },
+            {
+              "q": 0.35997415822383044,
+              "valid": true
+            },
+            {
+              "q": 0.39269908169872414,
+              "valid": true
+            },
+            {
+              "q": 0.4254240051736178,
+              "valid": true
+            },
+            {
+              "q": 0.4581489286485115,
+              "valid": true
+            },
+            {
+              "q": 0.4908738521234051,
+              "valid": true
+            },
+            {
+              "q": 0.5235987755982988,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+Z",
+          "estimate_axis_world": [
+            0.0,
+            0.2588190451025208,
+            0.9659258262890684
+          ],
+          "joint_name": "part_00",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.0,
+            0.2588190451025208,
+            0.9659258262890684
+          ],
+          "selected_limit": 0.5235987755982988,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": -5.759586531581288,
+              "valid": true
+            },
+            {
+              "q": -5.0069132916587336,
+              "valid": false
+            },
+            {
+              "q": -4.254240051736179,
+              "valid": false
+            },
+            {
+              "q": -3.501566811813624,
+              "valid": false
+            },
+            {
+              "q": -2.7488935718910694,
+              "valid": false
+            },
+            {
+              "q": -1.996220331968515,
+              "valid": false
+            },
+            {
+              "q": -1.2435470920459597,
+              "valid": false
+            },
+            {
+              "q": -0.4908738521234053,
+              "valid": true
+            },
+            {
+              "q": 0.26179938779914913,
+              "valid": true
+            },
+            {
+              "q": 1.0144726277217035,
+              "valid": false
+            },
+            {
+              "q": 1.767145867644258,
+              "valid": false
+            },
+            {
+              "q": 2.5198191075668124,
+              "valid": false
+            },
+            {
+              "q": 3.2724923474893686,
+              "valid": false
+            },
+            {
+              "q": 4.025165587411923,
+              "valid": false
+            },
+            {
+              "q": 4.777838827334477,
+              "valid": false
+            },
+            {
+              "q": 5.530512067257032,
+              "valid": true
+            },
+            {
+              "q": 6.283185307179586,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            0.9659258262890684,
+            0.2588190451025208,
+            0.0
+          ],
+          "joint_name": "part_01",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.9659258262890684,
+            0.2588190451025208,
+            0.0
+          ],
+          "selected_limit": 6.283185307179586,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.0037500000000000003,
+              "valid": true
+            },
+            {
+              "q": 0.007500000000000001,
+              "valid": true
+            },
+            {
+              "q": 0.011250000000000001,
+              "valid": true
+            },
+            {
+              "q": 0.015000000000000001,
+              "valid": true
+            },
+            {
+              "q": 0.018750000000000003,
+              "valid": true
+            },
+            {
+              "q": 0.022500000000000003,
+              "valid": true
+            },
+            {
+              "q": 0.026250000000000002,
+              "valid": true
+            },
+            {
+              "q": 0.030000000000000002,
+              "valid": true
+            },
+            {
+              "q": 0.03375,
+              "valid": true
+            },
+            {
+              "q": 0.037500000000000006,
+              "valid": true
+            },
+            {
+              "q": 0.04125,
+              "valid": true
+            },
+            {
+              "q": 0.045000000000000005,
+              "valid": true
+            },
+            {
+              "q": 0.04875,
+              "valid": true
+            },
+            {
+              "q": 0.052500000000000005,
+              "valid": true
+            },
+            {
+              "q": 0.05625,
+              "valid": true
+            },
+            {
+              "q": 0.060000000000000005,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            0.9659258262890684,
+            -0.2588190451025208,
+            0.0
+          ],
+          "joint_name": "part_02",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.9659258262890684,
+            -0.2588190451025208,
+            0.0
+          ],
+          "selected_limit": 0.060000000000000005,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        }
+      ],
+      "object_id": "ra_063",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "candidate",
+      "run_dir": "kin_test/ra_063_agent_run_20260528_113756",
+      "xml_path": "kin_test/ra_063_agent_run_20260528_113756/object_assets/ks_ra_063_5e10801e_iter_003/mjcf/ks_ra_063_5e10801e_iter_003.xml"
+    },
+    {
+      "asset_dir": "kin_test/ra_063_agent_run_20260528_113756/object_assets/ks_ra_063_5e10801e_iter_004",
+      "asset_name": "ks_ra_063_5e10801e_iter_004",
+      "asset_root": "kin_test/ra_063_agent_run_20260528_113756/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.0,
+            0.34202014332566877,
+            0.9396926207859085
+          ],
+          "confidence": 0.5,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Previous estimate reconstructed from the installed editable code as axis=[0.0, 0.2588190451025208, 0.9659258262890684], lower=0.0, upper=0.5235987755982988. Evidence target axis=[0.0, 1.0, 0.0]. Last feedback considered: ''. This iteration: need_fix: rotated the previous unit axis toward the recommended evidence axis by one continuous-axis action no greater than 5 degrees; need_fix: no failure was reported for this temperature knob, but it still needs positive rotational sweep, so increased only the upper limit by one allowed +10 degree step in radians. The joint independently either stayed unchanged or took one bounded update: axis rotation <=5 degrees, lower changed at most once by an allowed ladder step, and upper changed at most once by an allowed ladder step.",
+          "upper": 0.6981317007977318
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.9396926207859085,
+            0.34202014332566877,
+            0.0
+          ],
+          "confidence": 0.5,
+          "joint_name": "part_01",
+          "lower": -5.585053606381855,
+          "reason": "State per joint: need_fix. Previous estimate reconstructed from the installed editable code as axis=[0.9659258262890684, 0.2588190451025208, 0.0], lower=-5.759586531581288, upper=6.283185307179586. Evidence target axis=[0.0, 1.0, 0.0]. Last feedback considered: ''. This iteration: need_fix: rotated the previous unit axis toward the recommended evidence axis by one continuous-axis action no greater than 5 degrees; need_fix: timer knob negative range remains excessive, so raised only the lower limit by one allowed +10 degree step in radians. The joint independently either stayed unchanged or took one bounded update: axis rotation <=5 degrees, lower changed at most once by an allowed ladder step, and upper changed at most once by an allowed ladder step.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.9396926207859085,
+            -0.34202014332566877,
+            0.0
+          ],
+          "confidence": 0.5,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Previous estimate reconstructed from the installed editable code as axis=[0.9659258262890684, -0.2588190451025208, 0.0], lower=0.0, upper=0.060000000000000005. Evidence target axis=[0.0, -1.0, 0.0]. Last feedback considered: ''. This iteration: need_fix: rotated the previous unit axis toward the recommended evidence axis by one continuous-axis action no greater than 5 degrees; need_fix: drawer/pan travel remains short, so increased only the upper limit by one allowed +10 mm step, expressed as 0.010 meters. The joint independently either stayed unchanged or took one bounded update: axis rotation <=5 degrees, lower changed at most once by an allowed ladder step, and upper changed at most once by an allowed ladder step.",
+          "upper": 0.07
+        }
+      ],
+      "iteration": 4,
+      "joint_states": {
+        "part_00": {
+          "errors": [],
+          "status": "correct"
+        },
+        "part_01": {
+          "errors": [
+            "candidate motion invalid at q=-4.84329 under continuous-axis action validation"
+          ],
+          "status": "need_fix"
+        },
+        "part_02": {
+          "errors": [],
+          "status": "correct"
+        }
+      },
+      "motion_search": [
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.04363323129985824,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971647,
+              "valid": true
+            },
+            {
+              "q": 0.1308996938995747,
+              "valid": true
+            },
+            {
+              "q": 0.17453292519943295,
+              "valid": true
+            },
+            {
+              "q": 0.2181661564992912,
+              "valid": true
+            },
+            {
+              "q": 0.2617993877991494,
+              "valid": true
+            },
+            {
+              "q": 0.30543261909900765,
+              "valid": true
+            },
+            {
+              "q": 0.3490658503988659,
+              "valid": true
+            },
+            {
+              "q": 0.39269908169872414,
+              "valid": true
+            },
+            {
+              "q": 0.4363323129985824,
+              "valid": true
+            },
+            {
+              "q": 0.4799655442984406,
+              "valid": true
+            },
+            {
+              "q": 0.5235987755982988,
+              "valid": true
+            },
+            {
+              "q": 0.5672320068981571,
+              "valid": true
+            },
+            {
+              "q": 0.6108652381980153,
+              "valid": true
+            },
+            {
+              "q": 0.6544984694978736,
+              "valid": true
+            },
+            {
+              "q": 0.6981317007977318,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+Z",
+          "estimate_axis_world": [
+            0.0,
+            0.34202014332566877,
+            0.9396926207859085
+          ],
+          "joint_name": "part_00",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.0,
+            0.34202014332566877,
+            0.9396926207859085
+          ],
+          "selected_limit": 0.6981317007977318,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": -5.585053606381855,
+              "valid": true
+            },
+            {
+              "q": -4.843288674284265,
+              "valid": false
+            },
+            {
+              "q": -4.101523742186675,
+              "valid": false
+            },
+            {
+              "q": -3.359758810089085,
+              "valid": false
+            },
+            {
+              "q": -2.617993877991495,
+              "valid": false
+            },
+            {
+              "q": -1.8762289458939048,
+              "valid": false
+            },
+            {
+              "q": -1.1344640137963147,
+              "valid": false
+            },
+            {
+              "q": -0.3926990816987246,
+              "valid": true
+            },
+            {
+              "q": 0.3490658503988655,
+              "valid": true
+            },
+            {
+              "q": 1.0908307824964556,
+              "valid": false
+            },
+            {
+              "q": 1.8325957145940457,
+              "valid": false
+            },
+            {
+              "q": 2.574360646691636,
+              "valid": false
+            },
+            {
+              "q": 3.316125578789226,
+              "valid": false
+            },
+            {
+              "q": 4.057890510886816,
+              "valid": false
+            },
+            {
+              "q": 4.799655442984406,
+              "valid": false
+            },
+            {
+              "q": 5.541420375081996,
+              "valid": true
+            },
+            {
+              "q": 6.283185307179586,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            0.9396926207859085,
+            0.34202014332566877,
+            0.0
+          ],
+          "joint_name": "part_01",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.9396926207859085,
+            0.34202014332566877,
+            0.0
+          ],
+          "selected_limit": 6.283185307179586,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.004375,
+              "valid": true
+            },
+            {
+              "q": 0.00875,
+              "valid": true
+            },
+            {
+              "q": 0.013125000000000001,
+              "valid": true
+            },
+            {
+              "q": 0.0175,
+              "valid": true
+            },
+            {
+              "q": 0.021875000000000002,
+              "valid": true
+            },
+            {
+              "q": 0.026250000000000002,
+              "valid": true
+            },
+            {
+              "q": 0.030625000000000003,
+              "valid": true
+            },
+            {
+              "q": 0.035,
+              "valid": true
+            },
+            {
+              "q": 0.03937500000000001,
+              "valid": true
+            },
+            {
+              "q": 0.043750000000000004,
+              "valid": true
+            },
+            {
+              "q": 0.048125,
+              "valid": true
+            },
+            {
+              "q": 0.052500000000000005,
+              "valid": true
+            },
+            {
+              "q": 0.05687500000000001,
+              "valid": true
+            },
+            {
+              "q": 0.061250000000000006,
+              "valid": true
+            },
+            {
+              "q": 0.065625,
+              "valid": true
+            },
+            {
+              "q": 0.07,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            0.9396926207859085,
+            -0.34202014332566877,
+            0.0
+          ],
+          "joint_name": "part_02",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.9396926207859085,
+            -0.34202014332566877,
+            0.0
+          ],
+          "selected_limit": 0.07,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        }
+      ],
+      "object_id": "ra_063",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "candidate",
+      "run_dir": "kin_test/ra_063_agent_run_20260528_113756",
+      "xml_path": "kin_test/ra_063_agent_run_20260528_113756/object_assets/ks_ra_063_5e10801e_iter_004/mjcf/ks_ra_063_5e10801e_iter_004.xml"
+    }
+  ],
+  "latest_iteration": 4,
+  "latest_preview": {
+    "asset_dir": "kin_test/ra_063_agent_run_20260528_113756/object_assets/ks_ra_063_5e10801e_iter_004",
+    "asset_name": "ks_ra_063_5e10801e_iter_004",
+    "asset_root": "kin_test/ra_063_agent_run_20260528_113756/object_assets",
+    "estimates": [
+      {
+        "axis_label": null,
+        "axis_world": [
+          0.0,
+          0.34202014332566877,
+          0.9396926207859085
+        ],
+        "confidence": 0.5,
+        "joint_name": "part_00",
+        "lower": 0.0,
+        "reason": "State per joint: need_fix. Previous estimate reconstructed from the installed editable code as axis=[0.0, 0.2588190451025208, 0.9659258262890684], lower=0.0, upper=0.5235987755982988. Evidence target axis=[0.0, 1.0, 0.0]. Last feedback considered: ''. This iteration: need_fix: rotated the previous unit axis toward the recommended evidence axis by one continuous-axis action no greater than 5 degrees; need_fix: no failure was reported for this temperature knob, but it still needs positive rotational sweep, so increased only the upper limit by one allowed +10 degree step in radians. The joint independently either stayed unchanged or took one bounded update: axis rotation <=5 degrees, lower changed at most once by an allowed ladder step, and upper changed at most once by an allowed ladder step.",
+        "upper": 0.6981317007977318
+      },
+      {
+        "axis_label": null,
+        "axis_world": [
+          0.9396926207859085,
+          0.34202014332566877,
+          0.0
+        ],
+        "confidence": 0.5,
+        "joint_name": "part_01",
+        "lower": -5.585053606381855,
+        "reason": "State per joint: need_fix. Previous estimate reconstructed from the installed editable code as axis=[0.9659258262890684, 0.2588190451025208, 0.0], lower=-5.759586531581288, upper=6.283185307179586. Evidence target axis=[0.0, 1.0, 0.0]. Last feedback considered: ''. This iteration: need_fix: rotated the previous unit axis toward the recommended evidence axis by one continuous-axis action no greater than 5 degrees; need_fix: timer knob negative range remains excessive, so raised only the lower limit by one allowed +10 degree step in radians. The joint independently either stayed unchanged or took one bounded update: axis rotation <=5 degrees, lower changed at most once by an allowed ladder step, and upper changed at most once by an allowed ladder step.",
+        "upper": 6.283185307179586
+      },
+      {
+        "axis_label": null,
+        "axis_world": [
+          0.9396926207859085,
+          -0.34202014332566877,
+          0.0
+        ],
+        "confidence": 0.5,
+        "joint_name": "part_02",
+        "lower": 0.0,
+        "reason": "State per joint: need_fix. Previous estimate reconstructed from the installed editable code as axis=[0.9659258262890684, -0.2588190451025208, 0.0], lower=0.0, upper=0.060000000000000005. Evidence target axis=[0.0, -1.0, 0.0]. Last feedback considered: ''. This iteration: need_fix: rotated the previous unit axis toward the recommended evidence axis by one continuous-axis action no greater than 5 degrees; need_fix: drawer/pan travel remains short, so increased only the upper limit by one allowed +10 mm step, expressed as 0.010 meters. The joint independently either stayed unchanged or took one bounded update: axis rotation <=5 degrees, lower changed at most once by an allowed ladder step, and upper changed at most once by an allowed ladder step.",
+        "upper": 0.07
+      }
+    ],
+    "iteration": 4,
+    "joint_states": {
+      "part_00": {
+        "errors": [],
+        "status": "correct"
+      },
+      "part_01": {
+        "errors": [
+          "candidate motion invalid at q=-4.84329 under continuous-axis action validation"
+        ],
+        "status": "need_fix"
+      },
+      "part_02": {
+        "errors": [],
+        "status": "correct"
+      }
+    },
+    "motion_search": [
+      {
+        "axis_trials": [],
+        "candidate_samples": [
+          {
+            "q": 0.0,
+            "valid": true
+          },
+          {
+            "q": 0.04363323129985824,
+            "valid": true
+          },
+          {
+            "q": 0.08726646259971647,
+            "valid": true
+          },
+          {
+            "q": 0.1308996938995747,
+            "valid": true
+          },
+          {
+            "q": 0.17453292519943295,
+            "valid": true
+          },
+          {
+            "q": 0.2181661564992912,
+            "valid": true
+          },
+          {
+            "q": 0.2617993877991494,
+            "valid": true
+          },
+          {
+            "q": 0.30543261909900765,
+            "valid": true
+          },
+          {
+            "q": 0.3490658503988659,
+            "valid": true
+          },
+          {
+            "q": 0.39269908169872414,
+            "valid": true
+          },
+          {
+            "q": 0.4363323129985824,
+            "valid": true
+          },
+          {
+            "q": 0.4799655442984406,
+            "valid": true
+          },
+          {
+            "q": 0.5235987755982988,
+            "valid": true
+          },
+          {
+            "q": 0.5672320068981571,
+            "valid": true
+          },
+          {
+            "q": 0.6108652381980153,
+            "valid": true
+          },
+          {
+            "q": 0.6544984694978736,
+            "valid": true
+          },
+          {
+            "q": 0.6981317007977318,
+            "valid": true
+          }
+        ],
+        "estimate_axis_label": "+Z",
+        "estimate_axis_world": [
+          0.0,
+          0.34202014332566877,
+          0.9396926207859085
+        ],
+        "joint_name": "part_00",
+        "selected_axis_label": "candidate",
+        "selected_axis_world": [
+          0.0,
+          0.34202014332566877,
+          0.9396926207859085
+        ],
+        "selected_limit": 0.6981317007977318,
+        "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+      },
+      {
+        "axis_trials": [],
+        "candidate_samples": [
+          {
+            "q": -5.585053606381855,
+            "valid": true
+          },
+          {
+            "q": -4.843288674284265,
+            "valid": false
+          },
+          {
+            "q": -4.101523742186675,
+            "valid": false
+          },
+          {
+            "q": -3.359758810089085,
+            "valid": false
+          },
+          {
+            "q": -2.617993877991495,
+            "valid": false
+          },
+          {
+            "q": -1.8762289458939048,
+            "valid": false
+          },
+          {
+            "q": -1.1344640137963147,
+            "valid": false
+          },
+          {
+            "q": -0.3926990816987246,
+            "valid": true
+          },
+          {
+            "q": 0.3490658503988655,
+            "valid": true
+          },
+          {
+            "q": 1.0908307824964556,
+            "valid": false
+          },
+          {
+            "q": 1.8325957145940457,
+            "valid": false
+          },
+          {
+            "q": 2.574360646691636,
+            "valid": false
+          },
+          {
+            "q": 3.316125578789226,
+            "valid": false
+          },
+          {
+            "q": 4.057890510886816,
+            "valid": false
+          },
+          {
+            "q": 4.799655442984406,
+            "valid": false
+          },
+          {
+            "q": 5.541420375081996,
+            "valid": true
+          },
+          {
+            "q": 6.283185307179586,
+            "valid": true
+          }
+        ],
+        "estimate_axis_label": "+X",
+        "estimate_axis_world": [
+          0.9396926207859085,
+          0.34202014332566877,
+          0.0
+        ],
+        "joint_name": "part_01",
+        "selected_axis_label": "candidate",
+        "selected_axis_world": [
+          0.9396926207859085,
+          0.34202014332566877,
+          0.0
+        ],
+        "selected_limit": 6.283185307179586,
+        "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+      },
+      {
+        "axis_trials": [],
+        "candidate_samples": [
+          {
+            "q": 0.0,
+            "valid": true
+          },
+          {
+            "q": 0.004375,
+            "valid": true
+          },
+          {
+            "q": 0.00875,
+            "valid": true
+          },
+          {
+            "q": 0.013125000000000001,
+            "valid": true
+          },
+          {
+            "q": 0.0175,
+            "valid": true
+          },
+          {
+            "q": 0.021875000000000002,
+            "valid": true
+          },
+          {
+            "q": 0.026250000000000002,
+            "valid": true
+          },
+          {
+            "q": 0.030625000000000003,
+            "valid": true
+          },
+          {
+            "q": 0.035,
+            "valid": true
+          },
+          {
+            "q": 0.03937500000000001,
+            "valid": true
+          },
+          {
+            "q": 0.043750000000000004,
+            "valid": true
+          },
+          {
+            "q": 0.048125,
+            "valid": true
+          },
+          {
+            "q": 0.052500000000000005,
+            "valid": true
+          },
+          {
+            "q": 0.05687500000000001,
+            "valid": true
+          },
+          {
+            "q": 0.061250000000000006,
+            "valid": true
+          },
+          {
+            "q": 0.065625,
+            "valid": true
+          },
+          {
+            "q": 0.07,
+            "valid": true
+          }
+        ],
+        "estimate_axis_label": "+X",
+        "estimate_axis_world": [
+          0.9396926207859085,
+          -0.34202014332566877,
+          0.0
+        ],
+        "joint_name": "part_02",
+        "selected_axis_label": "candidate",
+        "selected_axis_world": [
+          0.9396926207859085,
+          -0.34202014332566877,
+          0.0
+        ],
+        "selected_limit": 0.07,
+        "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+      }
+    ],
+    "object_id": "ra_063",
+    "playback": {
+      "mode": "sequential_full_range",
+      "seconds_per_joint": 1.8
+    },
+    "preview_kind": "candidate",
+    "run_dir": "kin_test/ra_063_agent_run_20260528_113756",
+    "xml_path": "kin_test/ra_063_agent_run_20260528_113756/object_assets/ks_ra_063_5e10801e_iter_004/mjcf/ks_ra_063_5e10801e_iter_004.xml"
+  },
+  "object_id": "ra_063",
+  "run_id": "7871f44dae36"
+}

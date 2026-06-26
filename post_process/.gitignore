@@ -1,0 +1,42 @@
+# Large asset files
+assets/object_assets/
+assets/scene_assets/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Submodules
+submodules/
+
+# Temporary files
+*.log
+*.tmp
+
+# IDE & AI tooling
+.vscode/
+.idea/
+.claude/
+.codex/
+.omx/
+AGENTS.md
+CLAUDE.md
+
+# Planning docs (local workflow artifacts)
+.planning/
+
+# Virtual environments
+.venv/
+.post_process/
+
+# Package build artifacts
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Image artifacts
+image/
+tmp/

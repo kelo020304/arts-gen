@@ -1,0 +1,35 @@
+# SLat Flow (paper Stage 4) Scheme A / hybrid LoRA 配置
+# Launcher 对应: MODE=lora_ext
+# 模式语义:
+# - trunk attention 仍走 LoRA (`target_modules=all_attn`)
+# - sparse IO 路径上的关键层改成全量训练，补足纯 LoRA 对几何/统计适配不足的问题
+# - keep_trainable 四项覆盖完整条件流:
+#   input_layer (SparseLinear 8->128)
+#   -> input_blocks (SparseResBlock3d)
+#   -> trunk attention (LoRA)
+#   -> out_blocks (SparseResBlock3d)
+#   -> out_layer (SparseLinear 128->8)
+# - 这是 SLat Flow 推荐默认模式：通常比纯 LoRA 更稳，又比 full 更省资源
+_base_: mv_4view.yaml
+
+lora:
+  enabled: true
+  rank: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: all_attn   # attention 仍然只训练 LoRA adapter
+  keep_trainable:
+    - input_layer           # 输入统计适配
+    - input_blocks          # sparse IO 入口 ResBlocks，全量训练
+    - out_blocks            # sparse IO 出口 ResBlocks，全量训练
+    - out_layer             # 最终输出投影，全量训练
+
+training:
+  output_dir: output/slat_flow_art_mv_4view_lora_ext
+
+wandb:
+  name: slat-flow-art-mv4view-lora-ext
+  tags:
+    - slat_flow_art
+    - mv4view
+    - mode=lora_ext

@@ -1,0 +1,53 @@
+_base_: part_ss_latent_flow.yaml
+
+data:
+  data_root: /robot/data-lab/jzh/art-gen/data/PhysX-Mobility-full-4view-0511/PhysX-Mobility-full-4view-0511
+  recon_subdir: reconstruction
+  mask_subdir: renders
+  manifest_path: manifests/part_completion/arts_mllm_physx-mobility.train.jsonl
+  num_views: 4
+  include_obj_ids:
+    - "102276"
+    - "102528"
+    - "103064"
+    - "103069"
+    - "103002"
+    - "103134"
+    - "103140"
+    - "102901"
+    - "103143"
+    - "102966"
+    - "103513"
+    - "100745"
+    - "102909"
+    - "100015"
+    - "102892"
+    - "102389"
+
+flow:
+  t_schedule: logit_normal
+  num_steps: 20
+
+loss:
+  foreground_weight:
+    enabled: true
+    bg_weight: 0.1
+
+eval:
+  fixed_every: 5000
+  decode_every: 0
+  all_every: 0
+  decode_max_samples: 16
+  inspection_root: /robot/data-lab/jzh/art-gen-output/part-0526-A-finetune/inspections
+
+training:
+  seed: 42
+  batch_size: 8
+  max_steps: 625000
+  lr: 2.0e-4
+  warmup_steps: 200
+  fp16: true
+  num_workers: 2
+  log_every: 10
+  checkpoint_every: 5000
+  output_dir: /robot/data-lab/jzh/art-gen-output/part-0526-A-finetune

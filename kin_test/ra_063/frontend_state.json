@@ -1,0 +1,159 @@
+{
+  "iterations": [
+    {
+      "asset_dir": "kin_test/ra_063/object_assets/ra_063",
+      "asset_name": "ra_063",
+      "asset_root": "kin_test/ra_063/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "confidence": 0.25,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+          "upper": 0.0
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.25,
+          "joint_name": "part_01",
+          "lower": -6.283185307179586,
+          "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.25,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+          "upper": 0.03
+        }
+      ],
+      "iteration": 0,
+      "joint_states": {
+        "part_00": {
+          "errors": [
+            "rough VLM initial guess"
+          ],
+          "status": "need_fix"
+        },
+        "part_01": {
+          "errors": [
+            "rough VLM initial guess"
+          ],
+          "status": "need_fix"
+        },
+        "part_02": {
+          "errors": [
+            "rough VLM initial guess"
+          ],
+          "status": "need_fix"
+        }
+      },
+      "motion_search": [],
+      "object_id": "ra_063",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "vlm_initial",
+      "run_dir": "kin_test/ra_063",
+      "xml_path": "kin_test/ra_063/object_assets/ra_063/mjcf/ra_063.xml"
+    }
+  ],
+  "latest_iteration": 0,
+  "latest_preview": {
+    "asset_dir": "kin_test/ra_063/object_assets/ra_063",
+    "asset_name": "ra_063",
+    "asset_root": "kin_test/ra_063/object_assets",
+    "estimates": [
+      {
+        "axis_label": null,
+        "axis_world": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "confidence": 0.25,
+        "joint_name": "part_00",
+        "lower": 0.0,
+        "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+        "upper": 0.0
+      },
+      {
+        "axis_label": null,
+        "axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "confidence": 0.25,
+        "joint_name": "part_01",
+        "lower": -6.283185307179586,
+        "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+        "upper": 6.283185307179586
+      },
+      {
+        "axis_label": null,
+        "axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "confidence": 0.25,
+        "joint_name": "part_02",
+        "lower": 0.0,
+        "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+        "upper": 0.03
+      }
+    ],
+    "iteration": 0,
+    "joint_states": {
+      "part_00": {
+        "errors": [
+          "rough VLM initial guess"
+        ],
+        "status": "need_fix"
+      },
+      "part_01": {
+        "errors": [
+          "rough VLM initial guess"
+        ],
+        "status": "need_fix"
+      },
+      "part_02": {
+        "errors": [
+          "rough VLM initial guess"
+        ],
+        "status": "need_fix"
+      }
+    },
+    "motion_search": [],
+    "object_id": "ra_063",
+    "playback": {
+      "mode": "sequential_full_range",
+      "seconds_per_joint": 1.8
+    },
+    "preview_kind": "vlm_initial",
+    "run_dir": "kin_test/ra_063",
+    "xml_path": "kin_test/ra_063/object_assets/ra_063/mjcf/ra_063.xml"
+  },
+  "object_id": "ra_063",
+  "run_id": "ra_063"
+}

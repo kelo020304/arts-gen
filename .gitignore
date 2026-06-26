@@ -1,0 +1,88 @@
+# arts-gen open-source ignore policy
+#
+# Source, docs, launchers, and small configs should remain visible. Local data,
+# weights, generated outputs, vendored binary bundles, and personal tool state
+# must stay out of the repository.
+
+# Python / build cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.so
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Logs and local runtime state
+*.log
+logs/
+core
+core.*
+nohup.out
+
+# Local virtualenvs
+.venv/
+venv/
+env/
+
+# IDE / personal tools
+.vscode/
+.idea/
+.claude/
+.superpowers/
+.mcp.json
+.DS_Store
+
+# Datasets, checkpoints, pretrained weights. These are root-local paths; keep
+# source directories such as scripts/tools/data visible.
+/data
+/pretrained
+/checkpoints
+/ckpt
+
+# Training, eval, and inference outputs
+/output
+/outputs
+/runs
+/eval_output
+/ee-eval
+/vlm-reconstruct-smoke
+
+# Large local binary dependency bundles
+/software
+/sam3d_cu118_deps
+/sam3d_cu118_src_deps
+/libnvidia-gpucomp.so.*
+/nvdiffrast-*.whl
+
+# Local sample assets for optional articulator UI
+scripts/tools/articulator/data/
+scripts/tools/articulator/vendor/
+
+# Root scratch files seen on the dev machine
+/bash
+/command.md
+/command.txt
+/jzh.txt
+/train-ss-flow.txt
+/TRAINING.txt
+/TRAINING.xtxt
+/arts_code.tar.gz
+
+# Cleanup staging area; durable manifests live under /mnt/robot-data-lab.
+scripts/_trash/
+
+# Submodule working trees are pinned by .gitmodules / provenance docs.
+submodules/
+
+# Regenerable inspection images
+docs/inspections/**/*.png
+
+# Legacy local visualization output
+scripts/viz/
+
+# Ephemeral planning state
+.gsd/STATE.md
+.gsd/**/continue.md

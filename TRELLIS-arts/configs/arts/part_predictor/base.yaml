@@ -1,0 +1,62 @@
+# Part Predictor 基础训练配置
+# Query-based Transformer Decoder (Mask2Former-style)
+# Hungarian matching + mask CE + dice + class CE
+
+# Stage dispatch (D-11): train_arts.py reads this field.
+stage: part_predictor
+
+model:
+  num_layers: 12         # Transformer Decoder 层数；12 层 + query_dim=1024 约 253M 参数，A100 单卡可训
+  query_dim: 1024        # Query/key/value embedding 维度；voxel token 也用此维度（来自 coords 的 MLP 位置编码）
+  num_heads: 16          # Multi-head attention 头数；需整除 query_dim（1024/16=64 dim/head，Transformer 标准值）
+  num_part_types: 32     # Part type 词表大小（含 "other" 类别），需 >= PartNet-Mobility 实际类别数
+  max_k: 128             # 最大 query 数 K；运行时按 GT part 数动态截取，训练时取 min(gt_k, max_k)
+  cond_dim: 1024         # 多视角条件维度，等于 DINOv2-L/14 token 特征维度
+  dropout: 0.1           # Attention/FFN dropout rate，训练时启用，推理时自动关闭
+  fusion_mode: "serial"   # Cross-attn fusion: "serial"(默认, 当前) / "concat_kv"(方案 B) / "mmdit"(方案 C, 含 QK-Norm + joint_o zero-init)
+  serial_order: ["voxel", "rgb", "mask"]   # Serial 模式注入顺序；仅 fusion_mode=="serial" 时生效；可选 6 种 {voxel, rgb, mask} 的排列，默认 voxel→rgb→mask
+
+data:
+  data_root: "data/PhysX-Mobility"       # 数据根目录；与 part_labels / dinov2_tokens / part_info 的相对路径拼接
+  recon_subdir: "arts/reconstruction"    # 重建数据子目录；实际读取根路径为 {data_root}/{recon_subdir}
+  manifest_path: null                    # 显式指定 manifest JSON 路径；null 则从 {recon_root}/part_info 自动枚举样本
+  test_obj_ids: null                     # 对象 ID 白名单；null = 不过滤，直接枚举 manifest/目录里的全部对象
+  num_angles: 10                         # 每个物体的关节角度采样数，与 joint_angle_expand.py --num_angles 对齐
+  num_views: 4                           # 预留配置位；当前 PartPredictorDataset 实际固定按四象限各采 1 个视角，该字段暂未生效
+  mask_subdir: "arts/renders"            # 2D mask 子目录（相对 data_root）；null 则 dataset 返回全 0 mask_token_labels，模型端退化为 no-mask 路径
+  load_slat: false                       # 是否加载 SS latent（decode-aware loss 需要）；false = Stage 1 基础训练
+  slat_dir: "slat_latents_expanded"      # SS latent 存放子目录名；load_slat=true 时生效
+
+training:
+  batch_size: 8          # 每卡 mini-batch；多样本通过 collate_fn 打包成 packed coords + stacked cond
+  lr: 1e-4               # 初始学习率；AdamW 下 1e-4 为 Transformer 常用起点，warmup 后实际生效
+  optimizer: "adamw"     # 优化器类型；AdamW 对 Transformer 收敛更稳定（内置 decoupled weight decay）
+  weight_decay: 0.01     # L2 正则化系数；作用于非 bias/LayerNorm 参数
+  max_steps: 100000      # 总优化步数
+  warmup_steps: 1000     # 线性 warmup 步数；从 0 线性增至 lr，防止早期梯度爆炸
+  grad_clip: 1.0         # 梯度裁剪阈值（global L2 norm）；对 Transformer 稳定训练至关重要
+  fp16: true             # 是否启用 FP16 混合精度；RTX 4090/A100 下可提速 ~2x，显存减半
+  checkpoint_every: 10000 # 每隔多少步保存一次 checkpoint（含 optimizer/scheduler 状态）
+  eval_every: 5000       # 预留配置位；当前 train.py 还没有在线 eval 逻辑，不会实际触发评估
+  log_every: 10          # 每隔多少步打印 loss；若 wandb.enabled=true 则同步写入 wandb
+  output_dir: "output/part_predictor"   # checkpoint 和日志的输出根目录
+  seed: 42               # 随机种子，控制 dataset shuffle / dropout / 权重初始化
+
+loss:
+  mask_weight: 1.0       # per-voxel mask focal loss 权重（原 BCE，现用 sigmoid focal loss）
+  dice_weight: 2.0       # Dice loss 权重；对区域 overlap 更敏感，弥补 focal loss 对类别不均衡的不足
+  cls_weight: 1.0        # query 级 part-type 分类 CE loss 权重；监督每个 query 预测正确的 part 类别
+  aux_weight: 1.0        # Auxiliary loss 权重（Mask2Former-style）；对每个中间 decoder 层的 query 输出也算 loss，强迫 query 从早期就分化到不同 part
+  focal_alpha: 0.25      # Focal loss α（类别平衡权重）；0.25 为 Mask2Former 默认值
+  focal_gamma: 2.0       # Focal loss γ（难样本聚焦指数）；γ↑ 越聚焦 hard voxels（边界/小部件）
+
+decode_aware:
+  enabled: false         # 是否开启 decode-aware loss（Stage 2）；需要 load_slat=true 且 slat_dir 存在
+  weight: 0.5            # decode-aware Chamfer Distance loss 相对于主 loss 的缩放系数
+  decoder_ckpt: "pretrained/ckpts/slat_dec_gs_swin8_B_64l8gs32_fp16"  # 冻结的 SLatGaussianDecoder 权重路径
+  slat_dir: null         # 覆盖 data.slat_dir；null 则沿用 data.slat_dir 的值
+
+wandb:
+  enabled: true          # 是否启用 wandb 日志；false 时仅保留 stdout / checkpoint 输出
+  project: "arts-part-predictor"  # wandb 项目名
+  name: null             # wandb run 名称；null 则自动生成（时间戳 + 配置摘要）

@@ -1,0 +1,159 @@
+{
+  "iterations": [
+    {
+      "asset_dir": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_063_agent_run_20260528_160620/object_assets/ks_ra_036_a342f92c_iter_000",
+      "asset_name": "ks_ra_036_a342f92c_iter_000",
+      "asset_root": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_063_agent_run_20260528_160620/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "confidence": 0.25,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+          "upper": 0.0
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.25,
+          "joint_name": "part_01",
+          "lower": -6.283185307179586,
+          "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.25,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+          "upper": 0.03
+        }
+      ],
+      "iteration": 0,
+      "joint_states": {
+        "part_00": {
+          "errors": [
+            "rough VLM initial guess"
+          ],
+          "status": "need_fix"
+        },
+        "part_01": {
+          "errors": [
+            "rough VLM initial guess"
+          ],
+          "status": "need_fix"
+        },
+        "part_02": {
+          "errors": [
+            "rough VLM initial guess"
+          ],
+          "status": "need_fix"
+        }
+      },
+      "motion_search": [],
+      "object_id": "ra_036",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "vlm_initial",
+      "run_dir": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_063_agent_run_20260528_160620",
+      "xml_path": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_063_agent_run_20260528_160620/object_assets/ks_ra_036_a342f92c_iter_000/mjcf/ks_ra_036_a342f92c_iter_000.xml"
+    }
+  ],
+  "latest_iteration": 0,
+  "latest_preview": {
+    "asset_dir": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_063_agent_run_20260528_160620/object_assets/ks_ra_036_a342f92c_iter_000",
+    "asset_name": "ks_ra_036_a342f92c_iter_000",
+    "asset_root": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_063_agent_run_20260528_160620/object_assets",
+    "estimates": [
+      {
+        "axis_label": null,
+        "axis_world": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "confidence": 0.25,
+        "joint_name": "part_00",
+        "lower": 0.0,
+        "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+        "upper": 0.0
+      },
+      {
+        "axis_label": null,
+        "axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "confidence": 0.25,
+        "joint_name": "part_01",
+        "lower": -6.283185307179586,
+        "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+        "upper": 6.283185307179586
+      },
+      {
+        "axis_label": null,
+        "axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "confidence": 0.25,
+        "joint_name": "part_02",
+        "lower": 0.0,
+        "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+        "upper": 0.03
+      }
+    ],
+    "iteration": 0,
+    "joint_states": {
+      "part_00": {
+        "errors": [
+          "rough VLM initial guess"
+        ],
+        "status": "need_fix"
+      },
+      "part_01": {
+        "errors": [
+          "rough VLM initial guess"
+        ],
+        "status": "need_fix"
+      },
+      "part_02": {
+        "errors": [
+          "rough VLM initial guess"
+        ],
+        "status": "need_fix"
+      }
+    },
+    "motion_search": [],
+    "object_id": "ra_036",
+    "playback": {
+      "mode": "sequential_full_range",
+      "seconds_per_joint": 1.8
+    },
+    "preview_kind": "vlm_initial",
+    "run_dir": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_063_agent_run_20260528_160620",
+    "xml_path": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_063_agent_run_20260528_160620/object_assets/ks_ra_036_a342f92c_iter_000/mjcf/ks_ra_036_a342f92c_iter_000.xml"
+  },
+  "object_id": "ra_036",
+  "run_id": "4d081c5d7303"
+}

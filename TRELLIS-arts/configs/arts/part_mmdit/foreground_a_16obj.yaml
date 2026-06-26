@@ -1,0 +1,114 @@
+stage: part_mmdit
+
+model:
+  resolution: 16
+  latent_channels: 8
+  model_channels: 1024
+  cond_dim: 1024
+  num_blocks: 12
+  num_heads: 16
+  patch_size: 2
+  num_views: 4
+  max_parts: 20
+  cross_part_layers: [3, 6, 9]
+  clip_name_dim: 768
+  use_fp16: false
+  use_checkpoint: true
+
+data:
+  data_root: /robot/data-lab/jzh/art-gen/data/PhysX-Mobility-full-4view-0511/PhysX-Mobility-full-4view-0511
+  recon_subdir: reconstruction
+  mask_subdir: renders
+  manifest_path: manifests/part_completion/arts_mllm_physx-mobility.train.jsonl
+  num_views: 4
+  include_obj_ids:
+    - "102276"
+    - "102528"
+    - "103064"
+    - "103069"
+    - "103002"
+    - "103134"
+    - "103140"
+    - "102901"
+    - "103143"
+    - "102966"
+    - "103513"
+    - "100745"
+    - "102909"
+    - "100015"
+    - "102892"
+    - "102389"
+
+flow:
+  type: rectified
+  latent_scale: 8.0
+  t_schedule: uniform
+  timestep_shift: 0.0
+  dynamic_timestep_shift: false
+  num_steps: 20
+  solver: euler
+  s_name: 1.0
+  s_anchor: 1.0
+
+loss:
+  part_weight_mode: raw_voxel_count
+  part_weight_ref_mode: median
+  part_weight_alpha: 0.5
+  part_weight_min: 0.5
+  part_weight_max: 3.0
+  normalize_part_weights_per_object: true
+  object_balanced: true
+  object_weight_mode: none
+  object_weight_k_ref: null
+  object_weight_min: 0.75
+  object_weight_max: 2.0
+  cfg_dropout_name: 0.1
+  cfg_dropout_anchor: 0.1
+  foreground_weight:
+    enabled: true
+    bg_weight: 0.1
+
+eval:
+  fixed_every: 1000
+  eval_every: 1000
+  bucket_metrics: true
+  smoke_metrics: false
+  queue_metrics: false
+  cond_only: true
+  decode: true
+  ss_decoder_ckpt: /root/code/arts-gen/pretrained/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16.safetensors
+  size_bucket_boundaries: [500.0, 3000.0]
+  max_samples: 16
+  train_max_samples: 16
+  batch_size: 4
+  velocity_max_samples: 16
+  velocity_batch_size: 4
+  velocity_t_values: [0.02]
+  noise_seed: 12345
+  prefer_obj_ids:
+    - "102276"
+    - "102528"
+    - "103064"
+    - "100745"
+  train_prefer_obj_ids:
+    - "102276"
+    - "102528"
+    - "103064"
+    - "100745"
+
+training:
+  seed: 42
+  batch_size: 8
+  max_steps: 6000
+  lr: 2.0e-4
+  warmup_steps: 200
+  weight_decay: 0.01
+  grad_clip: 1.0
+  fp16: true
+  num_workers: 2
+  log_every: 10
+  checkpoint_every: 1000
+  output_dir: /robot/data-lab/jzh/art-gen/outputs/part_mmdit_foreground_a_16obj
+
+wandb:
+  enabled: false

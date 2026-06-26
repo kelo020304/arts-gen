@@ -1,0 +1,70 @@
+_base_: mv_4view.yaml
+
+stage: ss_flow_global_z
+
+model:
+  args:
+    use_checkpoint: true
+    use_camera_pose: false
+
+data:
+  tokens_subdir: dinov2_tokens_official_prenorm1374
+  ignore_manifest_dinov2_tokens_path: true
+  condition_mode: single_view
+  token_count: 1374
+  token_dim: 1024
+  cache_in_memory: true
+  test_samples:
+    - {obj_id: "100283", angle_idx: 0}
+    - {obj_id: "101253", angle_idx: 0}
+    - {obj_id: "101943", angle_idx: 0}
+    - {obj_id: "102701", angle_idx: 0}
+    - {obj_id: "101049", angle_idx: 0}
+    - {obj_id: "101106", angle_idx: 0}
+    - {obj_id: "102505", angle_idx: 0}
+    - {obj_id: "103252", angle_idx: 0}
+    - {obj_id: "103972", angle_idx: 0}
+    - {obj_id: "100816", angle_idx: 0}
+    - {obj_id: "102130", angle_idx: 0}
+    - {obj_id: "102417", angle_idx: 0}
+    - {obj_id: "103347", angle_idx: 0}
+    - {obj_id: "103917", angle_idx: 0}
+    - {obj_id: "102890", angle_idx: 0}
+    - {obj_id: "101352", angle_idx: 0}
+
+training:
+  seed: 42
+  max_steps: 2000
+  batch_size_per_gpu: 4
+  batch_split: 1
+  num_workers: 0
+  prefetch_data: false
+  optimizer:
+    name: AdamW
+    args:
+      lr: 5.0e-5
+      weight_decay: 0.0
+      betas: [0.9, 0.999]
+  lr_scheduler: null
+  grad_clip: 1.0
+  ema_rate: 0.9999
+  fp16_mode: inflat_all
+  p_uncond: 0.1
+  output_dir: /robot/data-lab/jzh/art-gen-output/tre_ss_flow_official_single_multiflow_16obj_0610
+  pretrained_ckpt: /robot/data-lab/jzh/art-gen/weights/ss_flow_img_dit_L_16l8_fp16.safetensors
+  i_print: 50
+  i_log: 25
+  i_sample: 999999
+  i_save: 1000
+  i_ddpcheck: 999999
+
+snapshot:
+  enabled: false
+
+wandb:
+  enabled: false
+  mode: disabled
+  name: ss-flow-official-single-multiflow-16obj
+
+lora:
+  enabled: false

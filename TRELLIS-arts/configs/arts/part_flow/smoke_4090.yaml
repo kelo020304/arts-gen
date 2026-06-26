@@ -1,0 +1,88 @@
+# Part Flow Phase 8 4090 smoke preset.
+# Keeps the full dense 64^3 voxel contract, but shrinks the transformer.
+#
+# Data: 20-sample HQ subset under data/smoke_test/1, manifest-driven.
+#   See docs/inspections/smoke_test_1/index.md for per-sample inspection.
+
+# Stage dispatch (D-11). This file is standalone (no _base_), so declares stage explicitly.
+stage: part_flow
+
+flow:
+  type: fisher
+  parameterization: endpoint_logits
+  k_max: 128
+  t_max: 1.0
+  dirichlet_alpha: 1.0
+  tau_max: 10.0
+  decay_rate: 3.0
+  noise_scale: 2.0
+  tau_min: 0.01
+  solver: euler
+
+model:
+  hidden_dim: 128
+  num_layers: 4
+  num_heads: 4
+  cond_dim: 1024
+  dropout: 0.1
+  num_views: 4
+  part_token_layers: 2
+  condition_tokens_per_view: 3
+  voxel_chunk_size: 8192
+  use_slot_embedding_fallback: true
+  use_slot_id_embedding: false
+  slot_id_embedding_scale: 0.1
+  use_gradient_checkpointing: false
+
+data:
+  data_root: data/smoke_test/1
+  recon_subdir: reconstruction
+  mask_subdir: renders                  # mask_*.npy at renders/{oid}/angle_0/mask/
+  manifest_path: manifests/part_completion/subset_hq20.train.jsonl
+  resolution: 64
+  num_angles: 1                          # only angle_0 in this curated subset
+  num_views: 4                           # informational; manifest's view_indices drives selection
+  load_slat: false
+  num_samples: null                      # use full 20 samples (overfit smoke)
+  surface_dropout_min: 0.05
+  surface_dropout_max: 0.10              # conservative for 20-sample overfit
+  allow_missing_masks: false             # mask is part of the contract; fail loud if absent
+
+surface:
+  dropout_min: 0.05
+  dropout_max: 0.10
+
+loss:
+  empty_weight: 0.05
+  part_weight: 1.0
+  focal_gamma: 2.0
+  ignore_index: -1
+
+postprocess:
+  enabled: false
+  tiny_blob_min_voxels: 5
+  morph_close_kernel: 3
+
+training:
+  seed: 42
+  batch_size: 2
+  grad_accum_steps: 1
+  max_steps: 2000                # 20-sample overfit; CLI MAX_STEPS=N overrides for forward smoke
+  lr: 1.0e-4
+  warmup_steps: 50
+  min_lr_ratio: 0.1
+  weight_decay: 0.01
+  grad_clip: 1.0
+  fp16: true
+  ema_decay: 0.9999
+  num_workers: 2
+  log_every: 10
+  eval_every: 100
+  checkpoint_every: 250
+  eval_ode_steps: 10
+  output_dir: runs/partflow_smoke_4090
+
+wandb:
+  enabled: false
+  project: part_flow
+  name: partflow-smoke-4090

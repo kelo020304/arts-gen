@@ -1,0 +1,31 @@
+arts-gen provenance and third-party notices
+
+This repository contains code derived from or interoperating with Microsoft
+TRELLIS. The TRELLIS license text is preserved verbatim at:
+
+  TRELLIS-arts/LICENSE
+  submodules/TRELLIS.1/LICENSE
+  submodules/TRELLIS.2/LICENSE
+
+Primary local modifications live under TRELLIS-arts/, scripts/, pipeline/,
+post_process/, tests/, scripts/tools/, and docs/.
+
+Known third-party source trees and local license files:
+
+  submodules/Hunyuan3D-2/LICENSE
+  submodules/Hunyuan3D-2/NOTICE
+  submodules/PhysX-Anything/LICENSE
+  sam3d_cu118_deps/gsplat/LICENSE
+  sam3d_cu118_deps/MoGe/LICENSE
+  sam3d_cu118_deps/pytorch3d/LICENSE
+  sam3d_cu118_deps/pytorch3d/LICENSE-3RD-PARTY
+  sam3d_cu118_deps/utils3d/LICENSE
+  sam3d_cu118_src_deps/gsplat/LICENSE
+  sam3d_cu118_src_deps/MoGe/LICENSE
+  sam3d_cu118_src_deps/pytorch3d/LICENSE
+  sam3d_cu118_src_deps/pytorch3d/LICENSE-3RD-PARTY
+  sam3d_cu118_src_deps/utils3d/LICENSE
+
+Model weights, datasets, and generated artifacts under /mnt/robot-data-lab are
+not relicensed by this repository notice. Check their original source terms
+before redistribution.

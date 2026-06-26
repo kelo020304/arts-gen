@@ -1,0 +1,25 @@
+# SLat Flow (paper Stage 4) Scheme B / L2-SP anchor 配置
+# Launcher 对应: MODE=l2sp
+# 模式语义:
+# - full fine-tune：不启用 LoRA，所有原模型参数都可训练
+# - 额外引入 L2-SP anchor，把训练中的参数拉向 pretrained checkpoint 初值
+# - 适合想保留通用能力、但又不想把训练限制在 LoRA 小子空间里的场景
+_base_: mv_4view.yaml
+
+anchor:
+  enabled: true
+  mode: l2_sp                # 当前 anchor 方案：L2-SP
+  lambda: 1.0e-4             # 正则强度；越大越偏向保留 pretrained
+  target: trainable          # 锚定当前所有可训练参数
+  log_summary_every: 500     # 周期性打印分桶 drift
+  log_per_layer_every: 2000  # 更低频打印逐层 drift
+
+training:
+  output_dir: output/slat_flow_art_mv_4view_l2sp
+
+wandb:
+  name: slat-flow-art-mv4view-l2sp
+  tags:
+    - slat_flow_art
+    - mv4view
+    - mode=l2sp

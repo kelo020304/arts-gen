@@ -1,0 +1,29 @@
+<mujoco model="ra_063">
+  <compiler angle="radian" meshdir="." />
+  <default>
+    <geom type="mesh" group="2" contype="0" conaffinity="0" rgba="0.72 0.76 0.80 1" />
+  </default>
+  <asset>
+    <mesh name="body_mesh" file="assets/body.obj" />
+    <mesh name="part_00_mesh" file="assets/part_00.obj" />
+    <mesh name="part_01_mesh" file="assets/part_01.obj" />
+    <mesh name="part_02_mesh" file="assets/part_02.obj" />
+  </asset>
+  <worldbody>
+    <body name="body" pos="0 0 0">
+      <geom name="body_visual" mesh="body_mesh" group="2" contype="0" conaffinity="0" />
+      <body name="part_00" pos="0 0 0">
+        <joint name="part_00" type="hinge" pos="0.0260000005 -0 0.0989999995" axis="0.0871274324 0.00222126452 0.996194698" range="0 0.1" limited="true" />
+        <geom name="part_00_visual" mesh="part_00_mesh" group="2" contype="0" conaffinity="0" />
+      </body>
+      <body name="part_01" pos="0 0 0">
+        <joint name="part_01" type="hinge" pos="0.0700000003 -0 0.0399999991" axis="1 0 0" range="-6.10865238 6.28318531" limited="true" />
+        <geom name="part_01_visual" mesh="part_01_mesh" group="2" contype="0" conaffinity="0" />
+      </body>
+      <body name="part_02" pos="0 0 0">
+        <joint name="part_02" type="slide" pos="0.0109999999 -0 -0.0540000014" axis="1 0 0" range="0 0.11" limited="true" />
+        <geom name="part_02_visual" mesh="part_02_mesh" group="2" contype="0" conaffinity="0" />
+      </body>
+    </body>
+  </worldbody>
+</mujoco>

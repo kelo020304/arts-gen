@@ -1,0 +1,26 @@
+# SS Flow (paper Stage 2) LoRA-only 配置
+# Launcher 对应: MODE=lora
+# 模式语义:
+# - 只在 attention 线性层上挂 LoRA (`target_modules=all_attn`)
+# - base model 权重保持冻结；训练参数主要是 `lora_A/lora_B`
+# - 适合显存更紧、希望尽量少改底座参数的微调
+# thin override: 继承 mv_4view.yaml，只改 lora / output_dir / wandb
+
+_base_: mv_4view.yaml
+
+lora:
+  enabled: true
+  rank: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: all_attn   # attention-only LoRA; 非 attention 层不训练
+
+training:
+  output_dir: output/ss_flow_art_mv_4view_lora
+
+wandb:
+  name: ss-flow-art-mv4view-lora
+  tags:
+    - ss_flow_art
+    - mv4view
+    - mode=lora

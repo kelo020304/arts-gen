@@ -1,0 +1,92 @@
+# Fine-tune TRELLIS SS flow: 4 pre-encoded DINOv2 views -> whole-object z_global.
+
+_base_: ../base/base.yaml
+
+stage: ss_flow_global_z
+
+model:
+  name: SparseStructureFlowModel
+  args:
+    resolution: 16
+    in_channels: 8
+    model_channels: 1024
+    cond_channels: 1024
+    out_channels: 8
+    num_blocks: 24
+    num_heads: 16
+    mlp_ratio: 4
+    patch_size: 1
+    pe_mode: ape
+    use_fp16: true
+    use_checkpoint: false
+    share_mod: false
+    qk_rms_norm: true
+    qk_rms_norm_cross: false
+    use_camera_pose: true
+
+data:
+  data_root: /robot/data-lab/jzh/art-gen/data/PhysX-Mobility-full-4view-0511/PhysX-Mobility-full-4view-0511
+  recon_subdir: reconstruction
+  manifest_path: manifests/part_completion/arts_mllm_physx-mobility.train.jsonl
+  num_views: 4
+  # Fallback only for manifests without per-record view_indices. Part-completion
+  # manifests drive the real physical 4 views per sample.
+  view_indices: [0, 1, 2, 3]
+  view_aug:
+    enabled: false
+
+training:
+  seed: 42
+  batch_size_per_gpu: 1
+  batch_split: 1
+  max_steps: 50000
+  optimizer:
+    name: AdamW
+    args:
+      lr: 1.0e-5
+      weight_decay: 0.0
+      betas: [0.9, 0.999]
+  lr_scheduler: null
+  grad_clip: 1.0
+  ema_rate: 0.9999
+  fp16_mode: inflat_all
+  p_uncond: 0.1
+  t_schedule:
+    name: logitNormal
+    args:
+      mean: 0.0
+      std: 1.0
+  sigma_min: 1.0e-5
+  output_dir: output/ss_flow_global_z_mv_4view
+  pretrained_ckpt: /robot/data-lab/jzh/art-gen/weights/ss_flow_img_dit_L_16l8_fp16.safetensors
+  i_print: 100
+  i_log: 50
+  i_sample: 5000
+  i_save: 5000
+
+snapshot:
+  enabled: true
+  ss_decoder_ckpt: pretrained/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16.safetensors
+  num_samples: 1
+  batch_size: 1
+  num_steps: 20
+  cfg_strength: 3.0
+  decode_threshold: 0.0
+  seed: 1234
+  verbose: false
+
+wandb:
+  project: arts-reconstruction
+  name: ss-flow-global-z-mv4view
+  tags:
+    - ss_flow_global_z
+    - mv4view
+  enabled: false
+  mode: disabled
+
+lora:
+  enabled: false
+  rank: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: all_attn

@@ -1,0 +1,227 @@
+stage: part_ss_latent_flow
+
+# This model starts from random initialization. Do not load SS Flow pretrained
+# weights: SS Flow learns RGB -> whole-object SS latent, while this stage learns
+# z_global + part-specific condition -> target-part SS latent.
+model:
+  resolution: 16
+  latent_channels: 8
+  # Match TRELLIS SparseStructureFlowModel paper-scale capacity.
+  model_channels: 1024
+  cond_dim: 1024
+  num_blocks: 12
+  num_heads: 16
+  patch_size: 1
+  num_views: 4
+  max_parts: 20
+  num_part_query_layers: 2
+  part_label_vocab_size: 64
+  require_part_token: true
+  # z_global [8,16^3] -> 512 cross-attn condition tokens via P=2 patchify.
+  global_cond_patch_size: 2
+  # Main path keeps RF state and global condition separated:
+  #   x_t_part -> backbone input
+  #   z_global -> 512 cross-attn condition tokens
+  # Set true only for concat-global ablations. With flow.latent_scale != 1,
+  # concat ablations mix scaled x_t_part with raw z_global in the first
+  # backbone layer, so compare them as a diagnostic rather than the main path.
+  concat_global: false
+  # Keep trainable weights in FP32. training.fp16 enables AMP autocast; setting
+  # this true converts backbone weights to native FP16 and breaks GradScaler.
+  use_fp16: false
+  # Gradient-checkpoint the DiT backbone blocks. The backbone retains an
+  # autograd graph per part (max_part_forward_batch chunks all feed one
+  # backward), so activation memory scales with parts-per-object K; checkpointing
+  # recomputes block activations in backward and keeps the peak ~constant. The
+  # blocks use torch.utils.checkpoint(use_reentrant=False), which is DDP-safe as
+  # is (no static_graph needed — static_graph would in fact break under the
+  # variable per-object K here).
+  use_checkpoint: true
+  # Limit how many target parts from one object are sent through the SS
+  # backbone at once. Full PhysX has objects with many target parts; chunking
+  # preserves the loss while avoiding rare per-object OOM spikes (legacy
+  # independent path only; the joint cross_part_attention path processes one
+  # object's K parts together).
+  max_part_forward_batch: 4
+  # Fix 1: joint per-object forward with alternating global/within-part
+  # self-attention so parts bind as a set instead of being generated
+  # independently (the diagnosed identity-collapse root cause).
+  cross_part_attention: true
+  # Fix 2: add a per-part identity embedding to every latent token so each part
+  # carries a stable identity through the joint attention.
+  token_identity_embedding: true
+  # Fix 7: self-conditioning. Lets the model consume its own previous x0_hat
+  # (the loss runs the 50% double-pass via loss.self_conditioning_prob; the eval
+  # sampler carries x0_hat across steps). Changes backbone in_channels, so a
+  # checkpoint trained with this flag is NOT loadable with it off (and vice versa).
+  self_conditioning: true
+  # Fix 8: classifier-free guidance. Trains a learnable null per-part condition
+  # (driven by loss.cfg_dropout_prob); the eval sampler applies flow.cfg_scale.
+  classifier_free_guidance: true
+  # Soft role marking: make the target/context role tokens in the cross-attn
+  # KEY/VALUE use the same soft per-patch overlap weights (part_token_weights) as
+  # the pooled query, instead of the hard min_fg=3 mask_token_labels vote that
+  # marks sub-patch parts ALL-context. Completes the overlap-pooling that was only
+  # wired to the query. No new params / no data change / no anchor.
+  soft_role_marking: true
+  # Summary-token cross-part interaction (ISAB / Perceiver pooling) for the EVEN
+  # (global) joint blocks. Replaces the O((K*T)^2) full [1,K*T,C] cross-part
+  # self-attention (the speed bottleneck: T=16^3=4096 per part, K up to 25) with
+  # pool -> cross-part mix over K*m summaries -> broadcast back, i.e. O(K*m*T) +
+  # O((K*m)^2). Each part is pooled to n_summary_tokens summaries via a learned
+  # spatially-structured attention pool (coarse 4x4x4 grid + 3D pos emb), so small
+  # parts keep their footprint (no mean pooling). Requires cross_part_attention.
+  summary_cross_part_attention: true
+  # m summary tokens per part = a coarse 4x4x4 grid. K=25, m=64 -> 1600 mix tokens
+  # vs 102400 for the full path.
+  n_summary_tokens: 64
+  # Mask attention position bias (B): when enabled, add
+  # lambda_bias * log(part_token_weights + eps) to the image-condition token
+  # segment of each part's cross-attention logits. Default off preserves the
+  # original model exactly.
+  mask_attention_bias:
+    enabled: false
+    lambda_bias: 1.0
+    eps: 1.0e-3
+
+data:
+  data_root: /robot/data-lab/jzh/art-gen/data/PhysX-Mobility-full-4view-0511/PhysX-Mobility-full-4view-0511
+  recon_subdir: reconstruction
+  mask_subdir: renders
+  manifest_path: manifests/part_completion/arts_mllm_physx-mobility.train.jsonl
+  num_views: 4
+  allow_missing_masks: false
+  require_part_token: true
+  mask_patch_grid: 37
+  use_mask_overlap_pooling: true
+  mask_overlap_patch_grid_h: 37
+  mask_overlap_patch_grid_w: 37
+  mask_overlap_patch_h: 14
+  mask_overlap_patch_w: 14
+  mask_overlap_patch_start_index: 1
+  filter_zero_mask_coverage: false
+  zero_mask_coverage_report: manifests/part_completion/part_ss_latent_flow_zero_mask_report.json
+
+flow:
+  type: rectified
+  t_min: 0.0
+  t_max: 1.0
+  noise_scale: 1.0
+  # Part SS latents are much smaller than whole-object SS latents. Train RF in
+  # scaled latent space, then divide samples back to decoder scale for metrics.
+  latent_scale: 8.0
+  num_steps: 20
+  solver: euler
+  # Fix 5: continuous-time sampling schedule. logit_normal(0,1) concentrates
+  # training mass near t=0.5 (away from the trivial t->0 / t->1 endpoints),
+  # which improves velocity learning over uniform. Set t_schedule: uniform to
+  # recover the old behavior.
+  t_schedule: logit_normal
+  t_logit_normal_mean: 0.0
+  t_logit_normal_std: 1.0
+  # Fix 6: latent normalization. scalar multiplies x_1 by latent_scale.
+  # per_channel normalizes each of the latent_channels by precomputed mean/std.
+  # When per_channel and latent_mean/latent_std are null, the trainer computes
+  # them once over the first latent_stats_max_samples objects (rank0 computes +
+  # broadcasts) and logs the result; or set latent_stats_path to a JSON
+  # {"latent_mean": [...], "latent_std": [...]} to load fixed stats. The sampler
+  # de-normalizes with the same statistics.
+  latent_norm_mode: per_channel
+  latent_mean: null
+  latent_std: null
+  latent_stats_path: null
+  latent_stats_max_samples: 256
+  # Eval-time classifier-free guidance scale (1.0 = no guidance). The training
+  # objective stays unguided; only the eval sampler applies this. Requires
+  # model.classifier_free_guidance to have been trained with cfg_dropout_prob>0.
+  cfg_scale: 1.0
+
+loss:
+  part_weight_mode: raw_voxel_count
+  part_weight_ref_mode: median
+  part_weight_alpha: 0.5
+  part_weight_min: 0.5
+  part_weight_max: 3.0
+  normalize_part_weights_per_object: true
+  size_bucket_boundaries: [500.0, 3000.0]
+  object_balanced: true
+  object_weight_mode: none
+  object_weight_k_ref_source: dataset_median
+  object_weight_k_ref: null
+  object_weight_min: 0.75
+  object_weight_max: 2.0
+  # Relative endpoint loss optimizes the eval-time mse_vs_zero objective so
+  # tiny parts are not cheap to predict as near-empty latents.
+  relative_endpoint_weight: 0.25
+  relative_endpoint_eps: 1.0e-6
+  # Fix 3: per-object slot<->part shuffle. Randomly permutes the (target_slot,
+  # GT part) binding per object per step so identity cannot be memorized to a
+  # fixed slot index. Enable together with cross_part_attention for set binding.
+  part_shuffle: true
+  # Fix 4: DeltaFM velocity-contrastive identity loss (default on). For each
+  # object it pushes part i's predicted velocity toward its own target velocity
+  # and away from sibling parts' target velocities (no GT leakage into the
+  # prediction path). velocity_contrastive_lambda weights the repulsive term.
+  velocity_contrastive_weight: 0.05
+  velocity_contrastive_lambda: 0.05
+  # Legacy endpoint-based identity contrastive, kept for ablation only. Leave at
+  # 0 unless explicitly ablating against the velocity-contrastive term.
+  identity_contrastive_weight: 0.0
+  identity_contrastive_temperature: 0.1
+  identity_contrastive_eps: 1.0e-6
+  # Self-conditioning double-pass probability (requires model.self_conditioning).
+  # With probability self_conditioning_prob a stop-grad pass estimates x0_hat and
+  # feeds it back as x_self_cond; otherwise zeros are fed.
+  self_conditioning_prob: 0.5
+  # Classifier-free-guidance training dropout. With probability cfg_dropout_prob
+  # each valid part's condition is nulled (global z tokens kept) via the model's
+  # drop_part_cond path. 0 disables CFG training (requires model.classifier_free_guidance).
+  cfg_dropout_prob: 0.1
+  # Foreground-weighted velocity MSE. The foreground mask is built per part by
+  # max-pooling the loaded GT 64^3 raw occupied coords to the 16^3 latent grid.
+  # bg_weight=1.0 recovers the unweighted velocity MSE exactly.
+  foreground_weight:
+    enabled: true
+    bg_weight: 0.1
+    dilate: 0
+
+eval:
+  fixed_every: 5000
+  # Full-dataset latent eval and decode inspection are intentionally disabled
+  # in the production DDP loop; run them as explicit short jobs/checkpoint evals.
+  all_every: 0
+  decode_every: 0
+  decode_max_samples: 20
+  ss_decoder_ckpt: pretrained/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16.safetensors
+  decode_threshold: 0.0
+  debug_thresholds: [0.0, -0.25, -0.5, -1.0]
+  decode_iou_pred_vs_raw_ind: true
+  inspection_root: /robot/data-lab/jzh/art-gen-output/part-ss-latent-flow-4view-05181627/inspections
+
+training:
+  seed: 42
+  # batch_size is PER-GPU; effective = batch_size * num_gpus (e.g. 8 * 8 = 64).
+  # The summary-token cross-part path frees enough self-attention compute/memory
+  # (K*m << K*T) to raise the per-GPU batch from 4 to 8 alongside use_checkpoint.
+  # lr stays 2e-4 (conservative): for an effective batch of 64 the sqrt rule would
+  # give ~2.8e-4, but this binding-fix model (joint cross-part attention +
+  # self-conditioning + velocity-contrastive) trains from scratch, so the gentler
+  # peak lr lowers early loss-spike / NaN risk on the expensive multi-GPU run.
+  # warmup_steps=200. If it trains cleanly you can raise toward the sqrt-scaled lr.
+  batch_size: 8
+  grad_accum_steps: 1
+  max_steps: 600000
+  lr: 2.0e-4
+  warmup_steps: 200
+  weight_decay: 0.01
+  grad_clip: 1.0
+  fp16: true
+  num_workers: 2
+  log_every: 10
+  checkpoint_every: 5000
+  output_dir: /robot/data-lab/jzh/art-gen-output/part-ss-latent-flow-4view-05181627
+
+wandb:
+  enabled: false
+  project: part_ss_latent_flow
+  name: part-ss-latent-flow

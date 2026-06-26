@@ -1,0 +1,119 @@
+# SLat Flow (paper Stage 4) 多视角 Flow Matching 全量微调配置
+# Launcher 对应: MODE=full
+# 模式说明:
+# - full:     全量 fine-tune；不启用 LoRA，不启用 anchor
+# - lora:     只训练 attention 上的 LoRA adapter；底座参数冻结
+# - lora_ext: attention 走 LoRA，同时解冻少量 keep_trainable 的 sparse IO 层
+# - l2sp:     全量 fine-tune，同时用 L2-SP anchor 把参数拉回 pretrained 初值
+# 本文件就是 SLat Flow 的 full 模式基线；其他三个模式都在此基础上做 thin override
+#
+# Terminology: code slat_flow_art/ = paper Stage 4 (SLat Flow) = appearance generation DiT
+# on SparseTensor with Flow Matching. Paper Stage 3 = frozen SLat VAE Decoder (GS head),
+# not in training code. See docs/aaai_pact_vs_my_pipeline.md section 1.
+#
+# Key differences vs SS Flow (ss_flow_art/mv_4view.yaml):
+#   - Model: ElasticSLatFlowModel (not SparseStructureFlowModel)
+#   - fp16_mode: inflat_all (not amp) -- TRELLIS SLat Flow was pretrained under inflat_all
+#   - grad_clip: AdaptiveGradClipper dict (not scalar 1.0)
+#   - elastic: LinearMemoryController enabled
+#   - data: slat_latents_expanded (sparse) instead of ss_latents_expanded (dense)
+#   - normalization: 8-dim mean/std in dataset layer
+
+_base_: ../base/base.yaml
+
+# Explicit stage declaration (D-11): overrides base.yaml default 'ss_flow_art'.
+stage: slat_flow_art
+
+model:
+  name: ElasticSLatFlowModel
+  args:
+    resolution: 64
+    in_channels: 8
+    out_channels: 8
+    model_channels: 1024
+    cond_channels: 1024
+    num_blocks: 24
+    num_heads: 16
+    mlp_ratio: 4
+    patch_size: 2
+    num_io_res_blocks: 2
+    io_block_channels: [128]
+    pe_mode: ape
+    qk_rms_norm: true
+    use_fp16: true
+
+data:
+  data_root: data/PhysX-Mobility
+  recon_subdir: arts/reconstruction
+  manifest_path: arts/manifest_train.json
+  val_manifest_path: arts/manifest_val.json
+  num_views: 4
+  min_views: 1
+  view_dropout: true
+  max_num_voxels: 32768
+  normalization:
+    # TRELLIS canonical (slat_flow_img_dit_L_64l8p2_fp16.json) -- Objaverse stats.
+    # TODO(H200-run1): recompute on PhysX-Mobility slat_latents_expanded and override.
+    mean:
+      - -2.1687545776367188
+      - -0.004347046371549368
+      - -0.13352349400520325
+      - -0.08418072760105133
+      - -0.5271206498146057
+      -  0.7238689064979553
+      - -1.1414450407028198
+      -  1.2039363384246826
+    std:
+      -  2.377650737762451
+      -  2.386378288269043
+      -  2.124418020248413
+      -  2.1748552322387695
+      -  2.663944721221924
+      -  2.371192216873169
+      -  2.6217446327209473
+      -  2.684523105621338
+
+training:
+  batch_size_per_gpu: 8       # H200 default, executor may adjust
+  batch_split: 4
+  max_steps: 50000
+  optimizer:
+    name: AdamW
+    args:
+      lr: 1.0e-4
+      weight_decay: 0.0
+      betas: [0.9, 0.999]
+  lr_scheduler: null
+  ema_rate: [0.9999]
+  fp16_mode: inflat_all        # D-16: do NOT use SS Flow's amp
+  fp16_scale_growth: 1.0e-3
+  elastic:                     # D-18: must be enabled in both smoke and production
+    name: LinearMemoryController
+    args:
+      target_ratio: 0.75
+      max_mem_ratio_start: 0.5
+  grad_clip:                   # D-17: structured dict, not SS Flow's scalar 1.0
+    name: AdaptiveGradClipper
+    args:
+      max_norm: 1.0
+      clip_percentile: 95
+  p_uncond: 0.1
+  t_schedule:
+    name: logitNormal
+    args: {mean: 1.0, std: 1.0}
+  sigma_min: 1.0e-5
+  i_print: 100
+  i_log: 500
+  i_sample: 10000              # D-12: matches TRELLIS canonical
+  i_save: 10000
+  output_dir: output/slat_flow_art_mv_4view
+  pretrained_ckpt: pretrained/ckpts/slat_flow_img_dit_L_64l8p2_fp16.safetensors
+
+wandb:
+  project: arts-reconstruction
+  name: slat-flow-art-mv4view-full
+  tags:
+    - slat_flow_art
+    - mv4view
+    - mode=full
+  mode: online

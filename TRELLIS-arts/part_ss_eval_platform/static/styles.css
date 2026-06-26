@@ -1,0 +1,2334 @@
+:root {
+  color-scheme: light;
+  /* v11 light theme tokens */
+  --bg: #f5f7fa;
+  --panel: #ffffff;
+  --panel-2: #f1f5fa;
+  --ink: #132033;
+  --muted: #65758a;
+  --line: #dbe3ee;
+  --line-soft: rgba(19, 32, 51, 0.08);
+  --line-strong: #c3cfdd;
+  --accent: #2563eb;
+  --accent-2: #0d8a6a;
+  --warn: #b45f06;
+  --bad: #b42318;
+  /* v11 semantic aliases */
+  --blue: #2563eb;
+  --green: #0d8a6a;
+  --amber: #b45f06;
+  --red: #b42318;
+  --shadow: 0 14px 34px rgba(19, 32, 51, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    linear-gradient(#e9eef5 1px, transparent 1px),
+    linear-gradient(90deg, #e9eef5 1px, transparent 1px),
+    var(--bg);
+  background-size: 24px 24px;
+  color: var(--ink);
+  font-family: "IBM Plex Sans", "Aptos", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.topbar {
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(16px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.brand {
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.brand span {
+  color: var(--accent);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.brand b {
+  font-weight: 650;
+}
+
+.status-pills {
+  display: flex;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.status-pills span {
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  padding: 7px 11px;
+  border-radius: 999px;
+  color: var(--muted);
+}
+
+.status-pills b {
+  color: var(--accent);
+}
+
+.status-pills .build-tag {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  opacity: 0.65;
+  border-style: dashed;
+}
+
+.entry {
+  min-height: calc(100vh - 58px);
+  display: grid;
+  place-items: center;
+  align-content: center;
+  padding: 40px;
+}
+
+.compare-head p {
+  margin: 0 0 8px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.entry-grid {
+  width: min(960px, 100%);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.entry-card {
+  min-height: 190px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(145deg, #ffffff, var(--panel-2));
+  box-shadow: var(--shadow);
+  padding: 22px;
+  color: var(--ink);
+  text-align: left;
+  display: grid;
+  align-content: space-between;
+  transition-property: transform, border-color, background;
+  transition-duration: 160ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.entry-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(37, 99, 235, 0.55);
+}
+
+.entry-card:active,
+.primary:active,
+.ghost:active,
+.experiment-row:active {
+  transform: scale(0.96);
+}
+
+.entry-card span {
+  color: var(--accent);
+  font: 700 13px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.entry-card b {
+  font-size: clamp(26px, 3vw, 36px);
+  line-height: 1.02;
+}
+
+.entry-card small {
+  color: var(--muted);
+}
+
+.entry-card.accent {
+  background: linear-gradient(145deg, rgba(37,99,235,0.10), rgba(13,138,106,0.06));
+}
+
+.workbench,
+.runs-layout {
+  width: min(1540px, calc(100vw - 40px));
+  margin: 22px auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(360px, 0.9fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.runs-layout {
+  grid-template-columns: minmax(460px, 0.42fr) minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.panel {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.config-panel,
+.summary-panel,
+.run-list,
+.compare-panel {
+  padding: 18px;
+}
+
+/* Only the "已跑实验" view wants a tall, full-height panel. The new-job form
+   (config/summary) sizes to its content so there is no dead space below 启动任务. */
+.run-list,
+.compare-panel {
+  min-height: calc(100vh - 104px);
+}
+
+.panel-head,
+.compare-head,
+.terminal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 24px;
+  text-wrap: balance;
+}
+
+h2 {
+  font-size: 22px;
+}
+
+h3 {
+  font-size: 14px;
+}
+
+.ghost {
+  min-height: 40px;
+  border: 1px solid var(--line-strong);
+  background: #ffffff;
+  color: var(--ink);
+  border-radius: 7px;
+  padding: 8px 12px;
+  transition-property: transform, border-color, background;
+  transition-duration: 150ms;
+}
+
+.ghost:hover {
+  border-color: rgba(37, 99, 235, 0.55);
+}
+
+.form-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+label {
+  color: var(--muted);
+  font-size: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+input,
+select,
+textarea {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 10px 11px;
+  outline: none;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.primary {
+  min-height: 44px;
+  border: 0;
+  border-radius: 7px;
+  padding: 13px 16px;
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 900;
+  transition-property: transform, filter;
+  transition-duration: 150ms;
+}
+
+.primary:hover {
+  filter: brightness(1.05);
+}
+
+.summary-panel dl {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 20px;
+  font-size: 13px;
+}
+
+.summary-panel dt {
+  color: var(--muted);
+}
+
+.summary-panel dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.bottom-tray {
+  width: min(1540px, calc(100vw - 40px));
+  margin: -8px auto 32px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.tray-title,
+.muted,
+small {
+  color: var(--muted);
+}
+
+.tray-title {
+  margin-bottom: 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.chip-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.run-chip {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 11px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.run-chip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.run-chip-name {
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.run-chip-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+}
+
+.run-chip-status {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chip-link {
+  border: 1px solid var(--accent);
+  background: #edf4ff;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.chip-link:hover {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.chip-link.danger {
+  border-color: var(--red);
+  background: #fff0ee;
+  color: var(--red);
+}
+
+.chip-link.danger:hover {
+  background: var(--red);
+  color: #ffffff;
+}
+
+/* clickable "运行中 N" header pill */
+.pill-link {
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  padding: 7px 11px;
+  border-radius: 999px;
+  color: var(--muted);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.pill-link:hover {
+  border-color: rgba(37, 99, 235, 0.55);
+  color: var(--accent);
+}
+
+.pill-link b {
+  color: var(--accent);
+}
+
+/* running-jobs view */
+.running-view {
+  width: min(1180px, calc(100vw - 40px));
+  margin: 22px auto;
+}
+
+.section-label {
+  margin: 4px 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.gpu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.gpu-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.gpu-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.gpu-card-head span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.gpu-mem {
+  font-size: 13px;
+}
+
+.gpu-mem b {
+  color: var(--accent-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.running-list {
+  display: grid;
+  gap: 8px;
+}
+
+.running-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.6fr) 120px auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--warn);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 11px 14px;
+}
+
+.running-name {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.running-name b {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.running-gpu {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.running-prog {
+  font-size: 13px;
+  color: var(--warn);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.running-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* kinematic stage3 -> solver view */
+.kinematic-view {
+  width: min(1320px, calc(100vw - 40px));
+  margin: 22px auto 32px;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(420px, 1.05fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.kin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.kin-grid label:nth-child(1),
+.kin-grid label:nth-child(5),
+.kin-grid label:nth-child(6) {
+  grid-column: 1 / -1;
+}
+
+.kin-toggles {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.check-row {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.check-row input {
+  width: auto;
+}
+
+.kin-submit {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.kin-results {
+  display: grid;
+  gap: 9px;
+}
+
+.kin-result {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 11px;
+}
+
+.kin-result.is-selected {
+  border-color: rgba(37, 99, 235, 0.56);
+  background: #f3f8ff;
+}
+
+.kin-result b {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.kin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.kin-link {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  padding: 7px 10px;
+  color: var(--accent);
+  background: #ffffff;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.kin-log {
+  margin: 14px 0 0;
+  max-height: 420px;
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--ink);
+  font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 820px) {
+  .kinematic-view {
+    grid-template-columns: 1fr;
+    width: min(100vw - 24px, 1320px);
+  }
+
+  .kin-grid,
+  .running-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .kin-result {
+    grid-template-columns: 1fr;
+  }
+
+  .kin-actions {
+    justify-content: flex-start;
+  }
+}
+
+.run-chip-bar {
+  position: relative;
+  height: 4px;
+  border-radius: 999px;
+  background: #edf2f7;
+  overflow: hidden;
+}
+
+.run-chip-bar > i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 999px;
+}
+
+/* running: amber, animated indeterminate bar (no real % is emitted by eval) */
+.run-chip.status-running {
+  border-left-color: var(--amber);
+}
+.run-chip.status-running .run-chip-status {
+  color: var(--amber);
+}
+.run-chip.status-running .run-chip-bar > i {
+  width: 34%;
+  background: var(--amber);
+  animation: chip-indeterminate 1.15s ease-in-out infinite;
+}
+
+/* once the eval log yields a real X/N, switch to a determinate teal bar
+   (width set inline from the parsed fraction). */
+.run-chip.status-running .run-chip-bar > i.is-determinate {
+  left: 0;
+  background: var(--accent-2);
+  animation: none;
+}
+
+/* completed: green, full bar */
+.run-chip.status-completed {
+  border-left-color: var(--green);
+}
+.run-chip.status-completed .run-chip-status {
+  color: var(--green);
+}
+.run-chip.status-completed .run-chip-bar > i {
+  width: 100%;
+  background: var(--green);
+}
+
+/* failed: red, full bar */
+.run-chip.status-failed {
+  border-left-color: var(--red);
+}
+.run-chip.status-failed .run-chip-status {
+  color: var(--red);
+}
+.run-chip.status-failed .run-chip-bar > i {
+  width: 100%;
+  background: var(--red);
+}
+
+@keyframes chip-indeterminate {
+  0% {
+    left: -34%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.experiment-list {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.experiment-row {
+  width: 100%;
+  min-height: 62px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 10px;
+  background: #ffffff;
+  color: var(--ink);
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 46px;
+  align-items: start;
+  gap: 10px;
+  text-align: left;
+  transition-property: transform, border-color, background;
+  transition-duration: 150ms;
+}
+
+.experiment-row:hover,
+.experiment-row.selected {
+  border-color: rgba(37, 99, 235, 0.55);
+  background: #edf4ff;
+}
+
+.experiment-row i {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--accent);
+  font-style: normal;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.experiment-row span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.experiment-row b,
+.experiment-row small {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.experiment-row em {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 12px;
+  line-height: 30px;
+  text-align: right;
+}
+
+.empty-state {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.empty-state b {
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.metric-hero {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.selected-strip {
+  margin-top: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.selected-strip div {
+  border-left: 3px solid var(--accent);
+  background: var(--panel-2);
+  padding: 9px 11px;
+  display: grid;
+  gap: 3px;
+}
+
+.selected-strip b,
+.selected-strip span {
+  overflow-wrap: anywhere;
+}
+
+.selected-strip span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.diagnostic-list {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.diagnostic-card {
+  border: 1px solid rgba(180, 95, 6, 0.40);
+  border-radius: 8px;
+  background: rgba(180, 95, 6, 0.07);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.diagnostic-card.loading {
+  border-color: rgba(37, 99, 235, 0.45);
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.diagnostic-card div {
+  display: grid;
+  gap: 4px;
+}
+
+.diagnostic-card span,
+.diagnostic-card code,
+.diagnostic-card li {
+  color: var(--muted);
+}
+
+.diagnostic-card code {
+  font-size: 11px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.diagnostic-card p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.diagnostic-card strong {
+  color: var(--warn);
+}
+
+.diagnostic-card em {
+  border: 1px solid rgba(180, 95, 6, 0.4);
+  border-radius: 999px;
+  padding: 3px 7px;
+  color: var(--ink);
+  font-style: normal;
+}
+
+.diagnostic-card ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+}
+
+.no-metrics {
+  margin-top: 14px;
+  min-height: 180px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.no-metrics b {
+  color: var(--ink);
+}
+
+.metric-tile {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.08), #ffffff);
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.metric-tile strong {
+  font-size: clamp(22px, 2.4vw, 34px);
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-tile span {
+  color: var(--muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metric-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metric-block {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--panel-2);
+}
+
+.metric-title {
+  display: grid;
+  gap: 5px;
+}
+
+.metric-title code {
+  white-space: normal;
+  color: var(--accent-2);
+  font-size: 11px;
+}
+
+.metric-title p {
+  color: var(--muted);
+  font-size: 12px;
+  text-wrap: pretty;
+}
+
+.bar-group {
+  margin-top: 11px;
+  display: grid;
+  gap: 8px;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.42fr) minmax(0, 1fr) 56px;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bar-row span {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.bar-track {
+  height: 8px;
+  background: #edf2f7;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bar-track i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+
+.definition-strip {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.definition-strip div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px;
+  display: grid;
+  gap: 5px;
+  background: var(--panel-2);
+}
+
+.examples {
+  margin-top: 16px;
+}
+
+.example-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.example-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.example-card img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  background: #f8fafc;
+  display: block;
+  outline: 1px solid var(--line-soft);
+}
+
+.example-card div {
+  padding: 10px 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(19, 32, 51, 0.38);
+  display: grid;
+  place-items: center;
+  z-index: 30;
+}
+
+.terminal-panel {
+  width: min(980px, calc(100vw - 48px));
+  background: #ffffff;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.terminal-head {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+#terminalLog {
+  margin: 0;
+  width: 100%;
+  height: 520px;
+  overflow: auto;
+  padding: 16px;
+  background: var(--panel-2);
+  color: var(--ink);
+  font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.boot-error {
+  margin: 24px;
+  color: var(--bad);
+}
+
+/* ==========================================================================
+   v11 runs-view components (light theme) — adapted from
+   eval-platform-runs-cn-v11.html. Live markup is rendered by app.js.
+   ========================================================================== */
+
+.layout {
+  display: grid;
+  grid-template-columns: 330px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.layout .panel {
+  overflow: hidden;
+}
+
+.panel-head {
+  min-height: 58px;
+  padding: 15px 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-body {
+  padding: 16px;
+}
+
+.filters {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.input,
+.select {
+  width: 100%;
+  height: 40px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 0 11px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.input:focus,
+.select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.run-list {
+  display: grid;
+  gap: 8px;
+}
+
+.run-item {
+  position: relative;  /* so the delete button can be absolutely placed */
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 11px;
+  cursor: pointer;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.run-del {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.run-item:hover .run-del {
+  display: inline-flex;
+}
+
+.run-del:hover {
+  color: var(--red);
+  border-color: var(--red);
+  background: #fff0ee;
+}
+
+.run-item:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+}
+
+/* JS renders the .run-item with class "is-selected" (and a ✓ inside .box). */
+.run-item.is-selected {
+  border-color: rgba(37, 99, 235, 0.56);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.10);
+  background: #f3f8ff;
+}
+
+.box {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  margin-top: 1px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.run-item.is-selected .box {
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+.run-name {
+  font-size: 14px;
+  font-weight: 830;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.run-meta {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.badge-row {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.badge.eval {
+  color: var(--blue);
+  background: #edf4ff;
+}
+
+.badge.done {
+  color: var(--green);
+  background: #e8f6f1;
+}
+
+.workspace {
+  display: grid;
+  gap: 16px;
+}
+
+.compare-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.metric-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.metric-chip {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 820;
+  cursor: pointer;
+}
+
+.metric-chip.is-active {
+  color: var(--blue);
+  border-color: rgba(37, 99, 235, 0.55);
+  background: #edf4ff;
+}
+
+.matrix {
+  display: grid;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+/* grid-template-columns is set inline by app.js per active tab:
+   144px repeat(N, minmax(0, 1fr)) where N = metric count (6/5/4). */
+.matrix-head,
+.matrix-row {
+  display: grid;
+  gap: 8px;
+  align-items: stretch;
+  min-width: 980px;
+}
+
+.matrix-head {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 820;
+  padding: 0 4px;
+}
+
+/* paper-style direction indicator: ↑ higher-better, ↓ lower-better */
+.dir-arrow {
+  color: var(--blue);
+  font-weight: 900;
+  font-size: 0.92em;
+}
+
+.matrix-row {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 9px;
+}
+
+.run-title {
+  font-weight: 850;
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.run-view {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cell {
+  display: grid;
+  gap: 6px;
+  align-content: center;
+  min-width: 0;
+}
+
+.num {
+  font-size: 13px;
+  font-weight: 880;
+  font-variant-numeric: tabular-nums;
+}
+
+.bar {
+  height: 8px;
+  border-radius: 999px;
+  background: #edf2f7;
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--blue);
+}
+
+.fill.green {
+  background: var(--green);
+}
+
+.fill.amber {
+  background: var(--amber);
+}
+
+.fill.red {
+  background: var(--red);
+}
+
+.green-text {
+  color: var(--green) !important;
+}
+
+.red-text {
+  color: var(--red) !important;
+}
+
+.amber-text {
+  color: var(--amber) !important;
+}
+
+.blue-text {
+  color: var(--blue) !important;
+}
+
+.metric-explain {
+  margin-top: 12px;
+  border: 1px solid #e8edf5;
+  border-radius: 8px;
+  background: #fbfcfe;
+  overflow: hidden;
+}
+
+.explain-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fbfcfe;
+  border: 0;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.explain-arrow {
+  color: var(--muted);
+}
+
+.explain-rows {
+  border-top: 1px solid #e8edf5;
+}
+
+.explain-row {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e8edf5;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.explain-row:last-child {
+  border-bottom: 0;
+}
+
+.explain-row strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.single-detail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.detail-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+  min-height: 92px;
+}
+
+.detail-card h3 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.detail-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+
+.detail-card p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* A case row stacks: a compact header (tag + obj + inline metrics) on top, and
+   the FULL-WIDTH eval panel image below (input RGB/mask + GT/Pred/Overlap). The
+   panel is a wide strip, so it is shown at natural aspect ratio (not cropped). */
+.case-row {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+  margin-bottom: 14px;
+}
+
+.case-row:last-child {
+  margin-bottom: 0;
+}
+
+.case-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.case-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.case-obj {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.case-sub {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.case-tag {
+  display: inline-flex;
+  height: 23px;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.case-tag.good {
+  color: var(--green);
+  background: #e8f6f1;
+}
+
+.case-tag.bad {
+  color: var(--red);
+  background: #fff0ee;
+}
+
+.case-metrics-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.case-metrics-inline b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.case-visual {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.visual-head {
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  padding: 7px 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 820;
+}
+
+/* the real eval panel PNG — full width, natural height (no crop) */
+.case-panel {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.case-panel-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* v11 runs-view: single-column layout on narrower screens */
+@media (max-width: 1220px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .single-detail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1120px) {
+  .metric-hero {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 920px) {
+  .entry-grid,
+  .workbench,
+  .runs-layout,
+  .metric-grid,
+  .example-grid,
+  .definition-strip,
+  .metric-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .workbench,
+  .runs-layout,
+  .bottom-tray {
+    width: min(100vw - 24px, 760px);
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* v11 responsive collapse for the compare workspace */
+  .compare-toolbar,
+  .explain-row,
+  .single-detail {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   Phase 2B — full-pipeline inference view (home card 03 + infer workbench +
+   stage cards + shared 3D viewer + RGB input preview). Light theme; reuses the
+   :root tokens above. Markup is rendered by app.js / infer.js / viewer3d.js.
+   ========================================================================== */
+
+/* 3rd home entry card — amber accent to distinguish from .accent (blue/teal) */
+.entry-card.infer {
+  background: linear-gradient(145deg, rgba(180, 95, 6, 0.12), rgba(37, 99, 235, 0.05));
+}
+
+.entry-card.infer:hover {
+  border-color: rgba(180, 95, 6, 0.55);
+}
+
+.entry-card.infer span {
+  color: var(--amber);
+}
+
+/* infer workbench: form (left) + viewer (right); stacks on narrow screens */
+.infer-view {
+  width: min(1540px, calc(100vw - 40px));
+  margin: 22px auto;
+  /* Single-subview layout (config OR run). NOT a 2-col grid anymore — the inner
+     .infer-config / .infer-run center themselves via max-width + margin:auto. */
+  display: block;
+}
+
+.infer-form,
+.infer-result {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.infer-result {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+/* pipeline stage cards (part flow / ss decode / ... ) with status color states */
+.stage-list {
+  display: grid;
+  gap: 10px;
+}
+
+.stage-card {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px 14px;
+  display: grid;
+  gap: 6px;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.stage-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stage-card-title {
+  font-size: 14px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.stage-card-status {
+  flex: none;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.stage-card-meta {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+/* pending — grey (default neutral) */
+.stage-card.is-pending {
+  border-left-color: var(--line-strong);
+}
+.stage-card.is-pending .stage-card-status {
+  color: var(--muted);
+}
+
+/* running — blue */
+.stage-card.is-running {
+  border-left-color: var(--blue);
+  background: #f3f8ff;
+}
+.stage-card.is-running .stage-card-status {
+  color: var(--blue);
+}
+
+/* done — green */
+.stage-card.is-done {
+  border-left-color: var(--green);
+}
+.stage-card.is-done .stage-card-status {
+  color: var(--green);
+}
+
+/* failed — red */
+.stage-card.is-failed {
+  border-left-color: var(--red);
+  background: #fff0ee;
+}
+.stage-card.is-failed .stage-card-status {
+  color: var(--red);
+}
+
+/* shared 3D viewer canvas container (Three.js mounts a <canvas> inside) */
+.viewer3d {
+  position: relative;
+  width: 100%;
+  min-height: 360px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0e1726;
+  overflow: hidden;
+}
+
+.viewer3d canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* small overlay hint (empty / loading / error) drawn over the dark canvas */
+.viewer3d-hint {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  padding: 16px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* viewer mode switcher (voxel / mesh / gaussian) — reuses metric-chip look */
+.viewer-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* RGB input preview — responsive thumbnail grid of the conditioning views */
+.input-preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+
+.input-preview figure {
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.input-preview img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: #f8fafc;
+}
+
+.input-preview figcaption {
+  padding: 4px 6px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ----- infer form: readable labels + tidy inline radios -----
+   The global `label{ color:muted; font-size:12px; display:grid }` made every
+   field label faint, and `input{ width:100% }` stretched the radios so they got
+   pushed to the right of their row. Override both here so the form reads clearly
+   and the radios sit inline next to their text. */
+.infer-form {
+  display: grid;
+  gap: 13px;
+  align-content: start;
+}
+.infer-form > h2 {
+  margin: 0 0 2px;
+}
+.pipeline-note {
+  border: 1px solid #d9e2f2;
+  border-radius: 8px;
+  background: #f6f9ff;
+  color: #31435f;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.infer-form label {
+  color: var(--ink);          /* was --muted (faint) */
+  font-size: 13px;
+  font-weight: 600;
+  gap: 5px;
+}
+.infer-form fieldset {
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px 12px;
+  display: grid;
+  gap: 6px;
+}
+.infer-form legend {
+  padding: 0 6px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+.infer-radio {
+  display: flex;              /* override label{display:grid} */
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 3px 2px;
+}
+.infer-radio input[type="radio"] {
+  width: auto;               /* override input{width:100%} that pushed radios out */
+  min-width: 0;
+  flex: none;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.infer-form input,
+.infer-form select {
+  font-size: 13px;
+}
+.infer-form input::placeholder {
+  color: #9aa7b8;            /* lighter than ink so real values stand out */
+}
+.infer-object-picker {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.6fr) minmax(120px, 0.8fr) minmax(180px, 1.6fr);
+  gap: 10px;
+  align-items: end;
+}
+.infer-object-picker label {
+  min-width: 0;
+}
+/* secondary text in the right panel — nudge darker for legibility */
+.infer-result .stage-card-meta {
+  color: #51617a;
+}
+
+/* infer view collapses to a single column on narrow screens */
+@media (max-width: 1100px) {
+  .infer-object-picker {
+    grid-template-columns: 1fr;
+  }
+  .infer-view {
+    grid-template-columns: 1fr;
+    width: min(100vw - 24px, 880px);
+  }
+}
+
+/* ==========================================================================
+   Phase 2B (rework) — reworked infer view: a centered single-column config
+   screen, then a centered single-column run screen. These OVERRIDE the older
+   2-col `.infer-view` grid so the two phases (`.infer-config` / `.infer-run`)
+   always read as a centered block, never as grid columns. The `.infer-form`
+   label/radio/fieldset rules above still apply and stay. Append-only.
+   ========================================================================== */
+
+/* 1. Centered single-column layout for both infer phases. `display:block`
+   neutralizes the parent `.infer-view` grid placement so these never sit in a
+   column; max-width keeps the reading measure comfortable and `margin:auto`
+   centers them in the viewport. */
+.infer-config,
+.infer-run {
+  display: block;
+  width: 100%;
+  max-width: 860px;
+  margin: 22px auto;
+}
+
+/* stack the inner sections (form / fieldsets / run-button) with breathing room */
+.infer-config {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+.infer-run {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+/* 2. [进入推理] — big full-width primary button anchoring the config bottom */
+.enter-infer-btn {
+  width: 100%;
+  margin-top: 4px;
+  padding: 14px 18px;
+  border: 1px solid var(--accent);
+  border-radius: 9px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.22);
+  transition: background 140ms ease, box-shadow 140ms ease, transform 80ms ease;
+}
+.enter-infer-btn:hover {
+  background: #1d4fd0;
+  box-shadow: 0 10px 26px rgba(37, 99, 235, 0.3);
+}
+.enter-infer-btn:active {
+  transform: translateY(1px);
+}
+.enter-infer-btn:disabled {
+  background: var(--line-strong);
+  border-color: var(--line-strong);
+  color: rgba(255, 255, 255, 0.85);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* 6. run-screen header row with a small ghost [← 返回配置] button, left-aligned */
+.infer-run-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.infer-run-context {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.infer-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+}
+.infer-back-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(37, 99, 235, 0.06);
+}
+
+/* 3. running — YELLOW/amber (overrides the older blue `.is-running` above) */
+.stage-card.is-running {
+  border-left-color: var(--amber);
+  background: #fff8e6;
+}
+.stage-card.is-running .stage-card-status {
+  color: #b07d00;
+}
+
+/* 5. locked — gated stages dim so they read as not-yet-available */
+.stage-card.is-locked {
+  opacity: 0.6;
+}
+
+/* 4. indeterminate progress bar — only rendered (by JS) while a stage runs. The
+   track is a thin rounded grey rail; the bar is an amber/accent segment that
+   slides left -> right on a loop to signal ongoing (unknown-duration) work. */
+.stage-progress {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: #eef1f6;
+  overflow: hidden;
+}
+.stage-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--amber), #f0a437);
+  animation: stage-progress-slide 1.15s ease-in-out infinite;
+}
+@keyframes stage-progress-slide {
+  0% {
+    left: -40%;
+    width: 40%;
+  }
+  50% {
+    width: 55%;
+  }
+  100% {
+    left: 100%;
+    width: 40%;
+  }
+}
+
+/* 6. stage log — copyable, scrollable run-log panel inside a stage card. Hidden
+   until the JS toggles .is-open (on [日志] click, or auto on a failed stage).
+   user-select:text keeps it selectable so the error can be copied out. */
+.stage-log {
+  display: none;
+  margin-top: 8px;
+  max-height: 220px;
+  overflow: auto;
+  background: #0e1726;
+  color: #d7e0ee;
+  font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace;
+  padding: 10px 12px;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: text;
+}
+.stage-log.is-open {
+  display: block;
+}
+.input-preview figure.img-failed {
+  opacity: 0.4;
+}
+
+/* 2026-06-03 infer run layout: horizontal stage controls + one main viewer. */
+.infer-run {
+  max-width: 1280px;
+}
+
+.infer-run-header {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.infer-run .stage-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+}
+
+.infer-stage-button {
+  min-height: 174px;
+  align-content: start;
+  cursor: pointer;
+}
+
+.infer-stage-button.is-active {
+  border-color: rgba(37, 99, 235, 0.55);
+  box-shadow: 0 10px 24px rgba(19, 32, 51, 0.09);
+}
+
+.stage-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.stage-card-actions .primary,
+.stage-card-actions .ghost {
+  min-height: 34px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.infer-main-viewer {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow);
+  padding: 12px;
+}
+
+.infer-viewer-head {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.infer-viewer-title {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.infer-viewer-status {
+  margin-top: 2px;
+  min-height: 18px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.infer-viewer-body {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.mesh-legend-panel {
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 8px;
+  overflow: auto;
+}
+
+.mesh-legend-empty {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mesh-legend-all,
+.mesh-legend-item {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.mesh-legend-all {
+  margin-bottom: 8px;
+  padding: 7px 8px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mesh-legend-items {
+  display: grid;
+  gap: 6px;
+}
+
+.mesh-legend-item {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 7px 8px;
+}
+
+.mesh-legend-all:hover,
+.mesh-legend-item:hover {
+  background: rgba(15, 23, 42, 0.055);
+}
+
+.mesh-legend-all.is-active,
+.mesh-legend-item.is-active {
+  border-color: rgba(15, 23, 42, 0.18);
+  background: #eef2f7;
+}
+
+.mesh-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.28);
+  border-radius: 50%;
+}
+
+.mesh-legend-text {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.mesh-legend-name,
+.mesh-legend-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mesh-legend-name {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mesh-legend-meta {
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.infer-main-viewer .viewer3d {
+  min-height: 620px;
+}
+
+.infer-main-viewer .stage-log {
+  margin-top: 0;
+}
+
+@media (max-width: 1180px) {
+  .infer-run .stage-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .infer-main-viewer .viewer3d {
+    min-height: 520px;
+  }
+}
+
+@media (max-width: 720px) {
+  .infer-run .stage-list {
+    grid-template-columns: 1fr;
+  }
+
+  .infer-main-viewer .viewer3d {
+    min-height: 430px;
+  }
+
+  .infer-viewer-body {
+    grid-template-columns: 1fr;
+  }
+
+  .mesh-legend-panel {
+    max-height: 160px;
+  }
+}

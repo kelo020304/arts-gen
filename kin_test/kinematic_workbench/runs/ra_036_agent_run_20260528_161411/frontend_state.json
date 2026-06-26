@@ -1,0 +1,235 @@
+{
+  "iterations": [
+    {
+      "asset_dir": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_036_agent_run_20260528_161411/object_assets/ks_ra_036_b6ec3bcb_iter_000",
+      "asset_name": "ks_ra_036_b6ec3bcb_iter_000",
+      "asset_root": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_036_agent_run_20260528_161411/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "confidence": 0.25,
+          "joint_name": "part_03",
+          "lower": -6.283185307179586,
+          "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.25,
+          "joint_name": "part_05",
+          "lower": -6.283185307179586,
+          "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.25,
+          "joint_name": "part_07",
+          "lower": 0.0,
+          "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+          "upper": 0.03
+        }
+      ],
+      "iteration": 0,
+      "joint_states": {
+        "part_03": {
+          "errors": [
+            "rough VLM initial guess"
+          ],
+          "status": "need_fix"
+        },
+        "part_05": {
+          "errors": [
+            "rough VLM initial guess"
+          ],
+          "status": "need_fix"
+        },
+        "part_07": {
+          "errors": [
+            "rough VLM initial guess"
+          ],
+          "status": "need_fix"
+        }
+      },
+      "motion_search": [],
+      "object_id": "ra_036",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "vlm_initial",
+      "run_dir": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_036_agent_run_20260528_161411",
+      "xml_path": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_036_agent_run_20260528_161411/object_assets/ks_ra_036_b6ec3bcb_iter_000/mjcf/ks_ra_036_b6ec3bcb_iter_000.xml"
+    },
+    {
+      "asset_dir": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_036_agent_run_20260528_161411/object_assets/ks_ra_036_b6ec3bcb_iter_001",
+      "asset_name": "ks_ra_036_b6ec3bcb_iter_001",
+      "asset_root": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_036_agent_run_20260528_161411/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "confidence": 0.62,
+          "joint_name": "part_03",
+          "lower": -6.283185307179586,
+          "reason": "State per joint: need_fix. Blocking signals parsed for this joint: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q from feedback: lower=None, upper=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. The only blocking signal is QC_CANDIDATE_CONTRACT/missing VHACD cache, which is not attributable to this joint and cannot be repaired by a bounded axis/lower/upper action; therefore this joint stays unchanged this iteration.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.62,
+          "joint_name": "part_05",
+          "lower": -6.283185307179586,
+          "reason": "State per joint: need_fix. Blocking signals parsed for this joint: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q from feedback: lower=None, upper=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. The only blocking signal is QC_CANDIDATE_CONTRACT/missing VHACD cache, which is not attributable to this joint and cannot be repaired by a bounded axis/lower/upper action; therefore this joint stays unchanged this iteration.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.62,
+          "joint_name": "part_07",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Blocking signals parsed for this joint: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q from feedback: lower=None, upper=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. The only blocking signal is QC_CANDIDATE_CONTRACT/missing VHACD cache, which is not attributable to this joint and cannot be repaired by a bounded axis/lower/upper action; therefore this joint stays unchanged this iteration.",
+          "upper": 0.03
+        }
+      ],
+      "iteration": 1,
+      "joint_states": {
+        "part_03": {
+          "errors": [
+            "motion validation failed: VhacdCacheMissingError: missing VHACD cache: /home/mi/jzh/AAAI2027/arts-reconstruction/data/RealAppliance/source/model/036/kin_036/raw/vhacd/ra_036/body.json"
+          ],
+          "status": "need_fix"
+        },
+        "part_05": {
+          "errors": [
+            "motion validation failed: VhacdCacheMissingError: missing VHACD cache: /home/mi/jzh/AAAI2027/arts-reconstruction/data/RealAppliance/source/model/036/kin_036/raw/vhacd/ra_036/body.json"
+          ],
+          "status": "need_fix"
+        },
+        "part_07": {
+          "errors": [
+            "motion validation failed: VhacdCacheMissingError: missing VHACD cache: /home/mi/jzh/AAAI2027/arts-reconstruction/data/RealAppliance/source/model/036/kin_036/raw/vhacd/ra_036/body.json"
+          ],
+          "status": "need_fix"
+        }
+      },
+      "motion_search": [],
+      "object_id": "ra_036",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "candidate",
+      "run_dir": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_036_agent_run_20260528_161411",
+      "xml_path": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_036_agent_run_20260528_161411/object_assets/ks_ra_036_b6ec3bcb_iter_001/mjcf/ks_ra_036_b6ec3bcb_iter_001.xml"
+    }
+  ],
+  "latest_iteration": 1,
+  "latest_preview": {
+    "asset_dir": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_036_agent_run_20260528_161411/object_assets/ks_ra_036_b6ec3bcb_iter_001",
+    "asset_name": "ks_ra_036_b6ec3bcb_iter_001",
+    "asset_root": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_036_agent_run_20260528_161411/object_assets",
+    "estimates": [
+      {
+        "axis_label": null,
+        "axis_world": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "confidence": 0.62,
+        "joint_name": "part_03",
+        "lower": -6.283185307179586,
+        "reason": "State per joint: need_fix. Blocking signals parsed for this joint: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q from feedback: lower=None, upper=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. The only blocking signal is QC_CANDIDATE_CONTRACT/missing VHACD cache, which is not attributable to this joint and cannot be repaired by a bounded axis/lower/upper action; therefore this joint stays unchanged this iteration.",
+        "upper": 6.283185307179586
+      },
+      {
+        "axis_label": null,
+        "axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "confidence": 0.62,
+        "joint_name": "part_05",
+        "lower": -6.283185307179586,
+        "reason": "State per joint: need_fix. Blocking signals parsed for this joint: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q from feedback: lower=None, upper=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. The only blocking signal is QC_CANDIDATE_CONTRACT/missing VHACD cache, which is not attributable to this joint and cannot be repaired by a bounded axis/lower/upper action; therefore this joint stays unchanged this iteration.",
+        "upper": 6.283185307179586
+      },
+      {
+        "axis_label": null,
+        "axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "confidence": 0.62,
+        "joint_name": "part_07",
+        "lower": 0.0,
+        "reason": "State per joint: need_fix. Blocking signals parsed for this joint: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q from feedback: lower=None, upper=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. The only blocking signal is QC_CANDIDATE_CONTRACT/missing VHACD cache, which is not attributable to this joint and cannot be repaired by a bounded axis/lower/upper action; therefore this joint stays unchanged this iteration.",
+        "upper": 0.03
+      }
+    ],
+    "iteration": 1,
+    "joint_states": {
+      "part_03": {
+        "errors": [
+          "motion validation failed: VhacdCacheMissingError: missing VHACD cache: /home/mi/jzh/AAAI2027/arts-reconstruction/data/RealAppliance/source/model/036/kin_036/raw/vhacd/ra_036/body.json"
+        ],
+        "status": "need_fix"
+      },
+      "part_05": {
+        "errors": [
+          "motion validation failed: VhacdCacheMissingError: missing VHACD cache: /home/mi/jzh/AAAI2027/arts-reconstruction/data/RealAppliance/source/model/036/kin_036/raw/vhacd/ra_036/body.json"
+        ],
+        "status": "need_fix"
+      },
+      "part_07": {
+        "errors": [
+          "motion validation failed: VhacdCacheMissingError: missing VHACD cache: /home/mi/jzh/AAAI2027/arts-reconstruction/data/RealAppliance/source/model/036/kin_036/raw/vhacd/ra_036/body.json"
+        ],
+        "status": "need_fix"
+      }
+    },
+    "motion_search": [],
+    "object_id": "ra_036",
+    "playback": {
+      "mode": "sequential_full_range",
+      "seconds_per_joint": 1.8
+    },
+    "preview_kind": "candidate",
+    "run_dir": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_036_agent_run_20260528_161411",
+    "xml_path": "/home/mi/jzh/AAAI2027/arts-reconstruction/kin_test/kinematic_workbench/runs/ra_036_agent_run_20260528_161411/object_assets/ks_ra_036_b6ec3bcb_iter_001/mjcf/ks_ra_036_b6ec3bcb_iter_001.xml"
+  },
+  "object_id": "ra_036",
+  "run_id": "e2f66c58b76b"
+}

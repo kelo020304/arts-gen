@@ -1,0 +1,4090 @@
+{
+  "iterations": [
+    {
+      "asset_dir": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_000",
+      "asset_name": "ks_ra_063_7005ab6e_iter_000",
+      "asset_root": "kin_test/ra_063_agent_run_20260528_133352/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "confidence": 0.25,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+          "upper": 0.0
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.25,
+          "joint_name": "part_01",
+          "lower": -6.283185307179586,
+          "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.25,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "VLM initial rough guess; expected to be refined by bounded agent actions.",
+          "upper": 0.03
+        }
+      ],
+      "iteration": 0,
+      "joint_states": {
+        "part_00": {
+          "errors": [
+            "rough VLM initial guess"
+          ],
+          "status": "need_fix"
+        },
+        "part_01": {
+          "errors": [
+            "rough VLM initial guess"
+          ],
+          "status": "need_fix"
+        },
+        "part_02": {
+          "errors": [
+            "rough VLM initial guess"
+          ],
+          "status": "need_fix"
+        }
+      },
+      "motion_search": [],
+      "object_id": "ra_063",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "vlm_initial",
+      "run_dir": "kin_test/ra_063_agent_run_20260528_133352",
+      "xml_path": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_000/mjcf/ks_ra_063_7005ab6e_iter_000.xml"
+    },
+    {
+      "asset_dir": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_001",
+      "asset_name": "ks_ra_063_7005ab6e_iter_001",
+      "asset_root": "kin_test/ra_063_agent_run_20260528_133352/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.08712743240683972,
+            0.002221264524442578,
+            0.9961946980917455
+          ],
+          "confidence": 0.7,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Latest compile/QC blocking signals: axis_blocked=True, sampled_motion_overlap=True, negative_endpoint_invalid=False. Parsed endpoint q values from feedback: lower=None, upper=0.04. Parsed target_axis_world=[0.25711651929817164, 0.006555039982107283, 0.966358177362217]. Action this iteration: axis changed once by rotating the current unit axis toward parsed SDK motion target_axis_world by at most 5 degrees; lower unchanged; upper unchanged. Blocking failures are treated as authoritative. Unblocked joints are marked correct and kept unchanged from the reconstructed previous candidate. Bounded action rule respected independently for this joint.",
+          "upper": 0.04
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.82,
+          "joint_name": "part_01",
+          "lower": -6.1086523819801535,
+          "reason": "State per joint: correct. Latest compile/QC blocking signals: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q values from feedback: lower=None, upper=None. Parsed target_axis_world=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. Blocking failures are treated as authoritative. Unblocked joints are marked correct and kept unchanged from the reconstructed previous candidate. Bounded action rule respected independently for this joint.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.68,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Latest compile/QC blocking signals: axis_blocked=True, sampled_motion_overlap=True, negative_endpoint_invalid=False. Parsed endpoint q values from feedback: lower=None, upper=0.04. Parsed target_axis_world=None. Action this iteration: axis changed once by direct switch to the SDK recommended/candidate axis; lower unchanged; upper changed upper once by +10 mm, expressed as +0.010 m. Blocking failures are treated as authoritative. Unblocked joints are marked correct and kept unchanged from the reconstructed previous candidate. Bounded action rule respected independently for this joint.",
+          "upper": 0.05
+        }
+      ],
+      "iteration": 1,
+      "joint_states": {
+        "part_00": {
+          "errors": [
+            "candidate axis +Z deviates from rotary control geometry axis +Z by 9.9 degrees; target_axis_world=[0.25711652, 0.00655504, 0.96635818]; candidate_axis_world=[0.08712743, 0.00222126, 0.9961947]; max_angle_degrees=5; switch axis or rotate toward the SDK motion target before marking this joint correct"
+          ],
+          "status": "need_fix"
+        },
+        "part_01": {
+          "errors": [],
+          "status": "correct"
+        },
+        "part_02": {
+          "errors": [
+            "candidate motion still intersects parent/static geometry at upper endpoint q=0.05; pairs=[('part_02', 'body')]. This is a sampled-motion failure, so fix axis or extend the limit before marking this joint correct"
+          ],
+          "status": "need_fix"
+        }
+      },
+      "motion_search": [
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9850973559473313,
+            "angle_degrees": 9.903988304607815,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+Z",
+            "target_axis_world": [
+              0.2571165161106847,
+              0.006555039818061494,
+              0.9663581782114165
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.0025,
+              "valid": true
+            },
+            {
+              "q": 0.005,
+              "valid": true
+            },
+            {
+              "q": 0.0075,
+              "valid": true
+            },
+            {
+              "q": 0.01,
+              "valid": true
+            },
+            {
+              "q": 0.0125,
+              "valid": true
+            },
+            {
+              "q": 0.015,
+              "valid": true
+            },
+            {
+              "q": 0.0175,
+              "valid": true
+            },
+            {
+              "q": 0.02,
+              "valid": true
+            },
+            {
+              "q": 0.0225,
+              "valid": true
+            },
+            {
+              "q": 0.025,
+              "valid": true
+            },
+            {
+              "q": 0.0275,
+              "valid": true
+            },
+            {
+              "q": 0.03,
+              "valid": true
+            },
+            {
+              "q": 0.0325,
+              "valid": true
+            },
+            {
+              "q": 0.035,
+              "valid": true
+            },
+            {
+              "q": 0.0375,
+              "valid": true
+            },
+            {
+              "q": 0.04,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+Z",
+          "estimate_axis_world": [
+            0.08712743240683972,
+            0.002221264524442578,
+            0.9961946980917455
+          ],
+          "joint_name": "part_00",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.08712743240683972,
+            0.002221264524442578,
+            0.9961946980917455
+          ],
+          "selected_limit": 0.04,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9999842467907148,
+            "angle_degrees": 0.321604947890337,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+X",
+            "target_axis_world": [
+              0.9999842467907148,
+              -2.6020852139652114e-18,
+              -0.005613035756778034
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": -6.1086523819801535,
+              "valid": true
+            },
+            {
+              "q": -5.3341625264076695,
+              "valid": true
+            },
+            {
+              "q": -4.559672670835186,
+              "valid": true
+            },
+            {
+              "q": -3.7851828152627025,
+              "valid": true
+            },
+            {
+              "q": -3.0106929596902186,
+              "valid": true
+            },
+            {
+              "q": -2.2362031041177346,
+              "valid": true
+            },
+            {
+              "q": -1.4617132485452515,
+              "valid": true
+            },
+            {
+              "q": -0.6872233929727676,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971638,
+              "valid": true
+            },
+            {
+              "q": 0.8617563181722003,
+              "valid": true
+            },
+            {
+              "q": 1.6362461737446843,
+              "valid": true
+            },
+            {
+              "q": 2.4107360293171674,
+              "valid": true
+            },
+            {
+              "q": 3.1852258848896504,
+              "valid": true
+            },
+            {
+              "q": 3.9597157404621353,
+              "valid": true
+            },
+            {
+              "q": 4.734205596034618,
+              "valid": true
+            },
+            {
+              "q": 5.508695451607103,
+              "valid": true
+            },
+            {
+              "q": 6.283185307179586,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_01",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 6.283185307179586,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.003125,
+              "valid": true
+            },
+            {
+              "q": 0.00625,
+              "valid": true
+            },
+            {
+              "q": 0.009375000000000001,
+              "valid": true
+            },
+            {
+              "q": 0.0125,
+              "valid": true
+            },
+            {
+              "q": 0.015625,
+              "valid": true
+            },
+            {
+              "q": 0.018750000000000003,
+              "valid": true
+            },
+            {
+              "q": 0.021875000000000002,
+              "valid": true
+            },
+            {
+              "q": 0.025,
+              "valid": true
+            },
+            {
+              "q": 0.028125,
+              "valid": true
+            },
+            {
+              "q": 0.03125,
+              "valid": true
+            },
+            {
+              "q": 0.034375,
+              "valid": true
+            },
+            {
+              "q": 0.037500000000000006,
+              "valid": true
+            },
+            {
+              "q": 0.040625,
+              "valid": true
+            },
+            {
+              "q": 0.043750000000000004,
+              "valid": true
+            },
+            {
+              "q": 0.046875,
+              "valid": true
+            },
+            {
+              "q": 0.05,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_02",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 0.05,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        }
+      ],
+      "object_id": "ra_063",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "candidate",
+      "run_dir": "kin_test/ra_063_agent_run_20260528_133352",
+      "xml_path": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_001/mjcf/ks_ra_063_7005ab6e_iter_001.xml"
+    },
+    {
+      "asset_dir": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_002",
+      "asset_name": "ks_ra_063_7005ab6e_iter_002",
+      "asset_root": "kin_test/ra_063_agent_run_20260528_133352/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.17359176986405092,
+            0.004425621600600815,
+            0.9848077534772535
+          ],
+          "confidence": 0.7,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Latest compile/QC blocking signals: axis_blocked=True, sampled_motion_overlap=True, negative_endpoint_invalid=False. Parsed endpoint q values from feedback: lower=None, upper=None. Parsed candidate_axis_world=[0.08712742985351779, 0.0022212599962655264, 0.9961946983251565] and target_axis_world=[0.25711651929817164, 0.006555039982107283, 0.966358177362217]. Action this iteration: axis changed once by rotating the latest candidate unit axis toward parsed SDK motion target_axis_world by at most 5 degrees; lower unchanged; upper unchanged. Blocking failures are authoritative. Unblocked joints are marked correct and kept unchanged from the reconstructed previous candidate. Bounded action rule respected independently for this joint.",
+          "upper": 0.17453292519943295
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.82,
+          "joint_name": "part_01",
+          "lower": -6.1086523819801535,
+          "reason": "State per joint: correct. Latest compile/QC blocking signals: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q values from feedback: lower=None, upper=None. Parsed candidate_axis_world=None and target_axis_world=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. Blocking failures are authoritative. Unblocked joints are marked correct and kept unchanged from the reconstructed previous candidate. Bounded action rule respected independently for this joint.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.68,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Latest compile/QC blocking signals: axis_blocked=True, sampled_motion_overlap=True, negative_endpoint_invalid=False. Parsed endpoint q values from feedback: lower=None, upper=0.05. Parsed candidate_axis_world=None and target_axis_world=None. Action this iteration: axis changed once by direct switch to the SDK recommended/candidate axis; lower unchanged; upper changed upper once by +10 mm, expressed as +0.010 m. Blocking failures are authoritative. Unblocked joints are marked correct and kept unchanged from the reconstructed previous candidate. Bounded action rule respected independently for this joint.",
+          "upper": 0.060000000000000005
+        }
+      ],
+      "iteration": 2,
+      "joint_states": {
+        "part_00": {
+          "errors": [],
+          "status": "correct"
+        },
+        "part_01": {
+          "errors": [],
+          "status": "correct"
+        },
+        "part_02": {
+          "errors": [
+            "candidate motion still intersects parent/static geometry at upper endpoint q=0.06; pairs=[('part_02', 'body')]. This is a sampled-motion failure, so fix axis or extend the limit before marking this joint correct"
+          ],
+          "status": "need_fix"
+        }
+      },
+      "motion_search": [
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9963393477575005,
+            "angle_degrees": 4.9039884580509705,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+Z",
+            "target_axis_world": [
+              0.2571165161106847,
+              0.006555039818061494,
+              0.9663581782114165
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.01090830782496456,
+              "valid": true
+            },
+            {
+              "q": 0.02181661564992912,
+              "valid": true
+            },
+            {
+              "q": 0.032724923474893676,
+              "valid": true
+            },
+            {
+              "q": 0.04363323129985824,
+              "valid": true
+            },
+            {
+              "q": 0.0545415391248228,
+              "valid": true
+            },
+            {
+              "q": 0.06544984694978735,
+              "valid": true
+            },
+            {
+              "q": 0.07635815477475191,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971647,
+              "valid": true
+            },
+            {
+              "q": 0.09817477042468103,
+              "valid": true
+            },
+            {
+              "q": 0.1090830782496456,
+              "valid": true
+            },
+            {
+              "q": 0.11999138607461016,
+              "valid": true
+            },
+            {
+              "q": 0.1308996938995747,
+              "valid": true
+            },
+            {
+              "q": 0.14180800172453928,
+              "valid": true
+            },
+            {
+              "q": 0.15271630954950383,
+              "valid": true
+            },
+            {
+              "q": 0.1636246173744684,
+              "valid": true
+            },
+            {
+              "q": 0.17453292519943295,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+Z",
+          "estimate_axis_world": [
+            0.17359176986405092,
+            0.004425621600600815,
+            0.9848077534772535
+          ],
+          "joint_name": "part_00",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.17359176986405092,
+            0.004425621600600815,
+            0.9848077534772535
+          ],
+          "selected_limit": 0.17453292519943295,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9999842467907148,
+            "angle_degrees": 0.321604947890337,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+X",
+            "target_axis_world": [
+              0.9999842467907148,
+              -2.6020852139652114e-18,
+              -0.005613035756778034
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": -6.1086523819801535,
+              "valid": true
+            },
+            {
+              "q": -5.3341625264076695,
+              "valid": true
+            },
+            {
+              "q": -4.559672670835186,
+              "valid": true
+            },
+            {
+              "q": -3.7851828152627025,
+              "valid": true
+            },
+            {
+              "q": -3.0106929596902186,
+              "valid": true
+            },
+            {
+              "q": -2.2362031041177346,
+              "valid": true
+            },
+            {
+              "q": -1.4617132485452515,
+              "valid": true
+            },
+            {
+              "q": -0.6872233929727676,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971638,
+              "valid": true
+            },
+            {
+              "q": 0.8617563181722003,
+              "valid": true
+            },
+            {
+              "q": 1.6362461737446843,
+              "valid": true
+            },
+            {
+              "q": 2.4107360293171674,
+              "valid": true
+            },
+            {
+              "q": 3.1852258848896504,
+              "valid": true
+            },
+            {
+              "q": 3.9597157404621353,
+              "valid": true
+            },
+            {
+              "q": 4.734205596034618,
+              "valid": true
+            },
+            {
+              "q": 5.508695451607103,
+              "valid": true
+            },
+            {
+              "q": 6.283185307179586,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_01",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 6.283185307179586,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.0037500000000000003,
+              "valid": true
+            },
+            {
+              "q": 0.007500000000000001,
+              "valid": true
+            },
+            {
+              "q": 0.011250000000000001,
+              "valid": true
+            },
+            {
+              "q": 0.015000000000000001,
+              "valid": true
+            },
+            {
+              "q": 0.018750000000000003,
+              "valid": true
+            },
+            {
+              "q": 0.022500000000000003,
+              "valid": true
+            },
+            {
+              "q": 0.026250000000000002,
+              "valid": true
+            },
+            {
+              "q": 0.030000000000000002,
+              "valid": true
+            },
+            {
+              "q": 0.03375,
+              "valid": true
+            },
+            {
+              "q": 0.037500000000000006,
+              "valid": true
+            },
+            {
+              "q": 0.04125,
+              "valid": true
+            },
+            {
+              "q": 0.045000000000000005,
+              "valid": true
+            },
+            {
+              "q": 0.04875,
+              "valid": true
+            },
+            {
+              "q": 0.052500000000000005,
+              "valid": true
+            },
+            {
+              "q": 0.05625,
+              "valid": true
+            },
+            {
+              "q": 0.060000000000000005,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_02",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 0.060000000000000005,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        }
+      ],
+      "object_id": "ra_063",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "candidate",
+      "run_dir": "kin_test/ra_063_agent_run_20260528_133352",
+      "xml_path": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_002/mjcf/ks_ra_063_7005ab6e_iter_002.xml"
+    },
+    {
+      "asset_dir": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_003",
+      "asset_name": "ks_ra_063_7005ab6e_iter_003",
+      "asset_root": "kin_test/ra_063_agent_run_20260528_133352/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "confidence": 0.84,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "State per joint: correct. Latest compile/QC blocking signals: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q values from feedback: lower=None, upper=None. Parsed candidate_axis_world=None and target_axis_world=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. Blocking failures are authoritative. Since the latest visual/compile signal mentions only part_02, other joints are treated as correct and left unchanged from the reconstructed previous candidate. Bounded action rule respected independently for this joint.",
+          "upper": 0.17453292519943295
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.84,
+          "joint_name": "part_01",
+          "lower": -6.1086523819801535,
+          "reason": "State per joint: correct. Latest compile/QC blocking signals: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q values from feedback: lower=None, upper=None. Parsed candidate_axis_world=None and target_axis_world=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. Blocking failures are authoritative. Since the latest visual/compile signal mentions only part_02, other joints are treated as correct and left unchanged from the reconstructed previous candidate. Bounded action rule respected independently for this joint.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.68,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Latest compile/QC blocking signals: axis_blocked=False, sampled_motion_overlap=True, negative_endpoint_invalid=False. Parsed endpoint q values from feedback: lower=None, upper=0.06. Parsed candidate_axis_world=None and target_axis_world=None. Action this iteration: axis unchanged; lower unchanged; upper changed upper once by +10 mm, from the failed upper endpoint, expressed as +0.010 m. Blocking failures are authoritative. Since the latest visual/compile signal mentions only part_02, other joints are treated as correct and left unchanged from the reconstructed previous candidate. Bounded action rule respected independently for this joint.",
+          "upper": 0.06999999999999999
+        }
+      ],
+      "iteration": 3,
+      "joint_states": {
+        "part_00": {
+          "errors": [
+            "candidate axis +Z deviates from rotary control geometry axis +Z by 14.9 degrees; target_axis_world=[0.25711652, 0.00655504, 0.96635818]; candidate_axis_world=[0.0, 0.0, 1.0]; max_angle_degrees=5; switch axis or rotate toward the SDK motion target before marking this joint correct"
+          ],
+          "status": "need_fix"
+        },
+        "part_01": {
+          "errors": [],
+          "status": "correct"
+        },
+        "part_02": {
+          "errors": [
+            "candidate motion still intersects parent/static geometry at upper endpoint q=0.07; pairs=[('part_02', 'body')]. This is a sampled-motion failure, so fix axis or extend the limit before marking this joint correct"
+          ],
+          "status": "need_fix"
+        }
+      },
+      "motion_search": [
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9663581782114165,
+            "angle_degrees": 14.903988304607847,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+Z",
+            "target_axis_world": [
+              0.2571165161106847,
+              0.006555039818061494,
+              0.9663581782114165
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.01090830782496456,
+              "valid": true
+            },
+            {
+              "q": 0.02181661564992912,
+              "valid": true
+            },
+            {
+              "q": 0.032724923474893676,
+              "valid": true
+            },
+            {
+              "q": 0.04363323129985824,
+              "valid": true
+            },
+            {
+              "q": 0.0545415391248228,
+              "valid": true
+            },
+            {
+              "q": 0.06544984694978735,
+              "valid": true
+            },
+            {
+              "q": 0.07635815477475191,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971647,
+              "valid": true
+            },
+            {
+              "q": 0.09817477042468103,
+              "valid": true
+            },
+            {
+              "q": 0.1090830782496456,
+              "valid": true
+            },
+            {
+              "q": 0.11999138607461016,
+              "valid": true
+            },
+            {
+              "q": 0.1308996938995747,
+              "valid": true
+            },
+            {
+              "q": 0.14180800172453928,
+              "valid": true
+            },
+            {
+              "q": 0.15271630954950383,
+              "valid": true
+            },
+            {
+              "q": 0.1636246173744684,
+              "valid": true
+            },
+            {
+              "q": 0.17453292519943295,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+Z",
+          "estimate_axis_world": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "joint_name": "part_00",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "selected_limit": 0.17453292519943295,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9999842467907148,
+            "angle_degrees": 0.321604947890337,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+X",
+            "target_axis_world": [
+              0.9999842467907148,
+              -2.6020852139652114e-18,
+              -0.005613035756778034
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": -6.1086523819801535,
+              "valid": true
+            },
+            {
+              "q": -5.3341625264076695,
+              "valid": true
+            },
+            {
+              "q": -4.559672670835186,
+              "valid": true
+            },
+            {
+              "q": -3.7851828152627025,
+              "valid": true
+            },
+            {
+              "q": -3.0106929596902186,
+              "valid": true
+            },
+            {
+              "q": -2.2362031041177346,
+              "valid": true
+            },
+            {
+              "q": -1.4617132485452515,
+              "valid": true
+            },
+            {
+              "q": -0.6872233929727676,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971638,
+              "valid": true
+            },
+            {
+              "q": 0.8617563181722003,
+              "valid": true
+            },
+            {
+              "q": 1.6362461737446843,
+              "valid": true
+            },
+            {
+              "q": 2.4107360293171674,
+              "valid": true
+            },
+            {
+              "q": 3.1852258848896504,
+              "valid": true
+            },
+            {
+              "q": 3.9597157404621353,
+              "valid": true
+            },
+            {
+              "q": 4.734205596034618,
+              "valid": true
+            },
+            {
+              "q": 5.508695451607103,
+              "valid": true
+            },
+            {
+              "q": 6.283185307179586,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_01",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 6.283185307179586,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.0043749999999999995,
+              "valid": true
+            },
+            {
+              "q": 0.008749999999999999,
+              "valid": true
+            },
+            {
+              "q": 0.013124999999999998,
+              "valid": true
+            },
+            {
+              "q": 0.017499999999999998,
+              "valid": true
+            },
+            {
+              "q": 0.021875,
+              "valid": true
+            },
+            {
+              "q": 0.026249999999999996,
+              "valid": true
+            },
+            {
+              "q": 0.030624999999999996,
+              "valid": true
+            },
+            {
+              "q": 0.034999999999999996,
+              "valid": true
+            },
+            {
+              "q": 0.03937499999999999,
+              "valid": true
+            },
+            {
+              "q": 0.04375,
+              "valid": true
+            },
+            {
+              "q": 0.048124999999999994,
+              "valid": true
+            },
+            {
+              "q": 0.05249999999999999,
+              "valid": true
+            },
+            {
+              "q": 0.056874999999999995,
+              "valid": true
+            },
+            {
+              "q": 0.06124999999999999,
+              "valid": true
+            },
+            {
+              "q": 0.06562499999999999,
+              "valid": true
+            },
+            {
+              "q": 0.06999999999999999,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_02",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 0.06999999999999999,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        }
+      ],
+      "object_id": "ra_063",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "candidate",
+      "run_dir": "kin_test/ra_063_agent_run_20260528_133352",
+      "xml_path": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_003/mjcf/ks_ra_063_7005ab6e_iter_003.xml"
+    },
+    {
+      "asset_dir": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_004",
+      "asset_name": "ks_ra_063_7005ab6e_iter_004",
+      "asset_root": "kin_test/ra_063_agent_run_20260528_133352/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.08712743240683972,
+            0.002221264524442578,
+            0.9961946980917455
+          ],
+          "confidence": 0.7,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Latest compile/QC blocking signals: axis_blocked=True, sampled_motion_overlap=True, negative_endpoint_invalid=False. Parsed endpoint q values from feedback: lower=None, upper=0.07. Parsed candidate_axis_world=[0.0, 0.0, 1.0] and target_axis_world=[0.25711651929817164, 0.006555039982107283, 0.966358177362217]. Action this iteration: axis changed axis once by rotating the current candidate unit axis toward the parsed motion target by no more than 5 degrees; lower unchanged; upper unchanged. Blocking failures are authoritative and are fixed before marking a joint correct. Joints not named by the latest blocking feedback are treated as correct and kept unchanged from the reconstructed prior candidate. Bounded action rule respected independently for this joint.",
+          "upper": 0.07
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.84,
+          "joint_name": "part_01",
+          "lower": -6.1086523819801535,
+          "reason": "State per joint: correct. Latest compile/QC blocking signals: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q values from feedback: lower=None, upper=None. Parsed candidate_axis_world=None and target_axis_world=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. Blocking failures are authoritative and are fixed before marking a joint correct. Joints not named by the latest blocking feedback are treated as correct and kept unchanged from the reconstructed prior candidate. Bounded action rule respected independently for this joint.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.68,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Latest compile/QC blocking signals: axis_blocked=True, sampled_motion_overlap=True, negative_endpoint_invalid=False. Parsed endpoint q values from feedback: lower=None, upper=0.07. Parsed candidate_axis_world=None and target_axis_world=None. Action this iteration: axis changed axis once by direct switch to the SDK recommended/candidate axis; lower unchanged; upper changed upper once by +10 mm from the failed upper endpoint, expressed as +0.010 m. Blocking failures are authoritative and are fixed before marking a joint correct. Joints not named by the latest blocking feedback are treated as correct and kept unchanged from the reconstructed prior candidate. Bounded action rule respected independently for this joint.",
+          "upper": 0.08
+        }
+      ],
+      "iteration": 4,
+      "joint_states": {
+        "part_00": {
+          "errors": [
+            "candidate axis +Z deviates from rotary control geometry axis +Z by 9.9 degrees; target_axis_world=[0.25711652, 0.00655504, 0.96635818]; candidate_axis_world=[0.08712743, 0.00222126, 0.9961947]; max_angle_degrees=5; switch axis or rotate toward the SDK motion target before marking this joint correct"
+          ],
+          "status": "need_fix"
+        },
+        "part_01": {
+          "errors": [],
+          "status": "correct"
+        },
+        "part_02": {
+          "errors": [
+            "candidate motion still intersects parent/static geometry at upper endpoint q=0.08; pairs=[('part_02', 'body')]. This is a sampled-motion failure, so fix axis or extend the limit before marking this joint correct"
+          ],
+          "status": "need_fix"
+        }
+      },
+      "motion_search": [
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9850973559473313,
+            "angle_degrees": 9.903988304607815,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+Z",
+            "target_axis_world": [
+              0.2571165161106847,
+              0.006555039818061494,
+              0.9663581782114165
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.004375,
+              "valid": true
+            },
+            {
+              "q": 0.00875,
+              "valid": true
+            },
+            {
+              "q": 0.013125000000000001,
+              "valid": true
+            },
+            {
+              "q": 0.0175,
+              "valid": true
+            },
+            {
+              "q": 0.021875000000000002,
+              "valid": true
+            },
+            {
+              "q": 0.026250000000000002,
+              "valid": true
+            },
+            {
+              "q": 0.030625000000000003,
+              "valid": true
+            },
+            {
+              "q": 0.035,
+              "valid": true
+            },
+            {
+              "q": 0.03937500000000001,
+              "valid": true
+            },
+            {
+              "q": 0.043750000000000004,
+              "valid": true
+            },
+            {
+              "q": 0.048125,
+              "valid": true
+            },
+            {
+              "q": 0.052500000000000005,
+              "valid": true
+            },
+            {
+              "q": 0.05687500000000001,
+              "valid": true
+            },
+            {
+              "q": 0.061250000000000006,
+              "valid": true
+            },
+            {
+              "q": 0.065625,
+              "valid": true
+            },
+            {
+              "q": 0.07,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+Z",
+          "estimate_axis_world": [
+            0.08712743240683972,
+            0.002221264524442578,
+            0.9961946980917455
+          ],
+          "joint_name": "part_00",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.08712743240683972,
+            0.002221264524442578,
+            0.9961946980917455
+          ],
+          "selected_limit": 0.07,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9999842467907148,
+            "angle_degrees": 0.321604947890337,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+X",
+            "target_axis_world": [
+              0.9999842467907148,
+              -2.6020852139652114e-18,
+              -0.005613035756778034
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": -6.1086523819801535,
+              "valid": true
+            },
+            {
+              "q": -5.3341625264076695,
+              "valid": true
+            },
+            {
+              "q": -4.559672670835186,
+              "valid": true
+            },
+            {
+              "q": -3.7851828152627025,
+              "valid": true
+            },
+            {
+              "q": -3.0106929596902186,
+              "valid": true
+            },
+            {
+              "q": -2.2362031041177346,
+              "valid": true
+            },
+            {
+              "q": -1.4617132485452515,
+              "valid": true
+            },
+            {
+              "q": -0.6872233929727676,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971638,
+              "valid": true
+            },
+            {
+              "q": 0.8617563181722003,
+              "valid": true
+            },
+            {
+              "q": 1.6362461737446843,
+              "valid": true
+            },
+            {
+              "q": 2.4107360293171674,
+              "valid": true
+            },
+            {
+              "q": 3.1852258848896504,
+              "valid": true
+            },
+            {
+              "q": 3.9597157404621353,
+              "valid": true
+            },
+            {
+              "q": 4.734205596034618,
+              "valid": true
+            },
+            {
+              "q": 5.508695451607103,
+              "valid": true
+            },
+            {
+              "q": 6.283185307179586,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_01",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 6.283185307179586,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.005,
+              "valid": true
+            },
+            {
+              "q": 0.01,
+              "valid": true
+            },
+            {
+              "q": 0.015,
+              "valid": true
+            },
+            {
+              "q": 0.02,
+              "valid": true
+            },
+            {
+              "q": 0.025,
+              "valid": true
+            },
+            {
+              "q": 0.03,
+              "valid": true
+            },
+            {
+              "q": 0.035,
+              "valid": true
+            },
+            {
+              "q": 0.04,
+              "valid": true
+            },
+            {
+              "q": 0.045,
+              "valid": true
+            },
+            {
+              "q": 0.05,
+              "valid": true
+            },
+            {
+              "q": 0.055,
+              "valid": true
+            },
+            {
+              "q": 0.06,
+              "valid": true
+            },
+            {
+              "q": 0.065,
+              "valid": true
+            },
+            {
+              "q": 0.07,
+              "valid": true
+            },
+            {
+              "q": 0.075,
+              "valid": true
+            },
+            {
+              "q": 0.08,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_02",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 0.08,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        }
+      ],
+      "object_id": "ra_063",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "candidate",
+      "run_dir": "kin_test/ra_063_agent_run_20260528_133352",
+      "xml_path": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_004/mjcf/ks_ra_063_7005ab6e_iter_004.xml"
+    },
+    {
+      "asset_dir": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_005",
+      "asset_name": "ks_ra_063_7005ab6e_iter_005",
+      "asset_root": "kin_test/ra_063_agent_run_20260528_133352/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.17359176986405092,
+            0.004425621600600815,
+            0.9848077534772535
+          ],
+          "confidence": 0.7,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Latest compile/QC blocking signals: axis_blocked=True, sampled_motion_overlap=True, negative_endpoint_invalid=False. Parsed endpoint q values from feedback: lower=None, upper=None. Parsed candidate_axis_world=[0.08712742985351779, 0.0022212599962655264, 0.9961946983251565] and target_axis_world=[0.25711651929817164, 0.006555039982107283, 0.966358177362217]. Action this iteration: axis changed axis once by rotating the current unit axis toward the parsed SDK motion target by no more than 5 degrees; lower unchanged; upper unchanged. Blocking failures are authoritative and are fixed before marking a joint correct. Joints not named by the latest blocking feedback are treated as correct and kept unchanged from the reconstructed prior candidate. Bounded action rule respected independently for this joint.",
+          "upper": 0.17453292519943295
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.84,
+          "joint_name": "part_01",
+          "lower": -6.1086523819801535,
+          "reason": "State per joint: correct. Latest compile/QC blocking signals: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q values from feedback: lower=None, upper=None. Parsed candidate_axis_world=None and target_axis_world=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. Blocking failures are authoritative and are fixed before marking a joint correct. Joints not named by the latest blocking feedback are treated as correct and kept unchanged from the reconstructed prior candidate. Bounded action rule respected independently for this joint.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.68,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Latest compile/QC blocking signals: axis_blocked=True, sampled_motion_overlap=True, negative_endpoint_invalid=False. Parsed endpoint q values from feedback: lower=None, upper=0.08. Parsed candidate_axis_world=None and target_axis_world=None. Action this iteration: axis changed axis once by direct switch to the SDK recommended/candidate axis; lower unchanged; upper changed upper once by +10 mm from the failed upper endpoint, expressed as +0.010 m. Blocking failures are authoritative and are fixed before marking a joint correct. Joints not named by the latest blocking feedback are treated as correct and kept unchanged from the reconstructed prior candidate. Bounded action rule respected independently for this joint.",
+          "upper": 0.09
+        }
+      ],
+      "iteration": 5,
+      "joint_states": {
+        "part_00": {
+          "errors": [],
+          "status": "correct"
+        },
+        "part_01": {
+          "errors": [],
+          "status": "correct"
+        },
+        "part_02": {
+          "errors": [
+            "candidate motion still intersects parent/static geometry at upper endpoint q=0.09; pairs=[('part_02', 'body')]. This is a sampled-motion failure, so fix axis or extend the limit before marking this joint correct"
+          ],
+          "status": "need_fix"
+        }
+      },
+      "motion_search": [
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9963393477575005,
+            "angle_degrees": 4.9039884580509705,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+Z",
+            "target_axis_world": [
+              0.2571165161106847,
+              0.006555039818061494,
+              0.9663581782114165
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.01090830782496456,
+              "valid": true
+            },
+            {
+              "q": 0.02181661564992912,
+              "valid": true
+            },
+            {
+              "q": 0.032724923474893676,
+              "valid": true
+            },
+            {
+              "q": 0.04363323129985824,
+              "valid": true
+            },
+            {
+              "q": 0.0545415391248228,
+              "valid": true
+            },
+            {
+              "q": 0.06544984694978735,
+              "valid": true
+            },
+            {
+              "q": 0.07635815477475191,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971647,
+              "valid": true
+            },
+            {
+              "q": 0.09817477042468103,
+              "valid": true
+            },
+            {
+              "q": 0.1090830782496456,
+              "valid": true
+            },
+            {
+              "q": 0.11999138607461016,
+              "valid": true
+            },
+            {
+              "q": 0.1308996938995747,
+              "valid": true
+            },
+            {
+              "q": 0.14180800172453928,
+              "valid": true
+            },
+            {
+              "q": 0.15271630954950383,
+              "valid": true
+            },
+            {
+              "q": 0.1636246173744684,
+              "valid": true
+            },
+            {
+              "q": 0.17453292519943295,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+Z",
+          "estimate_axis_world": [
+            0.17359176986405092,
+            0.004425621600600815,
+            0.9848077534772535
+          ],
+          "joint_name": "part_00",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.17359176986405092,
+            0.004425621600600815,
+            0.9848077534772535
+          ],
+          "selected_limit": 0.17453292519943295,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9999842467907148,
+            "angle_degrees": 0.321604947890337,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+X",
+            "target_axis_world": [
+              0.9999842467907148,
+              -2.6020852139652114e-18,
+              -0.005613035756778034
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": -6.1086523819801535,
+              "valid": true
+            },
+            {
+              "q": -5.3341625264076695,
+              "valid": true
+            },
+            {
+              "q": -4.559672670835186,
+              "valid": true
+            },
+            {
+              "q": -3.7851828152627025,
+              "valid": true
+            },
+            {
+              "q": -3.0106929596902186,
+              "valid": true
+            },
+            {
+              "q": -2.2362031041177346,
+              "valid": true
+            },
+            {
+              "q": -1.4617132485452515,
+              "valid": true
+            },
+            {
+              "q": -0.6872233929727676,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971638,
+              "valid": true
+            },
+            {
+              "q": 0.8617563181722003,
+              "valid": true
+            },
+            {
+              "q": 1.6362461737446843,
+              "valid": true
+            },
+            {
+              "q": 2.4107360293171674,
+              "valid": true
+            },
+            {
+              "q": 3.1852258848896504,
+              "valid": true
+            },
+            {
+              "q": 3.9597157404621353,
+              "valid": true
+            },
+            {
+              "q": 4.734205596034618,
+              "valid": true
+            },
+            {
+              "q": 5.508695451607103,
+              "valid": true
+            },
+            {
+              "q": 6.283185307179586,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_01",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 6.283185307179586,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.005625,
+              "valid": true
+            },
+            {
+              "q": 0.01125,
+              "valid": true
+            },
+            {
+              "q": 0.016875,
+              "valid": true
+            },
+            {
+              "q": 0.0225,
+              "valid": true
+            },
+            {
+              "q": 0.028124999999999997,
+              "valid": true
+            },
+            {
+              "q": 0.03375,
+              "valid": true
+            },
+            {
+              "q": 0.039375,
+              "valid": true
+            },
+            {
+              "q": 0.045,
+              "valid": true
+            },
+            {
+              "q": 0.050624999999999996,
+              "valid": true
+            },
+            {
+              "q": 0.056249999999999994,
+              "valid": true
+            },
+            {
+              "q": 0.061875,
+              "valid": true
+            },
+            {
+              "q": 0.0675,
+              "valid": true
+            },
+            {
+              "q": 0.073125,
+              "valid": true
+            },
+            {
+              "q": 0.07875,
+              "valid": true
+            },
+            {
+              "q": 0.08437499999999999,
+              "valid": true
+            },
+            {
+              "q": 0.09,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_02",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 0.09,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        }
+      ],
+      "object_id": "ra_063",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "candidate",
+      "run_dir": "kin_test/ra_063_agent_run_20260528_133352",
+      "xml_path": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_005/mjcf/ks_ra_063_7005ab6e_iter_005.xml"
+    },
+    {
+      "asset_dir": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_006",
+      "asset_name": "ks_ra_063_7005ab6e_iter_006",
+      "asset_root": "kin_test/ra_063_agent_run_20260528_133352/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "confidence": 0.84,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "State per joint: correct. Latest blocking signals for this joint: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed failed endpoint q values: lower=None, upper=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. Blocking failures are authoritative; joints not named by the latest blocking feedback are marked correct and kept unchanged from the reconstructed prior candidate. Bounded action rule respected independently for this joint.",
+          "upper": 0.17453292519943295
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.84,
+          "joint_name": "part_01",
+          "lower": -6.1086523819801535,
+          "reason": "State per joint: correct. Latest blocking signals for this joint: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed failed endpoint q values: lower=None, upper=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. Blocking failures are authoritative; joints not named by the latest blocking feedback are marked correct and kept unchanged from the reconstructed prior candidate. Bounded action rule respected independently for this joint.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.69,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Latest blocking signals for this joint: axis_blocked=False, sampled_motion_overlap=True, negative_endpoint_invalid=False. Parsed failed endpoint q values: lower=None, upper=0.09. Action this iteration: axis unchanged; lower unchanged; upper changed upper once by +10 mm (+0.010 m) from the failed upper endpoint. Blocking failures are authoritative; joints not named by the latest blocking feedback are marked correct and kept unchanged from the reconstructed prior candidate. Bounded action rule respected independently for this joint.",
+          "upper": 0.09999999999999999
+        }
+      ],
+      "iteration": 6,
+      "joint_states": {
+        "part_00": {
+          "errors": [
+            "candidate axis +Z deviates from rotary control geometry axis +Z by 14.9 degrees; target_axis_world=[0.25711652, 0.00655504, 0.96635818]; candidate_axis_world=[0.0, 0.0, 1.0]; max_angle_degrees=5; switch axis or rotate toward the SDK motion target before marking this joint correct"
+          ],
+          "status": "need_fix"
+        },
+        "part_01": {
+          "errors": [],
+          "status": "correct"
+        },
+        "part_02": {
+          "errors": [
+            "candidate motion still intersects parent/static geometry at upper endpoint q=0.1; pairs=[('part_02', 'body')]. This is a sampled-motion failure, so fix axis or extend the limit before marking this joint correct"
+          ],
+          "status": "need_fix"
+        }
+      },
+      "motion_search": [
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9663581782114165,
+            "angle_degrees": 14.903988304607847,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+Z",
+            "target_axis_world": [
+              0.2571165161106847,
+              0.006555039818061494,
+              0.9663581782114165
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.01090830782496456,
+              "valid": true
+            },
+            {
+              "q": 0.02181661564992912,
+              "valid": true
+            },
+            {
+              "q": 0.032724923474893676,
+              "valid": true
+            },
+            {
+              "q": 0.04363323129985824,
+              "valid": true
+            },
+            {
+              "q": 0.0545415391248228,
+              "valid": true
+            },
+            {
+              "q": 0.06544984694978735,
+              "valid": true
+            },
+            {
+              "q": 0.07635815477475191,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971647,
+              "valid": true
+            },
+            {
+              "q": 0.09817477042468103,
+              "valid": true
+            },
+            {
+              "q": 0.1090830782496456,
+              "valid": true
+            },
+            {
+              "q": 0.11999138607461016,
+              "valid": true
+            },
+            {
+              "q": 0.1308996938995747,
+              "valid": true
+            },
+            {
+              "q": 0.14180800172453928,
+              "valid": true
+            },
+            {
+              "q": 0.15271630954950383,
+              "valid": true
+            },
+            {
+              "q": 0.1636246173744684,
+              "valid": true
+            },
+            {
+              "q": 0.17453292519943295,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+Z",
+          "estimate_axis_world": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "joint_name": "part_00",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "selected_limit": 0.17453292519943295,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9999842467907148,
+            "angle_degrees": 0.321604947890337,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+X",
+            "target_axis_world": [
+              0.9999842467907148,
+              -2.6020852139652114e-18,
+              -0.005613035756778034
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": -6.1086523819801535,
+              "valid": true
+            },
+            {
+              "q": -5.3341625264076695,
+              "valid": true
+            },
+            {
+              "q": -4.559672670835186,
+              "valid": true
+            },
+            {
+              "q": -3.7851828152627025,
+              "valid": true
+            },
+            {
+              "q": -3.0106929596902186,
+              "valid": true
+            },
+            {
+              "q": -2.2362031041177346,
+              "valid": true
+            },
+            {
+              "q": -1.4617132485452515,
+              "valid": true
+            },
+            {
+              "q": -0.6872233929727676,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971638,
+              "valid": true
+            },
+            {
+              "q": 0.8617563181722003,
+              "valid": true
+            },
+            {
+              "q": 1.6362461737446843,
+              "valid": true
+            },
+            {
+              "q": 2.4107360293171674,
+              "valid": true
+            },
+            {
+              "q": 3.1852258848896504,
+              "valid": true
+            },
+            {
+              "q": 3.9597157404621353,
+              "valid": true
+            },
+            {
+              "q": 4.734205596034618,
+              "valid": true
+            },
+            {
+              "q": 5.508695451607103,
+              "valid": true
+            },
+            {
+              "q": 6.283185307179586,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_01",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 6.283185307179586,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.0062499999999999995,
+              "valid": true
+            },
+            {
+              "q": 0.012499999999999999,
+              "valid": true
+            },
+            {
+              "q": 0.01875,
+              "valid": true
+            },
+            {
+              "q": 0.024999999999999998,
+              "valid": true
+            },
+            {
+              "q": 0.031249999999999997,
+              "valid": true
+            },
+            {
+              "q": 0.0375,
+              "valid": true
+            },
+            {
+              "q": 0.04375,
+              "valid": true
+            },
+            {
+              "q": 0.049999999999999996,
+              "valid": true
+            },
+            {
+              "q": 0.056249999999999994,
+              "valid": true
+            },
+            {
+              "q": 0.06249999999999999,
+              "valid": true
+            },
+            {
+              "q": 0.06874999999999999,
+              "valid": true
+            },
+            {
+              "q": 0.075,
+              "valid": true
+            },
+            {
+              "q": 0.08124999999999999,
+              "valid": true
+            },
+            {
+              "q": 0.0875,
+              "valid": true
+            },
+            {
+              "q": 0.09374999999999999,
+              "valid": true
+            },
+            {
+              "q": 0.09999999999999999,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_02",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 0.09999999999999999,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        }
+      ],
+      "object_id": "ra_063",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "candidate",
+      "run_dir": "kin_test/ra_063_agent_run_20260528_133352",
+      "xml_path": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_006/mjcf/ks_ra_063_7005ab6e_iter_006.xml"
+    },
+    {
+      "asset_dir": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_007",
+      "asset_name": "ks_ra_063_7005ab6e_iter_007",
+      "asset_root": "kin_test/ra_063_agent_run_20260528_133352/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.08712743240683972,
+            0.002221264524442578,
+            0.9961946980917455
+          ],
+          "confidence": 0.7,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Latest blocking signals: axis_blocked=True, sampled_motion_overlap=True, negative_endpoint_invalid=False. Parsed endpoint q: lower=None, upper=0.1. Action this iteration: axis changed axis once by rotating 5.000 degrees toward feedback target_axis_world; lower unchanged; upper unchanged. For part_00 the blocking axis signal is authoritative, so I rotate the current unit axis toward the reported SDK motion target by no more than 5 degrees rather than marking it correct. For part_02 the blocking sampled-motion signal at the upper endpoint is authoritative, so I extend the prismatic upper limit by exactly +10 mm. Joints not named by blocking feedback are treated as correct and kept unchanged from the reconstructed prior candidate.",
+          "upper": 0.1
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.84,
+          "joint_name": "part_01",
+          "lower": -6.1086523819801535,
+          "reason": "State per joint: correct. Latest blocking signals: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q: lower=None, upper=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. For part_00 the blocking axis signal is authoritative, so I rotate the current unit axis toward the reported SDK motion target by no more than 5 degrees rather than marking it correct. For part_02 the blocking sampled-motion signal at the upper endpoint is authoritative, so I extend the prismatic upper limit by exactly +10 mm. Joints not named by blocking feedback are treated as correct and kept unchanged from the reconstructed prior candidate.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.69,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Latest blocking signals: axis_blocked=True, sampled_motion_overlap=True, negative_endpoint_invalid=False. Parsed endpoint q: lower=None, upper=0.1. Action this iteration: axis changed axis once by direct switch to SDK recommended/candidate axis; lower unchanged; upper changed upper once by +10 mm (+0.010 m) from the failed upper endpoint. For part_00 the blocking axis signal is authoritative, so I rotate the current unit axis toward the reported SDK motion target by no more than 5 degrees rather than marking it correct. For part_02 the blocking sampled-motion signal at the upper endpoint is authoritative, so I extend the prismatic upper limit by exactly +10 mm. Joints not named by blocking feedback are treated as correct and kept unchanged from the reconstructed prior candidate.",
+          "upper": 0.11
+        }
+      ],
+      "iteration": 7,
+      "joint_states": {
+        "part_00": {
+          "errors": [
+            "candidate axis +Z deviates from rotary control geometry axis +Z by 9.9 degrees; target_axis_world=[0.25711652, 0.00655504, 0.96635818]; candidate_axis_world=[0.08712743, 0.00222126, 0.9961947]; max_angle_degrees=5; switch axis or rotate toward the SDK motion target before marking this joint correct"
+          ],
+          "status": "need_fix"
+        },
+        "part_01": {
+          "errors": [],
+          "status": "correct"
+        },
+        "part_02": {
+          "errors": [],
+          "status": "correct"
+        }
+      },
+      "motion_search": [
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9850973559473313,
+            "angle_degrees": 9.903988304607815,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+Z",
+            "target_axis_world": [
+              0.2571165161106847,
+              0.006555039818061494,
+              0.9663581782114165
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.00625,
+              "valid": true
+            },
+            {
+              "q": 0.0125,
+              "valid": true
+            },
+            {
+              "q": 0.018750000000000003,
+              "valid": true
+            },
+            {
+              "q": 0.025,
+              "valid": true
+            },
+            {
+              "q": 0.03125,
+              "valid": true
+            },
+            {
+              "q": 0.037500000000000006,
+              "valid": true
+            },
+            {
+              "q": 0.043750000000000004,
+              "valid": true
+            },
+            {
+              "q": 0.05,
+              "valid": true
+            },
+            {
+              "q": 0.05625,
+              "valid": true
+            },
+            {
+              "q": 0.0625,
+              "valid": true
+            },
+            {
+              "q": 0.06875,
+              "valid": true
+            },
+            {
+              "q": 0.07500000000000001,
+              "valid": true
+            },
+            {
+              "q": 0.08125,
+              "valid": true
+            },
+            {
+              "q": 0.08750000000000001,
+              "valid": true
+            },
+            {
+              "q": 0.09375,
+              "valid": true
+            },
+            {
+              "q": 0.1,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+Z",
+          "estimate_axis_world": [
+            0.08712743240683972,
+            0.002221264524442578,
+            0.9961946980917455
+          ],
+          "joint_name": "part_00",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.08712743240683972,
+            0.002221264524442578,
+            0.9961946980917455
+          ],
+          "selected_limit": 0.1,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9999842467907148,
+            "angle_degrees": 0.321604947890337,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+X",
+            "target_axis_world": [
+              0.9999842467907148,
+              -2.6020852139652114e-18,
+              -0.005613035756778034
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": -6.1086523819801535,
+              "valid": true
+            },
+            {
+              "q": -5.3341625264076695,
+              "valid": true
+            },
+            {
+              "q": -4.559672670835186,
+              "valid": true
+            },
+            {
+              "q": -3.7851828152627025,
+              "valid": true
+            },
+            {
+              "q": -3.0106929596902186,
+              "valid": true
+            },
+            {
+              "q": -2.2362031041177346,
+              "valid": true
+            },
+            {
+              "q": -1.4617132485452515,
+              "valid": true
+            },
+            {
+              "q": -0.6872233929727676,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971638,
+              "valid": true
+            },
+            {
+              "q": 0.8617563181722003,
+              "valid": true
+            },
+            {
+              "q": 1.6362461737446843,
+              "valid": true
+            },
+            {
+              "q": 2.4107360293171674,
+              "valid": true
+            },
+            {
+              "q": 3.1852258848896504,
+              "valid": true
+            },
+            {
+              "q": 3.9597157404621353,
+              "valid": true
+            },
+            {
+              "q": 4.734205596034618,
+              "valid": true
+            },
+            {
+              "q": 5.508695451607103,
+              "valid": true
+            },
+            {
+              "q": 6.283185307179586,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_01",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 6.283185307179586,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.006875,
+              "valid": true
+            },
+            {
+              "q": 0.01375,
+              "valid": true
+            },
+            {
+              "q": 0.020625,
+              "valid": true
+            },
+            {
+              "q": 0.0275,
+              "valid": true
+            },
+            {
+              "q": 0.034375,
+              "valid": true
+            },
+            {
+              "q": 0.04125,
+              "valid": true
+            },
+            {
+              "q": 0.048125,
+              "valid": true
+            },
+            {
+              "q": 0.055,
+              "valid": true
+            },
+            {
+              "q": 0.061875,
+              "valid": true
+            },
+            {
+              "q": 0.06875,
+              "valid": true
+            },
+            {
+              "q": 0.075625,
+              "valid": true
+            },
+            {
+              "q": 0.0825,
+              "valid": true
+            },
+            {
+              "q": 0.089375,
+              "valid": true
+            },
+            {
+              "q": 0.09625,
+              "valid": true
+            },
+            {
+              "q": 0.103125,
+              "valid": true
+            },
+            {
+              "q": 0.11,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_02",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 0.11,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        }
+      ],
+      "object_id": "ra_063",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "candidate",
+      "run_dir": "kin_test/ra_063_agent_run_20260528_133352",
+      "xml_path": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_007/mjcf/ks_ra_063_7005ab6e_iter_007.xml"
+    },
+    {
+      "asset_dir": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_008",
+      "asset_name": "ks_ra_063_7005ab6e_iter_008",
+      "asset_root": "kin_test/ra_063_agent_run_20260528_133352/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.17359176986405092,
+            0.004425621600600815,
+            0.9848077534772535
+          ],
+          "confidence": 0.7,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Latest blocking signals: axis_blocked=True, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q: lower=None, upper=None. Action this iteration: axis changed axis once by rotating 5.000 degrees toward feedback target_axis_world; lower unchanged; upper unchanged. The only current blocking compile signal names part_00 for QC_JOINT_AXIS. For that joint I keep the prior failed candidate axis from feedback as the current state and rotate it once toward target_axis_world by no more than 5 degrees. Joints without current blocking feedback are marked correct and kept unchanged from the reconstructed prior candidate.",
+          "upper": 0.17453292519943295
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.84,
+          "joint_name": "part_01",
+          "lower": -6.1086523819801535,
+          "reason": "State per joint: correct. Latest blocking signals: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q: lower=None, upper=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. The only current blocking compile signal names part_00 for QC_JOINT_AXIS. For that joint I keep the prior failed candidate axis from feedback as the current state and rotate it once toward target_axis_world by no more than 5 degrees. Joints without current blocking feedback are marked correct and kept unchanged from the reconstructed prior candidate.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.84,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "State per joint: correct. Latest blocking signals: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q: lower=None, upper=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. The only current blocking compile signal names part_00 for QC_JOINT_AXIS. For that joint I keep the prior failed candidate axis from feedback as the current state and rotate it once toward target_axis_world by no more than 5 degrees. Joints without current blocking feedback are marked correct and kept unchanged from the reconstructed prior candidate.",
+          "upper": 0.06
+        }
+      ],
+      "iteration": 8,
+      "joint_states": {
+        "part_00": {
+          "errors": [],
+          "status": "correct"
+        },
+        "part_01": {
+          "errors": [],
+          "status": "correct"
+        },
+        "part_02": {
+          "errors": [
+            "candidate motion still intersects parent/static geometry at upper endpoint q=0.06; pairs=[('part_02', 'body')]. This is a sampled-motion failure, so fix axis or extend the limit before marking this joint correct"
+          ],
+          "status": "need_fix"
+        }
+      },
+      "motion_search": [
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9963393477575005,
+            "angle_degrees": 4.9039884580509705,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+Z",
+            "target_axis_world": [
+              0.2571165161106847,
+              0.006555039818061494,
+              0.9663581782114165
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.01090830782496456,
+              "valid": true
+            },
+            {
+              "q": 0.02181661564992912,
+              "valid": true
+            },
+            {
+              "q": 0.032724923474893676,
+              "valid": true
+            },
+            {
+              "q": 0.04363323129985824,
+              "valid": true
+            },
+            {
+              "q": 0.0545415391248228,
+              "valid": true
+            },
+            {
+              "q": 0.06544984694978735,
+              "valid": true
+            },
+            {
+              "q": 0.07635815477475191,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971647,
+              "valid": true
+            },
+            {
+              "q": 0.09817477042468103,
+              "valid": true
+            },
+            {
+              "q": 0.1090830782496456,
+              "valid": true
+            },
+            {
+              "q": 0.11999138607461016,
+              "valid": true
+            },
+            {
+              "q": 0.1308996938995747,
+              "valid": true
+            },
+            {
+              "q": 0.14180800172453928,
+              "valid": true
+            },
+            {
+              "q": 0.15271630954950383,
+              "valid": true
+            },
+            {
+              "q": 0.1636246173744684,
+              "valid": true
+            },
+            {
+              "q": 0.17453292519943295,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+Z",
+          "estimate_axis_world": [
+            0.17359176986405092,
+            0.004425621600600815,
+            0.9848077534772535
+          ],
+          "joint_name": "part_00",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.17359176986405092,
+            0.004425621600600815,
+            0.9848077534772535
+          ],
+          "selected_limit": 0.17453292519943295,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9999842467907148,
+            "angle_degrees": 0.321604947890337,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+X",
+            "target_axis_world": [
+              0.9999842467907148,
+              -2.6020852139652114e-18,
+              -0.005613035756778034
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": -6.1086523819801535,
+              "valid": true
+            },
+            {
+              "q": -5.3341625264076695,
+              "valid": true
+            },
+            {
+              "q": -4.559672670835186,
+              "valid": true
+            },
+            {
+              "q": -3.7851828152627025,
+              "valid": true
+            },
+            {
+              "q": -3.0106929596902186,
+              "valid": true
+            },
+            {
+              "q": -2.2362031041177346,
+              "valid": true
+            },
+            {
+              "q": -1.4617132485452515,
+              "valid": true
+            },
+            {
+              "q": -0.6872233929727676,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971638,
+              "valid": true
+            },
+            {
+              "q": 0.8617563181722003,
+              "valid": true
+            },
+            {
+              "q": 1.6362461737446843,
+              "valid": true
+            },
+            {
+              "q": 2.4107360293171674,
+              "valid": true
+            },
+            {
+              "q": 3.1852258848896504,
+              "valid": true
+            },
+            {
+              "q": 3.9597157404621353,
+              "valid": true
+            },
+            {
+              "q": 4.734205596034618,
+              "valid": true
+            },
+            {
+              "q": 5.508695451607103,
+              "valid": true
+            },
+            {
+              "q": 6.283185307179586,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_01",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 6.283185307179586,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.00375,
+              "valid": true
+            },
+            {
+              "q": 0.0075,
+              "valid": true
+            },
+            {
+              "q": 0.01125,
+              "valid": true
+            },
+            {
+              "q": 0.015,
+              "valid": true
+            },
+            {
+              "q": 0.01875,
+              "valid": true
+            },
+            {
+              "q": 0.0225,
+              "valid": true
+            },
+            {
+              "q": 0.02625,
+              "valid": true
+            },
+            {
+              "q": 0.03,
+              "valid": true
+            },
+            {
+              "q": 0.03375,
+              "valid": true
+            },
+            {
+              "q": 0.0375,
+              "valid": true
+            },
+            {
+              "q": 0.041249999999999995,
+              "valid": true
+            },
+            {
+              "q": 0.045,
+              "valid": true
+            },
+            {
+              "q": 0.04875,
+              "valid": true
+            },
+            {
+              "q": 0.0525,
+              "valid": true
+            },
+            {
+              "q": 0.056249999999999994,
+              "valid": true
+            },
+            {
+              "q": 0.06,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_02",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 0.06,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        }
+      ],
+      "object_id": "ra_063",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "candidate",
+      "run_dir": "kin_test/ra_063_agent_run_20260528_133352",
+      "xml_path": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_008/mjcf/ks_ra_063_7005ab6e_iter_008.xml"
+    },
+    {
+      "asset_dir": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_009",
+      "asset_name": "ks_ra_063_7005ab6e_iter_009",
+      "asset_root": "kin_test/ra_063_agent_run_20260528_133352/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "confidence": 0.84,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "State per joint: correct. Latest blocking signals parsed for this joint: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q from feedback: lower=None, upper=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. Joints without blocking feedback are treated as correct and kept unchanged from the reconstructed prior candidate. The only current blocking failure is QC_SAMPLED_MOTION_OVERLAP on part_02 at upper endpoint q=0.06, so part_02 takes exactly one bounded +10 mm upper-limit action.",
+          "upper": 0.17453292519943295
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.84,
+          "joint_name": "part_01",
+          "lower": -6.1086523819801535,
+          "reason": "State per joint: correct. Latest blocking signals parsed for this joint: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q from feedback: lower=None, upper=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. Joints without blocking feedback are treated as correct and kept unchanged from the reconstructed prior candidate. The only current blocking failure is QC_SAMPLED_MOTION_OVERLAP on part_02 at upper endpoint q=0.06, so part_02 takes exactly one bounded +10 mm upper-limit action.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.69,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Latest blocking signals parsed for this joint: axis_blocked=False, sampled_motion_overlap=True, negative_endpoint_invalid=False. Parsed endpoint q from feedback: lower=None, upper=0.06. Action this iteration: axis unchanged; lower unchanged; upper changed upper once by +10 mm (+0.010 m) from the failed upper endpoint. Joints without blocking feedback are treated as correct and kept unchanged from the reconstructed prior candidate. The only current blocking failure is QC_SAMPLED_MOTION_OVERLAP on part_02 at upper endpoint q=0.06, so part_02 takes exactly one bounded +10 mm upper-limit action.",
+          "upper": 0.06999999999999999
+        }
+      ],
+      "iteration": 9,
+      "joint_states": {
+        "part_00": {
+          "errors": [
+            "candidate axis +Z deviates from rotary control geometry axis +Z by 14.9 degrees; target_axis_world=[0.25711652, 0.00655504, 0.96635818]; candidate_axis_world=[0.0, 0.0, 1.0]; max_angle_degrees=5; switch axis or rotate toward the SDK motion target before marking this joint correct"
+          ],
+          "status": "need_fix"
+        },
+        "part_01": {
+          "errors": [],
+          "status": "correct"
+        },
+        "part_02": {
+          "errors": [
+            "candidate motion still intersects parent/static geometry at upper endpoint q=0.07; pairs=[('part_02', 'body')]. This is a sampled-motion failure, so fix axis or extend the limit before marking this joint correct"
+          ],
+          "status": "need_fix"
+        }
+      },
+      "motion_search": [
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9663581782114165,
+            "angle_degrees": 14.903988304607847,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+Z",
+            "target_axis_world": [
+              0.2571165161106847,
+              0.006555039818061494,
+              0.9663581782114165
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.01090830782496456,
+              "valid": true
+            },
+            {
+              "q": 0.02181661564992912,
+              "valid": true
+            },
+            {
+              "q": 0.032724923474893676,
+              "valid": true
+            },
+            {
+              "q": 0.04363323129985824,
+              "valid": true
+            },
+            {
+              "q": 0.0545415391248228,
+              "valid": true
+            },
+            {
+              "q": 0.06544984694978735,
+              "valid": true
+            },
+            {
+              "q": 0.07635815477475191,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971647,
+              "valid": true
+            },
+            {
+              "q": 0.09817477042468103,
+              "valid": true
+            },
+            {
+              "q": 0.1090830782496456,
+              "valid": true
+            },
+            {
+              "q": 0.11999138607461016,
+              "valid": true
+            },
+            {
+              "q": 0.1308996938995747,
+              "valid": true
+            },
+            {
+              "q": 0.14180800172453928,
+              "valid": true
+            },
+            {
+              "q": 0.15271630954950383,
+              "valid": true
+            },
+            {
+              "q": 0.1636246173744684,
+              "valid": true
+            },
+            {
+              "q": 0.17453292519943295,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+Z",
+          "estimate_axis_world": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "joint_name": "part_00",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "selected_limit": 0.17453292519943295,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9999842467907148,
+            "angle_degrees": 0.321604947890337,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+X",
+            "target_axis_world": [
+              0.9999842467907148,
+              -2.6020852139652114e-18,
+              -0.005613035756778034
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": -6.1086523819801535,
+              "valid": true
+            },
+            {
+              "q": -5.3341625264076695,
+              "valid": true
+            },
+            {
+              "q": -4.559672670835186,
+              "valid": true
+            },
+            {
+              "q": -3.7851828152627025,
+              "valid": true
+            },
+            {
+              "q": -3.0106929596902186,
+              "valid": true
+            },
+            {
+              "q": -2.2362031041177346,
+              "valid": true
+            },
+            {
+              "q": -1.4617132485452515,
+              "valid": true
+            },
+            {
+              "q": -0.6872233929727676,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971638,
+              "valid": true
+            },
+            {
+              "q": 0.8617563181722003,
+              "valid": true
+            },
+            {
+              "q": 1.6362461737446843,
+              "valid": true
+            },
+            {
+              "q": 2.4107360293171674,
+              "valid": true
+            },
+            {
+              "q": 3.1852258848896504,
+              "valid": true
+            },
+            {
+              "q": 3.9597157404621353,
+              "valid": true
+            },
+            {
+              "q": 4.734205596034618,
+              "valid": true
+            },
+            {
+              "q": 5.508695451607103,
+              "valid": true
+            },
+            {
+              "q": 6.283185307179586,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_01",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 6.283185307179586,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.0043749999999999995,
+              "valid": true
+            },
+            {
+              "q": 0.008749999999999999,
+              "valid": true
+            },
+            {
+              "q": 0.013124999999999998,
+              "valid": true
+            },
+            {
+              "q": 0.017499999999999998,
+              "valid": true
+            },
+            {
+              "q": 0.021875,
+              "valid": true
+            },
+            {
+              "q": 0.026249999999999996,
+              "valid": true
+            },
+            {
+              "q": 0.030624999999999996,
+              "valid": true
+            },
+            {
+              "q": 0.034999999999999996,
+              "valid": true
+            },
+            {
+              "q": 0.03937499999999999,
+              "valid": true
+            },
+            {
+              "q": 0.04375,
+              "valid": true
+            },
+            {
+              "q": 0.048124999999999994,
+              "valid": true
+            },
+            {
+              "q": 0.05249999999999999,
+              "valid": true
+            },
+            {
+              "q": 0.056874999999999995,
+              "valid": true
+            },
+            {
+              "q": 0.06124999999999999,
+              "valid": true
+            },
+            {
+              "q": 0.06562499999999999,
+              "valid": true
+            },
+            {
+              "q": 0.06999999999999999,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_02",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 0.06999999999999999,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        }
+      ],
+      "object_id": "ra_063",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "candidate",
+      "run_dir": "kin_test/ra_063_agent_run_20260528_133352",
+      "xml_path": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_009/mjcf/ks_ra_063_7005ab6e_iter_009.xml"
+    },
+    {
+      "asset_dir": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_010",
+      "asset_name": "ks_ra_063_7005ab6e_iter_010",
+      "asset_root": "kin_test/ra_063_agent_run_20260528_133352/object_assets",
+      "estimates": [
+        {
+          "axis_label": null,
+          "axis_world": [
+            0.08712743240683972,
+            0.002221264524442578,
+            0.9961946980917455
+          ],
+          "confidence": 0.7,
+          "joint_name": "part_00",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Blocking signals parsed for this joint: axis_blocked=True, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q from feedback: lower=None, upper=0.07. Action this iteration: axis changed axis once by rotating current unit axis toward feedback target_axis_world by at most 5 degrees; old_axis=[0.0, 0.0, 1.0] target=[0.25711651929817164, 0.006555039982107283, 0.966358177362217] new_axis=[0.08712743240683972, 0.002221264524442578, 0.9961946980917455]; lower unchanged; upper unchanged. Blocking failures are authoritative and fixed before marking correct. This iteration fixes part_00 QC_JOINT_AXIS by one bounded 5-degree rotation toward the reported target axis, and fixes part_02 QC_SAMPLED_MOTION_OVERLAP at upper q=0.07 by one bounded +10 mm upper-limit extension. Joints without blocking feedback stay unchanged.",
+          "upper": 0.07
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.84,
+          "joint_name": "part_01",
+          "lower": -6.1086523819801535,
+          "reason": "State per joint: correct. Blocking signals parsed for this joint: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q from feedback: lower=None, upper=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. Blocking failures are authoritative and fixed before marking correct. This iteration fixes part_00 QC_JOINT_AXIS by one bounded 5-degree rotation toward the reported target axis, and fixes part_02 QC_SAMPLED_MOTION_OVERLAP at upper q=0.07 by one bounded +10 mm upper-limit extension. Joints without blocking feedback stay unchanged.",
+          "upper": 6.283185307179586
+        },
+        {
+          "axis_label": null,
+          "axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "confidence": 0.68,
+          "joint_name": "part_02",
+          "lower": 0.0,
+          "reason": "State per joint: need_fix. Blocking signals parsed for this joint: axis_blocked=False, sampled_motion_overlap=True, negative_endpoint_invalid=False. Parsed endpoint q from feedback: lower=None, upper=0.07. Action this iteration: axis unchanged; lower unchanged; upper changed upper once by +10 mm (+0.010 m) from the failed upper endpoint. Blocking failures are authoritative and fixed before marking correct. This iteration fixes part_00 QC_JOINT_AXIS by one bounded 5-degree rotation toward the reported target axis, and fixes part_02 QC_SAMPLED_MOTION_OVERLAP at upper q=0.07 by one bounded +10 mm upper-limit extension. Joints without blocking feedback stay unchanged.",
+          "upper": 0.08
+        }
+      ],
+      "iteration": 10,
+      "joint_states": {
+        "part_00": {
+          "errors": [
+            "candidate axis +Z deviates from rotary control geometry axis +Z by 9.9 degrees; target_axis_world=[0.25711652, 0.00655504, 0.96635818]; candidate_axis_world=[0.08712743, 0.00222126, 0.9961947]; max_angle_degrees=5; switch axis or rotate toward the SDK motion target before marking this joint correct"
+          ],
+          "status": "need_fix"
+        },
+        "part_01": {
+          "errors": [],
+          "status": "correct"
+        },
+        "part_02": {
+          "errors": [
+            "candidate motion still intersects parent/static geometry at upper endpoint q=0.08; pairs=[('part_02', 'body')]. This is a sampled-motion failure, so fix axis or extend the limit before marking this joint correct"
+          ],
+          "status": "need_fix"
+        }
+      },
+      "motion_search": [
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9850973559473313,
+            "angle_degrees": 9.903988304607815,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+Z",
+            "target_axis_world": [
+              0.2571165161106847,
+              0.006555039818061494,
+              0.9663581782114165
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.004375,
+              "valid": true
+            },
+            {
+              "q": 0.00875,
+              "valid": true
+            },
+            {
+              "q": 0.013125000000000001,
+              "valid": true
+            },
+            {
+              "q": 0.0175,
+              "valid": true
+            },
+            {
+              "q": 0.021875000000000002,
+              "valid": true
+            },
+            {
+              "q": 0.026250000000000002,
+              "valid": true
+            },
+            {
+              "q": 0.030625000000000003,
+              "valid": true
+            },
+            {
+              "q": 0.035,
+              "valid": true
+            },
+            {
+              "q": 0.03937500000000001,
+              "valid": true
+            },
+            {
+              "q": 0.043750000000000004,
+              "valid": true
+            },
+            {
+              "q": 0.048125,
+              "valid": true
+            },
+            {
+              "q": 0.052500000000000005,
+              "valid": true
+            },
+            {
+              "q": 0.05687500000000001,
+              "valid": true
+            },
+            {
+              "q": 0.061250000000000006,
+              "valid": true
+            },
+            {
+              "q": 0.065625,
+              "valid": true
+            },
+            {
+              "q": 0.07,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+Z",
+          "estimate_axis_world": [
+            0.08712743240683972,
+            0.002221264524442578,
+            0.9961946980917455
+          ],
+          "joint_name": "part_00",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            0.08712743240683972,
+            0.002221264524442578,
+            0.9961946980917455
+          ],
+          "selected_limit": 0.07,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "axis_validation": {
+            "alignment": 0.9999842467907148,
+            "angle_degrees": 0.321604947890337,
+            "max_angle_degrees": 5.0,
+            "signed": false,
+            "target_axis_label": "+X",
+            "target_axis_world": [
+              0.9999842467907148,
+              -2.6020852139652114e-18,
+              -0.005613035756778034
+            ],
+            "target_kind": "rotary control geometry axis"
+          },
+          "candidate_samples": [
+            {
+              "q": -6.1086523819801535,
+              "valid": true
+            },
+            {
+              "q": -5.3341625264076695,
+              "valid": true
+            },
+            {
+              "q": -4.559672670835186,
+              "valid": true
+            },
+            {
+              "q": -3.7851828152627025,
+              "valid": true
+            },
+            {
+              "q": -3.0106929596902186,
+              "valid": true
+            },
+            {
+              "q": -2.2362031041177346,
+              "valid": true
+            },
+            {
+              "q": -1.4617132485452515,
+              "valid": true
+            },
+            {
+              "q": -0.6872233929727676,
+              "valid": true
+            },
+            {
+              "q": 0.08726646259971638,
+              "valid": true
+            },
+            {
+              "q": 0.8617563181722003,
+              "valid": true
+            },
+            {
+              "q": 1.6362461737446843,
+              "valid": true
+            },
+            {
+              "q": 2.4107360293171674,
+              "valid": true
+            },
+            {
+              "q": 3.1852258848896504,
+              "valid": true
+            },
+            {
+              "q": 3.9597157404621353,
+              "valid": true
+            },
+            {
+              "q": 4.734205596034618,
+              "valid": true
+            },
+            {
+              "q": 5.508695451607103,
+              "valid": true
+            },
+            {
+              "q": 6.283185307179586,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_01",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 6.283185307179586,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        },
+        {
+          "axis_trials": [],
+          "candidate_samples": [
+            {
+              "q": 0.0,
+              "valid": true
+            },
+            {
+              "q": 0.005,
+              "valid": true
+            },
+            {
+              "q": 0.01,
+              "valid": true
+            },
+            {
+              "q": 0.015,
+              "valid": true
+            },
+            {
+              "q": 0.02,
+              "valid": true
+            },
+            {
+              "q": 0.025,
+              "valid": true
+            },
+            {
+              "q": 0.03,
+              "valid": true
+            },
+            {
+              "q": 0.035,
+              "valid": true
+            },
+            {
+              "q": 0.04,
+              "valid": true
+            },
+            {
+              "q": 0.045,
+              "valid": true
+            },
+            {
+              "q": 0.05,
+              "valid": true
+            },
+            {
+              "q": 0.055,
+              "valid": true
+            },
+            {
+              "q": 0.06,
+              "valid": true
+            },
+            {
+              "q": 0.065,
+              "valid": true
+            },
+            {
+              "q": 0.07,
+              "valid": true
+            },
+            {
+              "q": 0.075,
+              "valid": true
+            },
+            {
+              "q": 0.08,
+              "valid": true
+            }
+          ],
+          "estimate_axis_label": "+X",
+          "estimate_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "joint_name": "part_02",
+          "selected_axis_label": "candidate",
+          "selected_axis_world": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "selected_limit": 0.08,
+          "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+        }
+      ],
+      "object_id": "ra_063",
+      "playback": {
+        "mode": "sequential_full_range",
+        "seconds_per_joint": 1.8
+      },
+      "preview_kind": "candidate",
+      "run_dir": "kin_test/ra_063_agent_run_20260528_133352",
+      "xml_path": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_010/mjcf/ks_ra_063_7005ab6e_iter_010.xml"
+    }
+  ],
+  "latest_iteration": 10,
+  "latest_preview": {
+    "asset_dir": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_010",
+    "asset_name": "ks_ra_063_7005ab6e_iter_010",
+    "asset_root": "kin_test/ra_063_agent_run_20260528_133352/object_assets",
+    "estimates": [
+      {
+        "axis_label": null,
+        "axis_world": [
+          0.08712743240683972,
+          0.002221264524442578,
+          0.9961946980917455
+        ],
+        "confidence": 0.7,
+        "joint_name": "part_00",
+        "lower": 0.0,
+        "reason": "State per joint: need_fix. Blocking signals parsed for this joint: axis_blocked=True, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q from feedback: lower=None, upper=0.07. Action this iteration: axis changed axis once by rotating current unit axis toward feedback target_axis_world by at most 5 degrees; old_axis=[0.0, 0.0, 1.0] target=[0.25711651929817164, 0.006555039982107283, 0.966358177362217] new_axis=[0.08712743240683972, 0.002221264524442578, 0.9961946980917455]; lower unchanged; upper unchanged. Blocking failures are authoritative and fixed before marking correct. This iteration fixes part_00 QC_JOINT_AXIS by one bounded 5-degree rotation toward the reported target axis, and fixes part_02 QC_SAMPLED_MOTION_OVERLAP at upper q=0.07 by one bounded +10 mm upper-limit extension. Joints without blocking feedback stay unchanged.",
+        "upper": 0.07
+      },
+      {
+        "axis_label": null,
+        "axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "confidence": 0.84,
+        "joint_name": "part_01",
+        "lower": -6.1086523819801535,
+        "reason": "State per joint: correct. Blocking signals parsed for this joint: axis_blocked=False, sampled_motion_overlap=False, negative_endpoint_invalid=False. Parsed endpoint q from feedback: lower=None, upper=None. Action this iteration: axis unchanged; lower unchanged; upper unchanged. Blocking failures are authoritative and fixed before marking correct. This iteration fixes part_00 QC_JOINT_AXIS by one bounded 5-degree rotation toward the reported target axis, and fixes part_02 QC_SAMPLED_MOTION_OVERLAP at upper q=0.07 by one bounded +10 mm upper-limit extension. Joints without blocking feedback stay unchanged.",
+        "upper": 6.283185307179586
+      },
+      {
+        "axis_label": null,
+        "axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "confidence": 0.68,
+        "joint_name": "part_02",
+        "lower": 0.0,
+        "reason": "State per joint: need_fix. Blocking signals parsed for this joint: axis_blocked=False, sampled_motion_overlap=True, negative_endpoint_invalid=False. Parsed endpoint q from feedback: lower=None, upper=0.07. Action this iteration: axis unchanged; lower unchanged; upper changed upper once by +10 mm (+0.010 m) from the failed upper endpoint. Blocking failures are authoritative and fixed before marking correct. This iteration fixes part_00 QC_JOINT_AXIS by one bounded 5-degree rotation toward the reported target axis, and fixes part_02 QC_SAMPLED_MOTION_OVERLAP at upper q=0.07 by one bounded +10 mm upper-limit extension. Joints without blocking feedback stay unchanged.",
+        "upper": 0.08
+      }
+    ],
+    "iteration": 10,
+    "joint_states": {
+      "part_00": {
+        "errors": [
+          "candidate axis +Z deviates from rotary control geometry axis +Z by 9.9 degrees; target_axis_world=[0.25711652, 0.00655504, 0.96635818]; candidate_axis_world=[0.08712743, 0.00222126, 0.9961947]; max_angle_degrees=5; switch axis or rotate toward the SDK motion target before marking this joint correct"
+        ],
+        "status": "need_fix"
+      },
+      "part_01": {
+        "errors": [],
+        "status": "correct"
+      },
+      "part_02": {
+        "errors": [
+          "candidate motion still intersects parent/static geometry at upper endpoint q=0.08; pairs=[('part_02', 'body')]. This is a sampled-motion failure, so fix axis or extend the limit before marking this joint correct"
+        ],
+        "status": "need_fix"
+      }
+    },
+    "motion_search": [
+      {
+        "axis_trials": [],
+        "axis_validation": {
+          "alignment": 0.9850973559473313,
+          "angle_degrees": 9.903988304607815,
+          "max_angle_degrees": 5.0,
+          "signed": false,
+          "target_axis_label": "+Z",
+          "target_axis_world": [
+            0.2571165161106847,
+            0.006555039818061494,
+            0.9663581782114165
+          ],
+          "target_kind": "rotary control geometry axis"
+        },
+        "candidate_samples": [
+          {
+            "q": 0.0,
+            "valid": true
+          },
+          {
+            "q": 0.004375,
+            "valid": true
+          },
+          {
+            "q": 0.00875,
+            "valid": true
+          },
+          {
+            "q": 0.013125000000000001,
+            "valid": true
+          },
+          {
+            "q": 0.0175,
+            "valid": true
+          },
+          {
+            "q": 0.021875000000000002,
+            "valid": true
+          },
+          {
+            "q": 0.026250000000000002,
+            "valid": true
+          },
+          {
+            "q": 0.030625000000000003,
+            "valid": true
+          },
+          {
+            "q": 0.035,
+            "valid": true
+          },
+          {
+            "q": 0.03937500000000001,
+            "valid": true
+          },
+          {
+            "q": 0.043750000000000004,
+            "valid": true
+          },
+          {
+            "q": 0.048125,
+            "valid": true
+          },
+          {
+            "q": 0.052500000000000005,
+            "valid": true
+          },
+          {
+            "q": 0.05687500000000001,
+            "valid": true
+          },
+          {
+            "q": 0.061250000000000006,
+            "valid": true
+          },
+          {
+            "q": 0.065625,
+            "valid": true
+          },
+          {
+            "q": 0.07,
+            "valid": true
+          }
+        ],
+        "estimate_axis_label": "+Z",
+        "estimate_axis_world": [
+          0.08712743240683972,
+          0.002221264524442578,
+          0.9961946980917455
+        ],
+        "joint_name": "part_00",
+        "selected_axis_label": "candidate",
+        "selected_axis_world": [
+          0.08712743240683972,
+          0.002221264524442578,
+          0.9961946980917455
+        ],
+        "selected_limit": 0.07,
+        "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+      },
+      {
+        "axis_trials": [],
+        "axis_validation": {
+          "alignment": 0.9999842467907148,
+          "angle_degrees": 0.321604947890337,
+          "max_angle_degrees": 5.0,
+          "signed": false,
+          "target_axis_label": "+X",
+          "target_axis_world": [
+            0.9999842467907148,
+            -2.6020852139652114e-18,
+            -0.005613035756778034
+          ],
+          "target_kind": "rotary control geometry axis"
+        },
+        "candidate_samples": [
+          {
+            "q": -6.1086523819801535,
+            "valid": true
+          },
+          {
+            "q": -5.3341625264076695,
+            "valid": true
+          },
+          {
+            "q": -4.559672670835186,
+            "valid": true
+          },
+          {
+            "q": -3.7851828152627025,
+            "valid": true
+          },
+          {
+            "q": -3.0106929596902186,
+            "valid": true
+          },
+          {
+            "q": -2.2362031041177346,
+            "valid": true
+          },
+          {
+            "q": -1.4617132485452515,
+            "valid": true
+          },
+          {
+            "q": -0.6872233929727676,
+            "valid": true
+          },
+          {
+            "q": 0.08726646259971638,
+            "valid": true
+          },
+          {
+            "q": 0.8617563181722003,
+            "valid": true
+          },
+          {
+            "q": 1.6362461737446843,
+            "valid": true
+          },
+          {
+            "q": 2.4107360293171674,
+            "valid": true
+          },
+          {
+            "q": 3.1852258848896504,
+            "valid": true
+          },
+          {
+            "q": 3.9597157404621353,
+            "valid": true
+          },
+          {
+            "q": 4.734205596034618,
+            "valid": true
+          },
+          {
+            "q": 5.508695451607103,
+            "valid": true
+          },
+          {
+            "q": 6.283185307179586,
+            "valid": true
+          }
+        ],
+        "estimate_axis_label": "+X",
+        "estimate_axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "joint_name": "part_01",
+        "selected_axis_label": "candidate",
+        "selected_axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "selected_limit": 6.283185307179586,
+        "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+      },
+      {
+        "axis_trials": [],
+        "candidate_samples": [
+          {
+            "q": 0.0,
+            "valid": true
+          },
+          {
+            "q": 0.005,
+            "valid": true
+          },
+          {
+            "q": 0.01,
+            "valid": true
+          },
+          {
+            "q": 0.015,
+            "valid": true
+          },
+          {
+            "q": 0.02,
+            "valid": true
+          },
+          {
+            "q": 0.025,
+            "valid": true
+          },
+          {
+            "q": 0.03,
+            "valid": true
+          },
+          {
+            "q": 0.035,
+            "valid": true
+          },
+          {
+            "q": 0.04,
+            "valid": true
+          },
+          {
+            "q": 0.045,
+            "valid": true
+          },
+          {
+            "q": 0.05,
+            "valid": true
+          },
+          {
+            "q": 0.055,
+            "valid": true
+          },
+          {
+            "q": 0.06,
+            "valid": true
+          },
+          {
+            "q": 0.065,
+            "valid": true
+          },
+          {
+            "q": 0.07,
+            "valid": true
+          },
+          {
+            "q": 0.075,
+            "valid": true
+          },
+          {
+            "q": 0.08,
+            "valid": true
+          }
+        ],
+        "estimate_axis_label": "+X",
+        "estimate_axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "joint_name": "part_02",
+        "selected_axis_label": "candidate",
+        "selected_axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "selected_limit": 0.08,
+        "selection_reason": "continuous candidate axis supplied by bounded agent action space"
+      }
+    ],
+    "object_id": "ra_063",
+    "playback": {
+      "mode": "sequential_full_range",
+      "seconds_per_joint": 1.8
+    },
+    "preview_kind": "candidate",
+    "run_dir": "kin_test/ra_063_agent_run_20260528_133352",
+    "xml_path": "kin_test/ra_063_agent_run_20260528_133352/object_assets/ks_ra_063_7005ab6e_iter_010/mjcf/ks_ra_063_7005ab6e_iter_010.xml"
+  },
+  "object_id": "ra_063",
+  "run_id": "91bceaa591d8"
+}

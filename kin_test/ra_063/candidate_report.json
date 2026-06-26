@@ -1,0 +1,47 @@
+{
+  "passed": true,
+  "estimates": [
+    {
+      "joint_name": "part_00",
+      "lower": 0.0,
+      "upper": 0.0,
+      "axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "axis_label": null,
+      "confidence": 0.25,
+      "reason": "State per joint: need_fix. Starting from rough VLM initial JSON; agent must refine axis by <=5deg and limits by allowed mm/degree steps."
+    },
+    {
+      "joint_name": "part_01",
+      "lower": -6.283185307179586,
+      "upper": 6.283185307179586,
+      "axis_world": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "axis_label": null,
+      "confidence": 0.25,
+      "reason": "State per joint: need_fix. Starting from rough VLM initial JSON; agent must refine axis by <=5deg and limits by allowed mm/degree steps."
+    },
+    {
+      "joint_name": "part_02",
+      "lower": 0.0,
+      "upper": 0.03,
+      "axis_world": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "axis_label": null,
+      "confidence": 0.25,
+      "reason": "State per joint: need_fix. Starting from rough VLM initial JSON; agent must refine axis by <=5deg and limits by allowed mm/degree steps."
+    }
+  ],
+  "errors": [],
+  "warnings": [],
+  "details": {}
+}

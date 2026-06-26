@@ -1,0 +1,109 @@
+{
+  "version": 2,
+  "device": "Device",
+  "source_glb": "./data/preprocessed.glb?t=1778241240981",
+  "physical_dims_mm": {
+    "x": 161.2,
+    "y": 143.28,
+    "z": 5.26
+  },
+  "parts": [
+    {
+      "id": "main_screen",
+      "clusters": [
+        "cluster_01_1",
+        "cluster_01_2",
+        "cluster_03_1",
+        "cluster_03_2",
+        "cluster_03_3",
+        "cluster_03_4",
+        "cluster_09_1",
+        "cluster_16",
+        "cluster_14",
+        "cluster_13",
+        "cluster_06_2",
+        "cluster_06_1",
+        "cluster_12",
+        "cluster_05_3",
+        "cluster_11",
+        "cluster_10_2",
+        "cluster_05_2",
+        "cluster_05_1",
+        "cluster_04",
+        "cluster_00_1_split1",
+        "cluster_00_2_split1",
+        "cluster_10_1",
+        "cluster_09_2_split1"
+      ],
+      "physics": "dynamic",
+      "collision": {
+        "approx": "sdf",
+        "resolution": 128
+      },
+      "scale_xyz": [
+        1,
+        1,
+        1
+      ],
+      "mass": 0.05
+    },
+    {
+      "id": "fold_screen",
+      "clusters": [
+        "cluster_00_1",
+        "cluster_00_2",
+        "cluster_02",
+        "cluster_15",
+        "cluster_08",
+        "cluster_07",
+        "cluster_09_2"
+      ],
+      "physics": "dynamic",
+      "collision": {
+        "approx": "sdf",
+        "resolution": 128
+      },
+      "scale_xyz": [
+        1,
+        1,
+        1
+      ],
+      "mass": 0.05
+    }
+  ],
+  "joints": [
+    {
+      "id": "main_screen_fold_screen_joint",
+      "parent": "main_screen",
+      "child": "fold_screen",
+      "type": "revolute",
+      "axis_p0": [
+        -1.0170192881674402,
+        -0.012398698237640789,
+        -0.050694995500881045
+      ],
+      "axis_p1": [
+        1,
+        -0.006971233780229014,
+        -0.050671429034839
+      ],
+      "lower": 0,
+      "upper": 180,
+      "bake_angle": 0,
+      "drive": {
+        "target": 0,
+        "stiffness": 50000,
+        "damping": 1000,
+        "max_force": 100000
+      },
+      "limit_hard": true,
+      "filtered_pairs": [],
+      "offset": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "external_meshes": []
+}

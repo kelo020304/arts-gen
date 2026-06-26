@@ -1,0 +1,1027 @@
+_base_: official_multiflow_train_full_0611.yaml
+data:
+  test_samples:
+  - obj_id: '102505'
+    angle_idx: 0
+  - obj_id: '103252'
+    angle_idx: 0
+  - obj_id: '103972'
+    angle_idx: 0
+  - obj_id: '100816'
+    angle_idx: 0
+  - obj_id: '102130'
+    angle_idx: 0
+  - obj_id: '102417'
+    angle_idx: 0
+  - obj_id: '103347'
+    angle_idx: 0
+  - obj_id: '103917'
+    angle_idx: 0
+  - obj_id: '102890'
+    angle_idx: 0
+  - obj_id: '101352'
+    angle_idx: 0
+  - obj_id: '101023'
+    angle_idx: 0
+  - obj_id: '102528'
+    angle_idx: 0
+  - obj_id: '102539'
+    angle_idx: 0
+  - obj_id: '103046'
+    angle_idx: 0
+  - obj_id: '103925'
+    angle_idx: 0
+  - obj_id: '103064'
+    angle_idx: 0
+  - obj_id: '103699'
+    angle_idx: 0
+  - obj_id: '103814'
+    angle_idx: 0
+  - obj_id: '101564'
+    angle_idx: 0
+  - obj_id: '101564'
+    angle_idx: 1
+  - obj_id: '101564'
+    angle_idx: 2
+  - obj_id: '101564'
+    angle_idx: 3
+  - obj_id: '101564'
+    angle_idx: 4
+  - obj_id: '101564'
+    angle_idx: 5
+  - obj_id: '101564'
+    angle_idx: 6
+  - obj_id: '101564'
+    angle_idx: 7
+  - obj_id: '101564'
+    angle_idx: 8
+  - obj_id: '101564'
+    angle_idx: 9
+  - obj_id: '45725'
+    angle_idx: 0
+  - obj_id: '45725'
+    angle_idx: 1
+  - obj_id: '45725'
+    angle_idx: 2
+  - obj_id: '45725'
+    angle_idx: 3
+  - obj_id: '45725'
+    angle_idx: 4
+  - obj_id: '45725'
+    angle_idx: 5
+  - obj_id: '45725'
+    angle_idx: 6
+  - obj_id: '45725'
+    angle_idx: 7
+  - obj_id: '45725'
+    angle_idx: 8
+  - obj_id: '45725'
+    angle_idx: 9
+  - obj_id: '102389'
+    angle_idx: 4
+  - obj_id: '103285'
+    angle_idx: 0
+  - obj_id: '103350'
+    angle_idx: 0
+  - obj_id: '103350'
+    angle_idx: 4
+  - obj_id: '103369'
+    angle_idx: 6
+  - obj_id: '100279'
+    angle_idx: 0
+  - obj_id: '101034'
+    angle_idx: 0
+  - obj_id: '101908'
+    angle_idx: 0
+  - obj_id: '101908'
+    angle_idx: 1
+  - obj_id: '101908'
+    angle_idx: 2
+  - obj_id: '101908'
+    angle_idx: 3
+  - obj_id: '101908'
+    angle_idx: 4
+  - obj_id: '101908'
+    angle_idx: 5
+  - obj_id: '101908'
+    angle_idx: 6
+  - obj_id: '101908'
+    angle_idx: 7
+  - obj_id: '101908'
+    angle_idx: 8
+  - obj_id: '101908'
+    angle_idx: 9
+  - obj_id: '101971'
+    angle_idx: 0
+  - obj_id: '101971'
+    angle_idx: 3
+  - obj_id: '101971'
+    angle_idx: 6
+  - obj_id: '101971'
+    angle_idx: 7
+  - obj_id: '101971'
+    angle_idx: 8
+  - obj_id: '102278'
+    angle_idx: 9
+  - obj_id: '102411'
+    angle_idx: 0
+  - obj_id: '102442'
+    angle_idx: 0
+  - obj_id: '103369'
+    angle_idx: 0
+  - obj_id: '103553'
+    angle_idx: 0
+  - obj_id: '103553'
+    angle_idx: 1
+  - obj_id: '103553'
+    angle_idx: 2
+  - obj_id: '103553'
+    angle_idx: 3
+  - obj_id: '103553'
+    angle_idx: 4
+  - obj_id: '103553'
+    angle_idx: 5
+  - obj_id: '103553'
+    angle_idx: 6
+  - obj_id: '103553'
+    angle_idx: 7
+  - obj_id: '103553'
+    angle_idx: 8
+  - obj_id: '103553'
+    angle_idx: 9
+  - obj_id: '103935'
+    angle_idx: 0
+  - obj_id: '100283'
+    angle_idx: 1
+  - obj_id: '100283'
+    angle_idx: 4
+  - obj_id: '100283'
+    angle_idx: 6
+  - obj_id: '101604'
+    angle_idx: 0
+  - obj_id: '101924'
+    angle_idx: 0
+  - obj_id: '101924'
+    angle_idx: 1
+  - obj_id: '101924'
+    angle_idx: 2
+  - obj_id: '101924'
+    angle_idx: 3
+  - obj_id: '101924'
+    angle_idx: 4
+  - obj_id: '101924'
+    angle_idx: 5
+  - obj_id: '101924'
+    angle_idx: 6
+  - obj_id: '101924'
+    angle_idx: 7
+  - obj_id: '101924'
+    angle_idx: 8
+  - obj_id: '101924'
+    angle_idx: 9
+  - obj_id: '102432'
+    angle_idx: 0
+  - obj_id: '103084'
+    angle_idx: 0
+  - obj_id: '103123'
+    angle_idx: 0
+  - obj_id: '103452'
+    angle_idx: 0
+  - obj_id: '103452'
+    angle_idx: 7
+  - obj_id: '100283'
+    angle_idx: 5
+  - obj_id: '100283'
+    angle_idx: 8
+  - obj_id: '101245'
+    angle_idx: 0
+  - obj_id: '101245'
+    angle_idx: 1
+  - obj_id: '101245'
+    angle_idx: 2
+  - obj_id: '101245'
+    angle_idx: 3
+  - obj_id: '101245'
+    angle_idx: 4
+  - obj_id: '101245'
+    angle_idx: 5
+  - obj_id: '101245'
+    angle_idx: 6
+  - obj_id: '101245'
+    angle_idx: 7
+  - obj_id: '101245'
+    angle_idx: 8
+  - obj_id: '101245'
+    angle_idx: 9
+  - obj_id: '102278'
+    angle_idx: 0
+  - obj_id: '102278'
+    angle_idx: 7
+  - obj_id: '102418'
+    angle_idx: 0
+  - obj_id: '102418'
+    angle_idx: 1
+  - obj_id: '102418'
+    angle_idx: 2
+  - obj_id: '102418'
+    angle_idx: 3
+  - obj_id: '102418'
+    angle_idx: 4
+  - obj_id: '102418'
+    angle_idx: 5
+  - obj_id: '102418'
+    angle_idx: 6
+  - obj_id: '102418'
+    angle_idx: 7
+  - obj_id: '102418'
+    angle_idx: 8
+  - obj_id: '102418'
+    angle_idx: 9
+  - obj_id: '103069'
+    angle_idx: 0
+  - obj_id: '103144'
+    angle_idx: 0
+  - obj_id: '103351'
+    angle_idx: 0
+  - obj_id: '103351'
+    angle_idx: 1
+  - obj_id: '103351'
+    angle_idx: 2
+  - obj_id: '103351'
+    angle_idx: 3
+  - obj_id: '103351'
+    angle_idx: 4
+  - obj_id: '103351'
+    angle_idx: 5
+  - obj_id: '103351'
+    angle_idx: 6
+  - obj_id: '103351'
+    angle_idx: 7
+  - obj_id: '103351'
+    angle_idx: 8
+  - obj_id: '103351'
+    angle_idx: 9
+  - obj_id: '103548'
+    angle_idx: 0
+  - obj_id: '103548'
+    angle_idx: 1
+  - obj_id: '103548'
+    angle_idx: 2
+  - obj_id: '103548'
+    angle_idx: 3
+  - obj_id: '103548'
+    angle_idx: 4
+  - obj_id: '103548'
+    angle_idx: 5
+  - obj_id: '103548'
+    angle_idx: 6
+  - obj_id: '103548'
+    angle_idx: 7
+  - obj_id: '103548'
+    angle_idx: 8
+  - obj_id: '103548'
+    angle_idx: 9
+  - obj_id: '103869'
+    angle_idx: 0
+  - obj_id: '47466'
+    angle_idx: 0
+  - obj_id: '47466'
+    angle_idx: 1
+  - obj_id: '47466'
+    angle_idx: 2
+  - obj_id: '47466'
+    angle_idx: 3
+  - obj_id: '47466'
+    angle_idx: 4
+  - obj_id: '47466'
+    angle_idx: 5
+  - obj_id: '47466'
+    angle_idx: 6
+  - obj_id: '47466'
+    angle_idx: 7
+  - obj_id: '47466'
+    angle_idx: 8
+  - obj_id: '47466'
+    angle_idx: 9
+  - obj_id: '100283'
+    angle_idx: 0
+  - obj_id: '100283'
+    angle_idx: 7
+  - obj_id: '100405'
+    angle_idx: 0
+  - obj_id: '101049'
+    angle_idx: 0
+  - obj_id: '101049'
+    angle_idx: 1
+  - obj_id: '101049'
+    angle_idx: 2
+  - obj_id: '101049'
+    angle_idx: 3
+  - obj_id: '101049'
+    angle_idx: 4
+  - obj_id: '101049'
+    angle_idx: 5
+  - obj_id: '101049'
+    angle_idx: 6
+  - obj_id: '101049'
+    angle_idx: 7
+  - obj_id: '101049'
+    angle_idx: 8
+  - obj_id: '101049'
+    angle_idx: 9
+  - obj_id: '101773'
+    angle_idx: 0
+  - obj_id: '101773'
+    angle_idx: 9
+  - obj_id: '101808'
+    angle_idx: 0
+  - obj_id: '101808'
+    angle_idx: 1
+  - obj_id: '101808'
+    angle_idx: 2
+  - obj_id: '101808'
+    angle_idx: 3
+  - obj_id: '101808'
+    angle_idx: 4
+  - obj_id: '101808'
+    angle_idx: 5
+  - obj_id: '101808'
+    angle_idx: 6
+  - obj_id: '101808'
+    angle_idx: 7
+  - obj_id: '101808'
+    angle_idx: 8
+  - obj_id: '101808'
+    angle_idx: 9
+  - obj_id: '101921'
+    angle_idx: 0
+  - obj_id: '101921'
+    angle_idx: 1
+  - obj_id: '101921'
+    angle_idx: 2
+  - obj_id: '101921'
+    angle_idx: 3
+  - obj_id: '101921'
+    angle_idx: 4
+  - obj_id: '101921'
+    angle_idx: 5
+  - obj_id: '101921'
+    angle_idx: 6
+  - obj_id: '101921'
+    angle_idx: 7
+  - obj_id: '101921'
+    angle_idx: 8
+  - obj_id: '101921'
+    angle_idx: 9
+  - obj_id: '102001'
+    angle_idx: 0
+  - obj_id: '102001'
+    angle_idx: 1
+  - obj_id: '102001'
+    angle_idx: 2
+  - obj_id: '102001'
+    angle_idx: 3
+  - obj_id: '102001'
+    angle_idx: 4
+  - obj_id: '102001'
+    angle_idx: 5
+  - obj_id: '102001'
+    angle_idx: 6
+  - obj_id: '102001'
+    angle_idx: 7
+  - obj_id: '102001'
+    angle_idx: 8
+  - obj_id: '102001'
+    angle_idx: 9
+  - obj_id: '102901'
+    angle_idx: 0
+  - obj_id: '103002'
+    angle_idx: 0
+  - obj_id: '103126'
+    angle_idx: 0
+  - obj_id: '103134'
+    angle_idx: 0
+  - obj_id: '103140'
+    angle_idx: 0
+  - obj_id: '103361'
+    angle_idx: 0
+  - obj_id: '103361'
+    angle_idx: 3
+  - obj_id: '103361'
+    angle_idx: 5
+  - obj_id: '103361'
+    angle_idx: 8
+  - obj_id: '103425'
+    angle_idx: 0
+  - obj_id: '103425'
+    angle_idx: 7
+  - obj_id: '103425'
+    angle_idx: 9
+  - obj_id: '103452'
+    angle_idx: 2
+  - obj_id: '103452'
+    angle_idx: 3
+  - obj_id: '103452'
+    angle_idx: 4
+  - obj_id: '103524'
+    angle_idx: 0
+  - obj_id: '103524'
+    angle_idx: 1
+  - obj_id: '103524'
+    angle_idx: 2
+  - obj_id: '103524'
+    angle_idx: 3
+  - obj_id: '103524'
+    angle_idx: 4
+  - obj_id: '103524'
+    angle_idx: 5
+  - obj_id: '103524'
+    angle_idx: 6
+  - obj_id: '103524'
+    angle_idx: 7
+  - obj_id: '103524'
+    angle_idx: 9
+  - obj_id: '103996'
+    angle_idx: 0
+  - obj_id: '30666'
+    angle_idx: 0
+  - obj_id: '30666'
+    angle_idx: 1
+  - obj_id: '30666'
+    angle_idx: 2
+  - obj_id: '30666'
+    angle_idx: 3
+  - obj_id: '30666'
+    angle_idx: 4
+  - obj_id: '30666'
+    angle_idx: 5
+  - obj_id: '30666'
+    angle_idx: 6
+  - obj_id: '30666'
+    angle_idx: 7
+  - obj_id: '30666'
+    angle_idx: 8
+  - obj_id: '30666'
+    angle_idx: 9
+  - obj_id: '100283'
+    angle_idx: 9
+  - obj_id: '100712'
+    angle_idx: 0
+  - obj_id: '101002'
+    angle_idx: 0
+  - obj_id: '101068'
+    angle_idx: 0
+  - obj_id: '101068'
+    angle_idx: 1
+  - obj_id: '101068'
+    angle_idx: 2
+  - obj_id: '101068'
+    angle_idx: 3
+  - obj_id: '101068'
+    angle_idx: 4
+  - obj_id: '101068'
+    angle_idx: 5
+  - obj_id: '101068'
+    angle_idx: 6
+  - obj_id: '101068'
+    angle_idx: 7
+  - obj_id: '101068'
+    angle_idx: 8
+  - obj_id: '101068'
+    angle_idx: 9
+  - obj_id: '101106'
+    angle_idx: 0
+  - obj_id: '101106'
+    angle_idx: 1
+  - obj_id: '101106'
+    angle_idx: 3
+  - obj_id: '101106'
+    angle_idx: 4
+  - obj_id: '101106'
+    angle_idx: 5
+  - obj_id: '101106'
+    angle_idx: 6
+  - obj_id: '101106'
+    angle_idx: 7
+  - obj_id: '101106'
+    angle_idx: 8
+  - obj_id: '101133'
+    angle_idx: 0
+  - obj_id: '101253'
+    angle_idx: 0
+  - obj_id: '101253'
+    angle_idx: 1
+  - obj_id: '101253'
+    angle_idx: 2
+  - obj_id: '101253'
+    angle_idx: 3
+  - obj_id: '101253'
+    angle_idx: 4
+  - obj_id: '101253'
+    angle_idx: 5
+  - obj_id: '101253'
+    angle_idx: 6
+  - obj_id: '101253'
+    angle_idx: 7
+  - obj_id: '101253'
+    angle_idx: 8
+  - obj_id: '101253'
+    angle_idx: 9
+  - obj_id: '101917'
+    angle_idx: 0
+  - obj_id: '101917'
+    angle_idx: 1
+  - obj_id: '101917'
+    angle_idx: 2
+  - obj_id: '101917'
+    angle_idx: 3
+  - obj_id: '101917'
+    angle_idx: 4
+  - obj_id: '101917'
+    angle_idx: 5
+  - obj_id: '101917'
+    angle_idx: 6
+  - obj_id: '101917'
+    angle_idx: 7
+  - obj_id: '101917'
+    angle_idx: 8
+  - obj_id: '101917'
+    angle_idx: 9
+  - obj_id: '101943'
+    angle_idx: 0
+  - obj_id: '101943'
+    angle_idx: 1
+  - obj_id: '101943'
+    angle_idx: 2
+  - obj_id: '101943'
+    angle_idx: 3
+  - obj_id: '101943'
+    angle_idx: 4
+  - obj_id: '101943'
+    angle_idx: 5
+  - obj_id: '101943'
+    angle_idx: 6
+  - obj_id: '101943'
+    angle_idx: 7
+  - obj_id: '101943'
+    angle_idx: 8
+  - obj_id: '101943'
+    angle_idx: 9
+  - obj_id: '101947'
+    angle_idx: 0
+  - obj_id: '101947'
+    angle_idx: 1
+  - obj_id: '101947'
+    angle_idx: 2
+  - obj_id: '101947'
+    angle_idx: 3
+  - obj_id: '101947'
+    angle_idx: 4
+  - obj_id: '101947'
+    angle_idx: 5
+  - obj_id: '101947'
+    angle_idx: 6
+  - obj_id: '101947'
+    angle_idx: 7
+  - obj_id: '101947'
+    angle_idx: 8
+  - obj_id: '101947'
+    angle_idx: 9
+  - obj_id: '102394'
+    angle_idx: 0
+  - obj_id: '102527'
+    angle_idx: 0
+  - obj_id: '102845'
+    angle_idx: 0
+  - obj_id: '102856'
+    angle_idx: 0
+  - obj_id: '102856'
+    angle_idx: 1
+  - obj_id: '102856'
+    angle_idx: 2
+  - obj_id: '102856'
+    angle_idx: 3
+  - obj_id: '102856'
+    angle_idx: 4
+  - obj_id: '102856'
+    angle_idx: 5
+  - obj_id: '102856'
+    angle_idx: 6
+  - obj_id: '102856'
+    angle_idx: 7
+  - obj_id: '102856'
+    angle_idx: 8
+  - obj_id: '102856'
+    angle_idx: 9
+  - obj_id: '103452'
+    angle_idx: 1
+  - obj_id: '103480'
+    angle_idx: 0
+  - obj_id: '103480'
+    angle_idx: 2
+  - obj_id: '103480'
+    angle_idx: 3
+  - obj_id: '103480'
+    angle_idx: 5
+  - obj_id: '103480'
+    angle_idx: 6
+  - obj_id: '103480'
+    angle_idx: 7
+  - obj_id: '103480'
+    angle_idx: 8
+  - obj_id: '103480'
+    angle_idx: 9
+  - obj_id: '103866'
+    angle_idx: 0
+  - obj_id: '103988'
+    angle_idx: 0
+  - obj_id: '104009'
+    angle_idx: 0
+  - obj_id: '104030'
+    angle_idx: 0
+  - obj_id: '22367'
+    angle_idx: 0
+  - obj_id: '22367'
+    angle_idx: 1
+  - obj_id: '22367'
+    angle_idx: 2
+  - obj_id: '22367'
+    angle_idx: 3
+  - obj_id: '22367'
+    angle_idx: 4
+  - obj_id: '22367'
+    angle_idx: 5
+  - obj_id: '22367'
+    angle_idx: 6
+  - obj_id: '22367'
+    angle_idx: 7
+  - obj_id: '22367'
+    angle_idx: 8
+  - obj_id: '22367'
+    angle_idx: 9
+  - obj_id: '26608'
+    angle_idx: 0
+  - obj_id: '26608'
+    angle_idx: 1
+  - obj_id: '26608'
+    angle_idx: 2
+  - obj_id: '26608'
+    angle_idx: 3
+  - obj_id: '26608'
+    angle_idx: 4
+  - obj_id: '26608'
+    angle_idx: 5
+  - obj_id: '26608'
+    angle_idx: 6
+  - obj_id: '26608'
+    angle_idx: 7
+  - obj_id: '26608'
+    angle_idx: 8
+  - obj_id: '26608'
+    angle_idx: 9
+  - obj_id: '48497'
+    angle_idx: 0
+  - obj_id: '48497'
+    angle_idx: 1
+  - obj_id: '48497'
+    angle_idx: 2
+  - obj_id: '48497'
+    angle_idx: 3
+  - obj_id: '48497'
+    angle_idx: 4
+  - obj_id: '48497'
+    angle_idx: 5
+  - obj_id: '48497'
+    angle_idx: 6
+  - obj_id: '48497'
+    angle_idx: 7
+  - obj_id: '48497'
+    angle_idx: 8
+  - obj_id: '48497'
+    angle_idx: 9
+  - obj_id: '100395'
+    angle_idx: 0
+  - obj_id: '100814'
+    angle_idx: 0
+  - obj_id: '101080'
+    angle_idx: 0
+  - obj_id: '101080'
+    angle_idx: 1
+  - obj_id: '101080'
+    angle_idx: 2
+  - obj_id: '101080'
+    angle_idx: 3
+  - obj_id: '101080'
+    angle_idx: 4
+  - obj_id: '101080'
+    angle_idx: 5
+  - obj_id: '101080'
+    angle_idx: 6
+  - obj_id: '101080'
+    angle_idx: 7
+  - obj_id: '101080'
+    angle_idx: 8
+  - obj_id: '101080'
+    angle_idx: 9
+  - obj_id: '101114'
+    angle_idx: 0
+  - obj_id: '101114'
+    angle_idx: 1
+  - obj_id: '101114'
+    angle_idx: 2
+  - obj_id: '101114'
+    angle_idx: 3
+  - obj_id: '101114'
+    angle_idx: 4
+  - obj_id: '101114'
+    angle_idx: 5
+  - obj_id: '101114'
+    angle_idx: 6
+  - obj_id: '101114'
+    angle_idx: 7
+  - obj_id: '101114'
+    angle_idx: 8
+  - obj_id: '101114'
+    angle_idx: 9
+  - obj_id: '101236'
+    angle_idx: 0
+  - obj_id: '101236'
+    angle_idx: 1
+  - obj_id: '101236'
+    angle_idx: 2
+  - obj_id: '101236'
+    angle_idx: 3
+  - obj_id: '101236'
+    angle_idx: 4
+  - obj_id: '101236'
+    angle_idx: 5
+  - obj_id: '101236'
+    angle_idx: 6
+  - obj_id: '101236'
+    angle_idx: 7
+  - obj_id: '101236'
+    angle_idx: 8
+  - obj_id: '101236'
+    angle_idx: 9
+  - obj_id: '101591'
+    angle_idx: 0
+  - obj_id: '101591'
+    angle_idx: 1
+  - obj_id: '101591'
+    angle_idx: 2
+  - obj_id: '101591'
+    angle_idx: 3
+  - obj_id: '101591'
+    angle_idx: 4
+  - obj_id: '101591'
+    angle_idx: 6
+  - obj_id: '101591'
+    angle_idx: 7
+  - obj_id: '101591'
+    angle_idx: 9
+  - obj_id: '101930'
+    angle_idx: 0
+  - obj_id: '101930'
+    angle_idx: 1
+  - obj_id: '101930'
+    angle_idx: 2
+  - obj_id: '101930'
+    angle_idx: 3
+  - obj_id: '101930'
+    angle_idx: 4
+  - obj_id: '101930'
+    angle_idx: 5
+  - obj_id: '101930'
+    angle_idx: 6
+  - obj_id: '101930'
+    angle_idx: 7
+  - obj_id: '101930'
+    angle_idx: 8
+  - obj_id: '101930'
+    angle_idx: 9
+  - obj_id: '101946'
+    angle_idx: 0
+  - obj_id: '101946'
+    angle_idx: 1
+  - obj_id: '101946'
+    angle_idx: 2
+  - obj_id: '101946'
+    angle_idx: 3
+  - obj_id: '101946'
+    angle_idx: 4
+  - obj_id: '101946'
+    angle_idx: 5
+  - obj_id: '101946'
+    angle_idx: 6
+  - obj_id: '101946'
+    angle_idx: 7
+  - obj_id: '101946'
+    angle_idx: 8
+  - obj_id: '101946'
+    angle_idx: 9
+  - obj_id: '102273'
+    angle_idx: 0
+  - obj_id: '102276'
+    angle_idx: 0
+  - obj_id: '102414'
+    angle_idx: 0
+  - obj_id: '102892'
+    angle_idx: 0
+  - obj_id: '103022'
+    angle_idx: 0
+  - obj_id: '103137'
+    angle_idx: 0
+  - obj_id: '103143'
+    angle_idx: 0
+  - obj_id: '103361'
+    angle_idx: 6
+  - obj_id: '103361'
+    angle_idx: 7
+  - obj_id: '103369'
+    angle_idx: 7
+  - obj_id: '103518'
+    angle_idx: 0
+  - obj_id: '103518'
+    angle_idx: 1
+  - obj_id: '103518'
+    angle_idx: 2
+  - obj_id: '103518'
+    angle_idx: 3
+  - obj_id: '103518'
+    angle_idx: 4
+  - obj_id: '103518'
+    angle_idx: 5
+  - obj_id: '103518'
+    angle_idx: 6
+  - obj_id: '103518'
+    angle_idx: 7
+  - obj_id: '103518'
+    angle_idx: 8
+  - obj_id: '103813'
+    angle_idx: 0
+  - obj_id: '103878'
+    angle_idx: 0
+  - obj_id: '103927'
+    angle_idx: 0
+  - obj_id: '104027'
+    angle_idx: 0
+  - obj_id: '32052'
+    angle_idx: 0
+  - obj_id: '32052'
+    angle_idx: 1
+  - obj_id: '32052'
+    angle_idx: 2
+  - obj_id: '32052'
+    angle_idx: 3
+  - obj_id: '32052'
+    angle_idx: 4
+  - obj_id: '32052'
+    angle_idx: 5
+  - obj_id: '32052'
+    angle_idx: 6
+  - obj_id: '32052'
+    angle_idx: 7
+  - obj_id: '32052'
+    angle_idx: 8
+  - obj_id: '32052'
+    angle_idx: 9
+  - obj_id: '100194'
+    angle_idx: 0
+  - obj_id: '100194'
+    angle_idx: 1
+  - obj_id: '100194'
+    angle_idx: 2
+  - obj_id: '100194'
+    angle_idx: 3
+  - obj_id: '100194'
+    angle_idx: 5
+  - obj_id: '100194'
+    angle_idx: 6
+  - obj_id: '100194'
+    angle_idx: 7
+  - obj_id: '100194'
+    angle_idx: 8
+  - obj_id: '100194'
+    angle_idx: 9
+  - obj_id: '100282'
+    angle_idx: 7
+  - obj_id: '100283'
+    angle_idx: 3
+  - obj_id: '101591'
+    angle_idx: 5
+  - obj_id: '101591'
+    angle_idx: 8
+  - obj_id: '101773'
+    angle_idx: 3
+  - obj_id: '101931'
+    angle_idx: 0
+  - obj_id: '101931'
+    angle_idx: 1
+  - obj_id: '101931'
+    angle_idx: 2
+  - obj_id: '101931'
+    angle_idx: 3
+  - obj_id: '101931'
+    angle_idx: 4
+  - obj_id: '101931'
+    angle_idx: 5
+  - obj_id: '101931'
+    angle_idx: 6
+  - obj_id: '101931'
+    angle_idx: 7
+  - obj_id: '101931'
+    angle_idx: 8
+  - obj_id: '101931'
+    angle_idx: 9
+  - obj_id: '101971'
+    angle_idx: 9
+  - obj_id: '102018'
+    angle_idx: 0
+  - obj_id: '102018'
+    angle_idx: 1
+  - obj_id: '102018'
+    angle_idx: 2
+  - obj_id: '102018'
+    angle_idx: 3
+  - obj_id: '102018'
+    angle_idx: 4
+  - obj_id: '102018'
+    angle_idx: 5
+  - obj_id: '102018'
+    angle_idx: 6
+  - obj_id: '102018'
+    angle_idx: 7
+  - obj_id: '102018'
+    angle_idx: 8
+  - obj_id: '102018'
+    angle_idx: 9
+  - obj_id: '102044'
+    angle_idx: 0
+  - obj_id: '102044'
+    angle_idx: 1
+  - obj_id: '102044'
+    angle_idx: 2
+  - obj_id: '102044'
+    angle_idx: 3
+  - obj_id: '102044'
+    angle_idx: 4
+  - obj_id: '102044'
+    angle_idx: 5
+  - obj_id: '102044'
+    angle_idx: 6
+  - obj_id: '102044'
+    angle_idx: 7
+  - obj_id: '102044'
+    angle_idx: 8
+  - obj_id: '102044'
+    angle_idx: 9
+  - obj_id: '102060'
+    angle_idx: 0
+  - obj_id: '102060'
+    angle_idx: 1
+  - obj_id: '102060'
+    angle_idx: 2
+  - obj_id: '102060'
+    angle_idx: 3
+  - obj_id: '102060'
+    angle_idx: 4
+  - obj_id: '102060'
+    angle_idx: 5
+  - obj_id: '102060'
+    angle_idx: 6
+  - obj_id: '102060'
+    angle_idx: 7
+  - obj_id: '102060'
+    angle_idx: 8
+  - obj_id: '102060'
+    angle_idx: 9
+  - obj_id: '102403'
+    angle_idx: 0
+  - obj_id: '102408'
+    angle_idx: 0
+  - obj_id: '102472'
+    angle_idx: 0
+  - obj_id: '102839'
+    angle_idx: 0
+  - obj_id: '102839'
+    angle_idx: 1
+  - obj_id: '102839'
+    angle_idx: 2
+  - obj_id: '102839'
+    angle_idx: 3
+  - obj_id: '102839'
+    angle_idx: 4
+  - obj_id: '102839'
+    angle_idx: 5
+  - obj_id: '102839'
+    angle_idx: 6
+  - obj_id: '102839'
+    angle_idx: 7
+  - obj_id: '102839'
+    angle_idx: 8
+  - obj_id: '102839'
+    angle_idx: 9
+  - obj_id: '102876'
+    angle_idx: 0
+  - obj_id: '103016'
+    angle_idx: 0

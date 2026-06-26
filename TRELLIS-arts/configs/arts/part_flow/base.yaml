@@ -1,0 +1,115 @@
+# Part Flow training: dense 64^3 surface part labeling (含内壁), manifest-driven.
+# Default flow family: fisher (D-16). Gumbel remains available for ablation.
+#
+# Switching flow family:
+#   - Edit ``flow.type`` below to ``gumbel`` or ``fisher``, OR
+#   - CLI override (no file edit):
+#       python3 TRELLIS-arts/train_arts.py \
+#         --config TRELLIS-arts/configs/arts/part_flow/base.yaml flow.type=fisher
+#
+# Sections:
+#   flow:        Fisher/Gumbel categorical bridge
+#   model:       PartFlowPredictor
+#   data:        manifest-driven dense-64^3 dataset (DINOv2 + mask inputs)
+#   surface:     surface-voxel dropout copied into data config by train script
+#   loss:        empty/part class weights + focal gamma
+#   postprocess: inference-only cleanup knobs, used by export_part_flow.py
+#
+# K policy (manifest-driven, target+body slot supervision — 2026-05-07 contract):
+#   Dataset returns num_parts = K_target + 2 per sample, slots:
+#     0           = empty / off-surface
+#     1..K_target = manifest target_part_names (in manifest order, sample-local)
+#     K_target+1  = body (all non-target part_info parts collapsed into one slot)
+#    -1           = overlap of multiple target ind voxels (loss ignore_index)
+#   ``flow.k_max`` (=128) is just the padded simplex width, not a semantic class count.
+#   Missing data (manifest_path, mask, target ind) raises at __getitem__.
+#   See docs/specs/data/part_labels_surface_64.md (v2 surface contract; renamed
+#   from v1 part_labels_solid_64.md — surface labeling, NOT solid completion).
+
+# Stage dispatch (D-11): train_arts.py reads this field.
+stage: part_flow
+
+flow:
+  type: fisher                  # gumbel | fisher  (CLI override: flow.type=fisher)
+  parameterization: endpoint_logits
+  k_max: 128                    # padding upper bound; NOT a semantic class count
+  t_max: 1.0                    # gumbel/fisher: t ∈ [0, 1]
+  dirichlet_alpha: 1.0          # Fisher source Dirichlet concentration on valid simplex slots
+  # Gumbel-Softmax FM hyperparameters (Tang et al. arXiv:2503.17361 §6.2-6.3)
+  tau_max: 10.0                 # initial temperature (high → near-uniform)
+  decay_rate: 3.0               # λ in paper Eq. 8: τ(t) = τ_max · exp(-λt)
+  noise_scale: 2.0              # β in paper Eq. 9 (Gumbel noise divisor)
+  tau_min: 0.01                 # numerical floor; avoids τ→0 at t=1
+  solver: euler                 # euler | heun
+
+model:
+  hidden_dim: 512
+  num_layers: 4                  # DenseVoxelDecoder layers
+  num_heads: 8
+  cond_dim: 1024                # DINOv2-L/14-reg
+  dropout: 0.1
+  num_views: 4                   # cond is interpreted as [B, num_views*T, D]
+  part_token_layers: 2           # non-causal transformer over per-sample valid slots (K_target+2)
+  condition_tokens_per_view: 3   # compressed condition K/V tokens per view
+  voxel_chunk_size: 32768        # eval/inference chunk size; dense 64^3 semantics unchanged
+  use_slot_embedding_fallback: true
+  use_slot_id_embedding: false   # sample-local slot hint, not semantic class id
+  slot_id_embedding_scale: 0.1
+  use_gradient_checkpointing: false # saves training memory when true, but slows training
+
+data:
+  data_root: data/PhysX-Mobility
+  recon_subdir: arts/reconstruction
+  mask_subdir: arts/renders
+  # REQUIRED: full-set manifest jsonl, same schema as smoke_4090.yaml's subset_hq20.
+  # null here means "must override via CLI" — without it PartFlowDataset raises
+  # at construction. Example CLI:
+  #   ... data.manifest_path=arts/manifests/part_completion/full.train.jsonl
+  manifest_path: null
+  resolution: 64
+  num_angles: 10
+  num_views: 4                  # informational; manifest's view_indices drives selection
+  load_slat: false
+  num_samples: null             # null = use all manifest rows; integer caps for debug
+  surface_dropout_min: 0.05
+  surface_dropout_max: 0.20
+  allow_missing_masks: false    # explicit; mask is part of training contract (fail loud if absent)
+
+surface:
+  dropout_min: 0.05
+  dropout_max: 0.20
+
+loss:
+  empty_weight: 0.05
+  part_weight: 1.0
+  focal_gamma: 2.0
+  ignore_index: -1
+
+postprocess:
+  enabled: false
+  tiny_blob_min_voxels: 5
+  morph_close_kernel: 3
+
+training:
+  seed: 42
+  batch_size: 1
+  grad_accum_steps: 4
+  max_steps: 100000
+  lr: 1.0e-4
+  warmup_steps: 1000
+  min_lr_ratio: 0.1
+  weight_decay: 0.01
+  grad_clip: 1.0
+  fp16: true
+  ema_decay: 0.9999
+  num_workers: 4
+  log_every: 50
+  eval_every: 2500
+  checkpoint_every: 5000
+  eval_ode_steps: 20
+  output_dir: runs/partflow_phase8_dense64
+
+wandb:
+  enabled: false                # default OFF; launcher also defaults WANDB_ENABLED=false
+  project: part_flow
+  name: partflow-phase8-dense64

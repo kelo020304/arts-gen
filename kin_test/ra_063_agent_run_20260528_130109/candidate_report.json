@@ -1,0 +1,8 @@
+{
+  "passed": false,
+  "estimates": [],
+  "errors": [
+    "'latin-1' codec can't encode characters in position 7-8: ordinal not in range(256)"
+  ],
+  "warnings": []
+}

@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kinematic Workbench</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #111318;
+    --panel: #181b22;
+    --panel-2: #1f232c;
+    --line: #303642;
+    --line-soft: #252a34;
+    --text: #edf1f7;
+    --muted: #9ba5b6;
+    --accent: #4db6ac;
+    --accent-2: #f4b860;
+    --danger: #ff8a80;
+    --ok: #7ddc9a;
+    --shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  button, input, select {
+    font: inherit;
+  }
+  button {
+    border: 1px solid var(--line);
+    color: var(--text);
+    background: #222733;
+    border-radius: 7px;
+    min-height: 34px;
+    padding: 7px 11px;
+    cursor: pointer;
+  }
+  button:hover { border-color: #586172; background: #29303d; }
+  button.primary {
+    color: #061412;
+    background: var(--accent);
+    border-color: #77d7cf;
+    font-weight: 800;
+  }
+  button.warn {
+    color: #201405;
+    background: var(--accent-2);
+    border-color: #ffd590;
+    font-weight: 800;
+  }
+  input, select, textarea {
+    width: 100%;
+    color: var(--text);
+    background: #10131a;
+    border: 1px solid var(--line-soft);
+    border-radius: 7px;
+    min-height: 34px;
+    padding: 7px 9px;
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(77, 182, 172, 0.18);
+  }
+  input[type="range"] {
+    padding: 0;
+    min-height: 24px;
+    accent-color: var(--accent);
+  }
+  label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .topbar {
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--line-soft);
+    background: #0f1117;
+  }
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .brand h1 {
+    margin: 0;
+    font-size: 16px;
+    letter-spacing: 0;
+  }
+  .brand span {
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .status-pill {
+    min-width: 240px;
+    max-width: 48vw;
+    color: var(--muted);
+    border: 1px solid var(--line-soft);
+    border-radius: 999px;
+    padding: 7px 11px;
+    background: #151922;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
+  }
+  .workbench-shell {
+    height: calc(100vh - 54px);
+    display: grid;
+    grid-template-columns: minmax(330px, 0.9fr) minmax(460px, 1.45fr) minmax(350px, 0.95fr);
+    gap: 12px;
+    padding: 12px;
+  }
+  .panel, .viewport-panel {
+    min-width: 0;
+    min-height: 0;
+    background: var(--panel);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .panel {
+    display: flex;
+    flex-direction: column;
+  }
+  .panel-head {
+    padding: 13px 14px 10px;
+    border-bottom: 1px solid var(--line-soft);
+    background: var(--panel-2);
+  }
+  .panel-head h2 {
+    margin: 0;
+    font-size: 14px;
+    letter-spacing: 0;
+  }
+  .panel-head .sub {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .panel-body {
+    padding: 13px;
+    overflow: auto;
+  }
+  .field {
+    margin-bottom: 12px;
+  }
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0;
+  }
+  .metric-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .metric {
+    min-height: 58px;
+    border: 1px solid var(--line-soft);
+    border-radius: 7px;
+    padding: 9px;
+    background: #121720;
+  }
+  .metric .name {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+  .metric .value {
+    margin-top: 5px;
+    font-size: 16px;
+    font-weight: 900;
+  }
+  .orientation-row {
+    display: grid;
+    grid-template-columns: 44px 1fr 72px;
+    gap: 8px;
+    align-items: center;
+    margin: 9px 0;
+  }
+  .axis-name {
+    color: var(--muted);
+    font-weight: 800;
+  }
+  .viewport-panel {
+    display: grid;
+    grid-template-rows: 38px 1fr;
+    background: #05070a;
+  }
+  .viewport-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 10px 0 12px;
+    border-bottom: 1px solid var(--line-soft);
+    background: #11151d;
+  }
+  .viewport-head strong {
+    font-size: 12px;
+  }
+  .viewport-head span {
+    color: var(--muted);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #fff;
+  }
+  .progress-track {
+    height: 8px;
+    border-radius: 999px;
+    background: #10131a;
+    border: 1px solid var(--line-soft);
+    overflow: hidden;
+  }
+  #agent-progress-fill {
+    display: block;
+    width: 0%;
+    height: 100%;
+    background: var(--accent);
+    transition: width 180ms ease;
+  }
+  .log-box {
+    height: 120px;
+    resize: none;
+    color: #cfd7e6;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+  }
+  .json-editor {
+    height: 190px;
+    resize: vertical;
+    color: #dce6f5;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+  .ok { color: var(--ok); }
+  .error { color: var(--danger); }
+  .small-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .small-actions button {
+    min-height: 30px;
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+  @media (max-width: 1180px) {
+    .workbench-shell {
+      height: auto;
+      min-height: calc(100vh - 54px);
+      grid-template-columns: 1fr;
+    }
+    .viewport-panel { min-height: 70vh; }
+    .status-pill { display: none; }
+  }
+</style>
+</head>
+<body class="kinematic-workbench">
+  <header class="topbar">
+    <div class="brand">
+      <h1>Kinematic Workbench</h1>
+      <span>asset setup / live agent run</span>
+    </div>
+    <div class="status-pill" id="global-status">starting</div>
+  </header>
+
+  <main class="workbench-shell">
+    <section class="panel" aria-label="Asset Setup">
+      <div class="panel-head">
+        <h2>Asset Setup</h2>
+        <div class="sub">USD / URDF / MJCF to preview XML bundle</div>
+      </div>
+      <div class="panel-body">
+        <div class="field">
+          <label for="source-path-input">Source USD / URDF / XML path</label>
+          <input id="source-path-input" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="button-row">
+          <button type="button" id="source-file-button">Choose File</button>
+          <button type="button" id="source-folder-button">Choose Folder</button>
+          <input type="file" id="source-file-input" accept=".usd,.usda,.usdc,.urdf,.xml,.mjcf" hidden>
+          <input type="file" id="source-folder-input" webkitdirectory directory multiple hidden>
+          <button type="button" id="import-button" class="primary">Load Asset</button>
+        </div>
+        <div class="field-grid">
+          <div class="field">
+            <label for="object-id-input">Object ID</label>
+            <input id="object-id-input" value="ra_063" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="source-type-readout">Source Type</label>
+            <input id="source-type-readout" value="auto" readonly>
+          </div>
+        </div>
+        <div class="field">
+          <label for="xml-root-input">XML save root</label>
+          <input id="xml-root-input" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="mesh-root-input">Mesh save root</label>
+          <input id="mesh-root-input" autocomplete="off" spellcheck="false">
+        </div>
+
+        <div class="field">
+          <label>Global Orientation</label>
+          <div class="orientation-row">
+            <div class="axis-name">Roll</div>
+            <input type="range" id="roll-range" min="-180" max="180" step="1" value="0">
+            <input type="number" id="roll-input" min="-180" max="180" step="1" value="0">
+          </div>
+          <div class="orientation-row">
+            <div class="axis-name">Pitch</div>
+            <input type="range" id="pitch-range" min="-180" max="180" step="1" value="0">
+            <input type="number" id="pitch-input" min="-180" max="180" step="1" value="0">
+          </div>
+          <div class="orientation-row">
+            <div class="axis-name">Yaw</div>
+            <input type="range" id="yaw-range" min="-180" max="180" step="1" value="0">
+            <input type="number" id="yaw-input" min="-180" max="180" step="1" value="0">
+          </div>
+          <div class="button-row">
+            <button type="button" id="orientation-reset-button">Reset</button>
+            <button type="button" id="orientation-save-button">Save Orientation</button>
+          </div>
+        </div>
+        <textarea id="asset-log" class="log-box" readonly spellcheck="false">asset idle</textarea>
+      </div>
+    </section>
+
+    <section class="viewport-panel" aria-label="Preview">
+      <div class="viewport-head">
+        <strong>Preview</strong>
+        <span id="preview-title">empty viewer</span>
+      </div>
+      <iframe id="viewer-frame" src="/object-post-process/"></iframe>
+    </section>
+
+    <section class="panel" aria-label="Agent Run">
+      <div class="panel-head">
+        <h2>Agent Run</h2>
+        <div class="sub">local estimate_limit.py loop</div>
+      </div>
+      <div class="panel-body">
+        <div class="metric-row">
+          <div class="metric">
+            <div class="name">Run</div>
+            <div class="value" id="run-id-readout">-</div>
+          </div>
+          <div class="metric">
+            <div class="name">Iter</div>
+            <div class="value" id="iter-readout">0</div>
+          </div>
+          <div class="metric">
+            <div class="name">Status</div>
+            <div class="value" id="run-status-readout">idle</div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="converter-root-input">Converter output root</label>
+          <input id="converter-root-input" value="/tmp/ks063_work_fix.BffLua" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="source-root-agent-input">Source root</label>
+          <input id="source-root-agent-input" value="data/RealAppliance" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="initial-json-input">Initial joints JSON</label>
+          <input id="initial-json-input" value="kin_test/ra_063/vlm_initial.json" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <div class="small-actions">
+            <label for="initial-json-editor">Manual VLM initial JSON</label>
+            <div class="button-row" style="margin:0">
+              <button type="button" id="load-template-json-button">Template</button>
+              <button type="button" id="save-initial-json-button">Save JSON</button>
+            </div>
+          </div>
+          <textarea id="initial-json-editor" class="json-editor" spellcheck="false"></textarea>
+        </div>
+        <div class="field">
+          <label for="out-dir-input">Run output dir</label>
+          <input id="out-dir-input" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field-grid">
+          <div class="field">
+            <label for="model-input">Model</label>
+            <input id="model-input" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="thinking-level-input">Effort</label>
+            <select id="thinking-level-input">
+              <option value="medium">medium</option>
+              <option value="high">high</option>
+              <option value="low">low</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-grid">
+          <div class="field">
+            <label for="max-iterations-input">Max iterations</label>
+            <input id="max-iterations-input" type="number" min="1" max="100" step="1" value="10">
+          </div>
+          <div class="field">
+            <label for="heartbeat-input">Heartbeat sec</label>
+            <input id="heartbeat-input" type="number" min="0.2" max="60" step="0.1" value="1">
+          </div>
+        </div>
+        <div class="field">
+          <label for="base-url-input">OpenRouter base URL</label>
+          <input id="base-url-input" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="api-key-input">API key override</label>
+          <input id="api-key-input" type="password" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="button-row">
+          <button type="button" id="agent-run-button" class="warn">Run Agent</button>
+          <button type="button" id="open-run-button">Open Run View</button>
+        </div>
+        <div class="field">
+          <div class="small-actions">
+            <label>Agent Progress</label>
+            <button type="button" id="copy-run-log-button">Copy</button>
+          </div>
+          <div class="progress-track"><span id="agent-progress-fill"></span></div>
+        </div>
+        <textarea id="agent-log" class="log-box" readonly spellcheck="false">agent idle</textarea>
+      </div>
+    </section>
+  </main>
+
+<script>
+var workbenchState = {
+  config: null,
+  assetName: '',
+  runId: '',
+  stateUrl: '',
+  viewerUrl: '',
+  generatedMeshDir: '',
+  pollTimer: null,
+  selectedSourceFiles: [],
+  initialJsonDirty: false,
+  initialJsonAutoManaged: true,
+  initialJsonPathAutoManaged: true,
+  outDirAutoManaged: true,
+  converterRootAutoManaged: true,
+  sourceRootAutoManaged: true,
+  lastObjectId: 'ra_063'
+};
+
+function $(id) {
+  return document.getElementById(id);
+}
+
+function currentObjectId() {
+  return $('object-id-input').value.trim() || 'object';
+}
+
+function buildInitialJsonTemplate(objectId) {
+  return JSON.stringify({
+    object_id: objectId,
+    initial_joints: {}
+  }, null, 2);
+}
+
+function objectNumericId(objectId) {
+  var match = String(objectId || '').match(/(\d+)$/);
+  if (match) {
+    return match[1].padStart(3, '0');
+  }
+  return String(objectId || 'object').replace(/[^A-Za-z0-9_]+/g, '_');
+}
+
+function defaultKinematicRoot(objectId) {
+  var modelRoot = (workbenchState.config && workbenchState.config.default_model_root) ||
+    '/home/mi/jzh/AAAI2027/arts-reconstruction/data/RealAppliance/source/model';
+  var numericId = objectNumericId(objectId);
+  return modelRoot.replace(/\/+$/, '') + '/' + numericId + '/kin_' + numericId;
+}
+
+function defaultConverterRoot(objectId) {
+  return defaultKinematicRoot(objectId);
+}
+
+function defaultSourceRoot() {
+  return (workbenchState.config && workbenchState.config.default_source_root) ||
+    'data/RealAppliance';
+}
+
+function defaultInitialJsonPath(objectId) {
+  var initialRoot = (workbenchState.config && workbenchState.config.default_initial_joints_root) ||
+    'kin_test/kinematic_workbench/initial_joints';
+  return initialRoot.replace(/\/+$/, '') + '/' + objectId + '/vlm_initial.json';
+}
+
+function defaultRunDir(objectId) {
+  return defaultKinematicRoot(objectId) + '/run_1';
+}
+
+function syncObjectDerivedPaths(force) {
+  var objectId = currentObjectId();
+  if (force || workbenchState.converterRootAutoManaged) {
+    $('converter-root-input').value = defaultConverterRoot(objectId);
+    workbenchState.converterRootAutoManaged = true;
+  }
+  if (force || workbenchState.sourceRootAutoManaged) {
+    $('source-root-agent-input').value = defaultSourceRoot();
+    workbenchState.sourceRootAutoManaged = true;
+  }
+  if (force || workbenchState.initialJsonPathAutoManaged) {
+    $('initial-json-input').value = defaultInitialJsonPath(objectId);
+    workbenchState.initialJsonPathAutoManaged = true;
+  }
+  if (force || workbenchState.outDirAutoManaged) {
+    $('out-dir-input').value = defaultRunDir(objectId);
+    workbenchState.outDirAutoManaged = true;
+  }
+  if (force || workbenchState.initialJsonAutoManaged || !$('initial-json-editor').value.trim()) {
+    $('initial-json-editor').value = buildInitialJsonTemplate(objectId);
+    workbenchState.initialJsonDirty = true;
+    workbenchState.initialJsonAutoManaged = true;
+  }
+}
+
+function syncInitialJsonObjectId(previousObjectId, nextObjectId) {
+  var text = $('initial-json-editor').value.trim();
+  if (!text) {
+    return;
+  }
+  var parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (err) {
+    return;
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return;
+  }
+  if (
+    workbenchState.initialJsonAutoManaged ||
+    !parsed.object_id ||
+    parsed.object_id === previousObjectId
+  ) {
+    parsed.object_id = nextObjectId;
+    $('initial-json-editor').value = JSON.stringify(parsed, null, 2);
+    workbenchState.initialJsonDirty = true;
+  }
+}
+
+function syncObjectFromViewerAsset() {
+  var frame = $('viewer-frame');
+  if (!frame || !frame.contentWindow) {
+    return;
+  }
+  var pathname = '';
+  try {
+    pathname = frame.contentWindow.location.pathname || '';
+  } catch (err) {
+    return;
+  }
+  var match = pathname.match(/^\/object-post-process\/([^\/?#]+)\/?$/);
+  if (!match) {
+    return;
+  }
+  var assetObjectId = decodeURIComponent(match[1]);
+  if (!assetObjectId || assetObjectId === currentObjectId()) {
+    workbenchState.assetName = assetObjectId || workbenchState.assetName;
+    return;
+  }
+
+  var previousObjectId = workbenchState.lastObjectId || currentObjectId();
+  workbenchState.assetName = assetObjectId;
+  $('object-id-input').value = assetObjectId;
+  workbenchState.converterRootAutoManaged = true;
+  workbenchState.sourceRootAutoManaged = true;
+  workbenchState.initialJsonPathAutoManaged = true;
+  workbenchState.outDirAutoManaged = true;
+  syncObjectDerivedPaths(false);
+  syncInitialJsonObjectId(previousObjectId, assetObjectId);
+  workbenchState.lastObjectId = assetObjectId;
+  appendLog('asset-log', 'object_id_synced_from_preview_asset=' + assetObjectId);
+}
+
+function setGlobalStatus(text, isError) {
+  var el = $('global-status');
+  el.textContent = text;
+  el.classList.toggle('error', isError === true);
+  el.classList.toggle('ok', isError !== true && text.indexOf('ready') >= 0);
+}
+
+function logTo(id, text) {
+  var box = $(id);
+  box.value = text;
+  box.scrollTop = box.scrollHeight;
+}
+
+function appendLog(id, text) {
+  var box = $(id);
+  box.value = box.value ? box.value + '\n' + text : text;
+  box.scrollTop = box.scrollHeight;
+}
+
+function getOrientation() {
+  return {
+    roll: Number($('roll-input').value || 0),
+    pitch: Number($('pitch-input').value || 0),
+    yaw: Number($('yaw-input').value || 0)
+  };
+}
+
+function setOrientation(orientation) {
+  ['roll', 'pitch', 'yaw'].forEach(function(axis) {
+    var value = Number((orientation && orientation[axis]) || 0);
+    $(axis + '-range').value = String(value);
+    $(axis + '-input').value = String(value);
+  });
+  postOrientationToViewer();
+}
+
+function postOrientationToViewer() {
+  var frame = $('viewer-frame');
+  if (!frame || !frame.contentWindow) {
+    return;
+  }
+  frame.contentWindow.postMessage({
+    type: 'set-global-orientation',
+    orientation_degrees: getOrientation()
+  }, window.location.origin);
+}
+
+function inferSourceType(path) {
+  var lower = String(path || '').toLowerCase();
+  if (lower.endsWith('.urdf')) return 'urdf';
+  if (lower.endsWith('.usd') || lower.endsWith('.usda') || lower.endsWith('.usdc')) return 'usd';
+  if (lower.endsWith('.xml') || lower.endsWith('.mjcf')) return 'mjcf';
+  return 'auto';
+}
+
+function relativePathForFile(file) {
+  return file.webkitRelativePath || file.name;
+}
+
+function firstSupportedSourceFile(files) {
+  for (var i = 0; i < files.length; i += 1) {
+    var rel = relativePathForFile(files[i]);
+    var type = inferSourceType(rel);
+    if (type !== 'auto') {
+      return { file: files[i], relativePath: rel, sourceType: type };
+    }
+  }
+  return null;
+}
+
+function timestamp() {
+  var d = new Date();
+  function pad(v) { return String(v).padStart(2, '0'); }
+  return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '_' +
+    pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+}
+
+function loadConfig() {
+  return fetch('/api/kinematic-workbench/config?t=' + Date.now(), { cache: 'no-store' })
+    .then(function(resp) { return resp.json().then(function(body) { return { resp: resp, body: body }; }); })
+    .then(function(result) {
+      if (!result.resp.ok || result.body.status !== 'ok') {
+        throw new Error(result.body.message || 'failed to load workbench config');
+      }
+      workbenchState.config = result.body;
+      $('xml-root-input').value = result.body.default_xml_save_root || '';
+      $('mesh-root-input').value = result.body.default_mesh_save_root || '';
+      $('model-input').value = result.body.model || 'gpt-5.5';
+      $('thinking-level-input').value = result.body.thinking_level || 'medium';
+      $('base-url-input').value = result.body.openrouter_base_url || '';
+      $('api-key-input').placeholder = result.body.has_openrouter_api_key
+        ? 'using server env key'
+        : 'paste key or export OPENROUTER_API_KEY';
+      syncObjectDerivedPaths(true);
+      workbenchState.lastObjectId = currentObjectId();
+      setGlobalStatus('ready: ' + result.body.workspace_root, false);
+    })
+    .catch(function(err) {
+      setGlobalStatus(String(err && err.message ? err.message : err), true);
+    });
+}
+
+function importAsset() {
+  if (workbenchState.selectedSourceFiles.length > 0) {
+    importUploadedAsset();
+    return;
+  }
+  var payload = {
+    source_path: $('source-path-input').value.trim(),
+    object_id: currentObjectId(),
+    xml_save_root: $('xml-root-input').value.trim(),
+    mesh_save_root: $('mesh-root-input').value.trim(),
+    orientation_degrees: getOrientation()
+  };
+  $('source-type-readout').value = inferSourceType(payload.source_path);
+  setGlobalStatus('loading asset', false);
+  logTo('asset-log', 'importing ' + payload.source_path);
+  fetch('/api/kinematic-workbench/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+    .then(function(resp) { return resp.json().then(function(body) { return { resp: resp, body: body }; }); })
+    .then(function(result) {
+      if (!result.resp.ok || result.body.status !== 'ok') {
+        throw new Error(result.body.message || 'import failed');
+      }
+      workbenchState.assetName = result.body.asset_name;
+      workbenchState.generatedMeshDir = result.body.generated_mesh_dir || '';
+      $('viewer-frame').src = result.body.viewer_url + '?t=' + Date.now();
+      $('preview-title').textContent = result.body.asset_name + ' static preview';
+      logTo('asset-log', [
+        'asset=' + result.body.asset_name,
+        'source_type=' + result.body.source_type,
+        'xml=' + result.body.generated_xml_path,
+        'mesh_dir=' + result.body.generated_mesh_dir
+      ].join('\n'));
+      setGlobalStatus('asset ready: ' + result.body.asset_name, false);
+    })
+    .catch(function(err) {
+      logTo('asset-log', String(err && err.message ? err.message : err));
+      setGlobalStatus('asset import failed', true);
+    });
+}
+
+function importUploadedAsset() {
+  var files = workbenchState.selectedSourceFiles || [];
+  var selected = firstSupportedSourceFile(files);
+  if (!selected) {
+    logTo('asset-log', 'selected upload has no USD, URDF, MJCF, or XML source file');
+    setGlobalStatus('asset import failed', true);
+    return;
+  }
+  var form = new FormData();
+  files.forEach(function(file) {
+    form.append('files', file, relativePathForFile(file));
+  });
+  form.append('source_relative_path', selected.relativePath);
+  form.append('object_id', currentObjectId());
+  form.append('xml_save_root', $('xml-root-input').value.trim());
+  form.append('mesh_save_root', $('mesh-root-input').value.trim());
+  form.append('orientation_degrees', JSON.stringify(getOrientation()));
+  $('source-path-input').value = selected.relativePath;
+  $('source-type-readout').value = selected.sourceType;
+  setGlobalStatus('uploading asset bundle', false);
+  logTo('asset-log', 'uploading ' + files.length + ' file(s)\nsource=' + selected.relativePath);
+  fetch('/api/kinematic-workbench/import-upload', {
+    method: 'POST',
+    body: form
+  })
+    .then(function(resp) { return resp.json().then(function(body) { return { resp: resp, body: body }; }); })
+    .then(function(result) {
+      if (!result.resp.ok || result.body.status !== 'ok') {
+        throw new Error(result.body.message || 'upload import failed');
+      }
+      workbenchState.assetName = result.body.asset_name;
+      workbenchState.generatedMeshDir = result.body.generated_mesh_dir || '';
+      $('viewer-frame').src = result.body.viewer_url + '?t=' + Date.now();
+      $('preview-title').textContent = result.body.asset_name + ' static preview';
+      logTo('asset-log', [
+        'asset=' + result.body.asset_name,
+        'source_type=' + result.body.source_type,
+        'uploaded_files=' + result.body.uploaded_file_count,
+        'upload_root=' + result.body.upload_root,
+        'xml=' + result.body.generated_xml_path,
+        'mesh_dir=' + result.body.generated_mesh_dir
+      ].join('\n'));
+      setGlobalStatus('asset ready: ' + result.body.asset_name, false);
+    })
+    .catch(function(err) {
+      logTo('asset-log', String(err && err.message ? err.message : err));
+      setGlobalStatus('asset import failed', true);
+    });
+}
+
+function autoImportSelectedFiles(label) {
+  // automatic upload/import after a browser file or folder selection.
+  var selected = firstSupportedSourceFile(workbenchState.selectedSourceFiles || []);
+  if (!selected) {
+    logTo('asset-log', (label || 'selection') + ' has no USD, URDF, MJCF, or XML source file');
+    return;
+  }
+  $('source-path-input').value = selected.relativePath;
+  $('source-type-readout').value = selected.sourceType;
+  logTo(
+    'asset-log',
+    (label || 'selection') + ': ' + workbenchState.selectedSourceFiles.length +
+      ' file(s)\nsource=' + selected.relativePath + '\nautomatic upload/import started'
+  );
+  importUploadedAsset();
+}
+
+function saveOrientation() {
+  if (!workbenchState.assetName) {
+    logTo('asset-log', 'load an asset before saving orientation');
+    return;
+  }
+  postOrientationToViewer();
+  fetch('/api/kinematic-workbench/orientation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      asset_name: workbenchState.assetName,
+      orientation_degrees: getOrientation()
+    })
+  })
+    .then(function(resp) { return resp.json().then(function(body) { return { resp: resp, body: body }; }); })
+    .then(function(result) {
+      if (!result.resp.ok || result.body.status !== 'ok') {
+        throw new Error(result.body.message || 'orientation save failed');
+      }
+      appendLog('asset-log', 'orientation_saved=' + result.body.orientation_path);
+      setGlobalStatus('orientation saved', false);
+    })
+    .catch(function(err) {
+      appendLog('asset-log', String(err && err.message ? err.message : err));
+      setGlobalStatus('orientation save failed', true);
+    });
+}
+
+function saveManualInitialJson(options) {
+  options = options || {};
+  var text = $('initial-json-editor').value.trim();
+  if (!text) {
+    return Promise.resolve({ skipped: true });
+  }
+  try {
+    JSON.parse(text);
+  } catch (err) {
+    setGlobalStatus('initial JSON invalid', true);
+    appendLog('agent-log', 'initial_json_error=' + String(err && err.message ? err.message : err));
+    return Promise.reject(err);
+  }
+  if (!options.quiet) {
+    setGlobalStatus('saving initial JSON', false);
+  }
+  return fetch('/api/kinematic-workbench/initial-joints-json', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      object_id: currentObjectId(),
+      target_path: $('initial-json-input').value.trim(),
+      json_text: text
+    })
+  })
+    .then(function(resp) { return resp.json().then(function(body) { return { resp: resp, body: body }; }); })
+    .then(function(result) {
+      if (!result.resp.ok || result.body.status !== 'ok') {
+        throw new Error(result.body.message || 'initial JSON save failed');
+      }
+      $('initial-json-input').value = result.body.initial_joints_json;
+      if (result.body.normalized_json_text) {
+        $('initial-json-editor').value = result.body.normalized_json_text;
+      }
+      workbenchState.initialJsonDirty = false;
+      appendLog('agent-log', 'initial_json=' + result.body.initial_joints_json);
+      if (result.body.object_id_normalized) {
+        appendLog('agent-log', 'initial_json_object_id_normalized=' + currentObjectId());
+      }
+      if (!options.quiet) {
+        setGlobalStatus('initial JSON saved', false);
+      }
+      return result.body;
+    })
+    .catch(function(err) {
+      appendLog('agent-log', String(err && err.message ? err.message : err));
+      setGlobalStatus('initial JSON save failed', true);
+      throw err;
+    });
+}
+
+function loadInitialJsonTemplate() {
+  setGlobalStatus('loading initial JSON template', false);
+  return fetch('/api/kinematic-workbench/initial-joints-template', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      object_id: currentObjectId(),
+      workbench_asset_name: workbenchState.assetName,
+      converter_output_root: $('converter-root-input').value.trim()
+    })
+  })
+    .then(function(resp) { return resp.json().then(function(body) { return { resp: resp, body: body }; }); })
+    .then(function(result) {
+      if (!result.resp.ok || result.body.status !== 'ok') {
+        throw new Error(result.body.message || 'initial JSON template failed');
+      }
+      $('initial-json-editor').value = result.body.json_text || buildInitialJsonTemplate(currentObjectId());
+      workbenchState.initialJsonDirty = true;
+      workbenchState.initialJsonAutoManaged = false;
+      appendLog('agent-log', 'initial_json_template_parts=' + (result.body.part_names || []).join(','));
+      setGlobalStatus('initial JSON template loaded', false);
+      return result.body;
+    })
+    .catch(function(err) {
+      appendLog('agent-log', String(err && err.message ? err.message : err));
+      setGlobalStatus('initial JSON template failed', true);
+      throw err;
+    });
+}
+
+function saveCurrentPreviewXmlIfPossible() {
+  var frame = $('viewer-frame');
+  if (!workbenchState.assetName || !frame || !frame.contentWindow) {
+    return Promise.resolve({ skipped: true });
+  }
+  var saveFn = null;
+  try {
+    saveFn = frame.contentWindow.handleSaveXml;
+  } catch (err) {
+    return Promise.resolve({ skipped: true });
+  }
+  if (typeof saveFn !== 'function') {
+    return Promise.resolve({ skipped: true });
+  }
+  setGlobalStatus('saving current preview XML', false);
+  return Promise.resolve()
+    .then(function() {
+      return saveFn.call(frame.contentWindow);
+    })
+    .then(function() {
+      appendLog('agent-log', 'preview_xml_saved_before_agent=' + workbenchState.assetName);
+      return { status: 'saved' };
+    });
+}
+
+function runAgent() {
+  $('agent-run-button').disabled = true;
+  $('run-status-readout').textContent = 'preparing';
+  $('agent-progress-fill').style.width = '2%';
+  appendLog('agent-log', 'prepare_step=save current preview XML if edited');
+  var beforeRun = saveCurrentPreviewXmlIfPossible();
+  if ($('initial-json-editor').value.trim()) {
+    beforeRun = beforeRun.then(function() {
+      appendLog('agent-log', 'prepare_step=save manual initial JSON');
+      return saveManualInitialJson({ quiet: true });
+    });
+  }
+  return beforeRun.then(startAgentRun).finally(function() {
+    $('agent-run-button').disabled = false;
+  });
+}
+
+function startAgentRun() {
+  var payload = {
+    object_id: currentObjectId(),
+    converter_output_root: $('converter-root-input').value.trim(),
+    source_root: $('source-root-agent-input').value.trim(),
+    initial_joints_json: $('initial-json-input').value.trim(),
+    generated_mesh_dir: workbenchState.generatedMeshDir,
+    workbench_asset_name: workbenchState.assetName,
+    out_dir: $('out-dir-input').value.trim(),
+    model: $('model-input').value.trim(),
+    thinking_level: $('thinking-level-input').value,
+    max_agent_iterations: Number($('max-iterations-input').value || 10),
+    api_heartbeat_seconds: Number($('heartbeat-input').value || 1),
+    orientation_degrees: getOrientation(),
+    openrouter_base_url: $('base-url-input').value.trim(),
+    openrouter_api_key: $('api-key-input').value.trim()
+  };
+  setGlobalStatus('preparing agent inputs', false);
+  appendLog('agent-log', 'prepare_step=syncing merged partseg and cooking VHACD');
+  appendLog('agent-log', 'note=this can take a while after merge because collision cache is rebuilt');
+  appendLog('agent-log', 'starting agent for ' + payload.object_id);
+  fetch('/api/kinematic-workbench/run-agent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+    .then(function(resp) { return resp.json().then(function(body) { return { resp: resp, body: body }; }); })
+    .then(function(result) {
+      if (!result.resp.ok || result.body.status !== 'ok') {
+        throw new Error(result.body.message || 'agent start failed');
+      }
+      workbenchState.runId = result.body.run_id;
+      workbenchState.stateUrl = result.body.state_url;
+      workbenchState.viewerUrl = result.body.viewer_url;
+      $('run-id-readout').textContent = result.body.run_id;
+      $('run-status-readout').textContent = 'running';
+      $('viewer-frame').src = result.body.viewer_url + '?t=' + Date.now();
+      $('preview-title').textContent = result.body.run_id + ' live agent';
+      logTo('agent-log', [
+        'run_id=' + result.body.run_id,
+        'pid=' + result.body.pid,
+        'out_dir=' + result.body.out_dir,
+        'log=' + result.body.log_path,
+        'initial_json=' + (result.body.initial_joints_json || ''),
+        'source_orientation_ignored_for_agent_preview=true',
+        'partseg_bootstrap=' + JSON.stringify(result.body.partseg_bootstrap || {}),
+        'vhacd_cache=' + JSON.stringify(result.body.vhacd_cache || {})
+      ].join('\n'));
+      pollAgentState();
+      setGlobalStatus('agent running: ' + result.body.run_id, false);
+    })
+    .catch(function(err) {
+      logTo('agent-log', String(err && err.message ? err.message : err));
+      setGlobalStatus('agent start failed', true);
+    });
+}
+
+function pollAgentState() {
+  if (workbenchState.pollTimer !== null) {
+    window.clearTimeout(workbenchState.pollTimer);
+    workbenchState.pollTimer = null;
+  }
+  if (!workbenchState.stateUrl) {
+    return;
+  }
+  fetch(workbenchState.stateUrl + '?t=' + Date.now(), { cache: 'no-store' })
+    .then(function(resp) { return resp.json(); })
+    .then(function(state) {
+      var latestEvent = state.latest_event || {};
+      var maxIter = Number($('max-iterations-input').value || 1);
+      var iter = Number(state.latest_iteration || latestEvent.iteration || 0);
+      var percent = Math.max(0, Math.min(100, Math.round((iter / Math.max(1, maxIter)) * 100)));
+      $('iter-readout').textContent = String(iter);
+      $('run-status-readout').textContent = latestEvent.status || state.status || 'running';
+      $('agent-progress-fill').style.width = percent + '%';
+      appendLog('agent-log', [
+        'status=' + (latestEvent.status || state.status || '-'),
+        'iteration=' + iter,
+        'phase=' + (latestEvent.phase || latestEvent.event || '-')
+      ].join(' '));
+      if (latestEvent.event === 'run_finished') {
+        setGlobalStatus('agent finished: ' + (latestEvent.status || '-'), latestEvent.status === 'failed');
+        return;
+      }
+      workbenchState.pollTimer = window.setTimeout(pollAgentState, 1000);
+    })
+    .catch(function(err) {
+      appendLog('agent-log', String(err && err.message ? err.message : err));
+      workbenchState.pollTimer = window.setTimeout(pollAgentState, 1500);
+    });
+}
+
+function copyRunLog() {
+  navigator.clipboard.writeText($('agent-log').value || '').catch(function() {});
+}
+
+function initEvents() {
+  $('source-file-button').addEventListener('click', function() {
+    $('source-file-input').click();
+  });
+  $('source-folder-button').addEventListener('click', function() {
+    $('source-folder-input').click();
+  });
+  $('source-file-input').addEventListener('change', function(event) {
+    var file = event.target.files && event.target.files[0];
+    if (file) {
+      workbenchState.selectedSourceFiles = [file];
+      $('source-path-input').value = relativePathForFile(file);
+      $('source-type-readout').value = inferSourceType(file.name);
+      autoImportSelectedFiles('selected browser file: ' + file.name);
+    }
+  });
+  $('source-folder-input').addEventListener('change', function(event) {
+    var files = Array.prototype.slice.call(event.target.files || []);
+    workbenchState.selectedSourceFiles = files;
+    autoImportSelectedFiles('selected browser folder bundle');
+  });
+  $('source-path-input').addEventListener('input', function() {
+    workbenchState.selectedSourceFiles = [];
+    $('source-type-readout').value = inferSourceType($('source-path-input').value);
+  });
+  $('import-button').addEventListener('click', importAsset);
+  $('orientation-save-button').addEventListener('click', saveOrientation);
+  $('orientation-reset-button').addEventListener('click', function() {
+    setOrientation({ roll: 0, pitch: 0, yaw: 0 });
+  });
+  ['roll', 'pitch', 'yaw'].forEach(function(axis) {
+    $(axis + '-range').addEventListener('input', function() {
+      $(axis + '-input').value = $(axis + '-range').value;
+      postOrientationToViewer();
+    });
+    $(axis + '-input').addEventListener('input', function() {
+      $(axis + '-range').value = $(axis + '-input').value;
+      postOrientationToViewer();
+    });
+  });
+  $('agent-run-button').addEventListener('click', runAgent);
+  $('object-id-input').addEventListener('input', function() {
+    var previousObjectId = workbenchState.lastObjectId || '';
+    syncObjectDerivedPaths(false);
+    syncInitialJsonObjectId(previousObjectId, currentObjectId());
+    workbenchState.lastObjectId = currentObjectId();
+  });
+  $('converter-root-input').addEventListener('input', function() {
+    workbenchState.converterRootAutoManaged = false;
+  });
+  $('source-root-agent-input').addEventListener('input', function() {
+    workbenchState.sourceRootAutoManaged = false;
+  });
+  $('initial-json-input').addEventListener('input', function() {
+    workbenchState.initialJsonPathAutoManaged = false;
+  });
+  $('out-dir-input').addEventListener('input', function() {
+    workbenchState.outDirAutoManaged = false;
+  });
+  $('initial-json-editor').addEventListener('input', function() {
+    workbenchState.initialJsonDirty = true;
+    workbenchState.initialJsonAutoManaged = false;
+  });
+  $('save-initial-json-button').addEventListener('click', function() {
+    saveManualInitialJson().catch(function() {});
+  });
+  $('load-template-json-button').addEventListener('click', function() {
+    loadInitialJsonTemplate().catch(function() {});
+  });
+  $('open-run-button').addEventListener('click', function() {
+    if (workbenchState.viewerUrl) {
+      window.open(workbenchState.viewerUrl, '_blank', 'noopener');
+    }
+  });
+  $('copy-run-log-button').addEventListener('click', copyRunLog);
+  $('viewer-frame').addEventListener('load', function() {
+    syncObjectFromViewerAsset();
+    window.setTimeout(postOrientationToViewer, 250);
+  });
+}
+
+initEvents();
+loadConfig();
+</script>
+</body>
+</html>
