@@ -1,0 +1,14 @@
+README.md
+pyproject.toml
+texture/__init__.py
+texture/__main__.py
+texture/align.py
+texture/cli.py
+texture/pipeline.py
+texture/types.py
+texture.egg-info/PKG-INFO
+texture.egg-info/SOURCES.txt
+texture.egg-info/dependency_links.txt
+texture.egg-info/entry_points.txt
+texture.egg-info/requires.txt
+texture.egg-info/top_level.txt

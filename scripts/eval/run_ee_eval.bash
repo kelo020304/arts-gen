@@ -36,6 +36,17 @@ SAMPLE_SELECTION_UNIT="${SAMPLE_SELECTION_UNIT:-objects}"
 ALLOWED_DATASETS="${ALLOWED_DATASETS:-phyx-verse,realappliance}"
 FORCE="${FORCE:-1}"
 OVERWRITE_SELECTION="${OVERWRITE_SELECTION:-1}"
+PART_SEG_CKPT="${PART_SEG_CKPT:-}"
+PART_JOINT_CANDIDATE_MODE="${PART_JOINT_CANDIDATE_MODE:-proposal}"
+PART_JOINT_REFINE="${PART_JOINT_REFINE:-0}"
+PART_JOINT_REFINE_ITERS="${PART_JOINT_REFINE_ITERS:-1}"
+PART_JOINT_REFINE_PAIRWISE="${PART_JOINT_REFINE_PAIRWISE:-3.0}"
+PART_JOINT_REFINE_MARGIN="${PART_JOINT_REFINE_MARGIN:-0.0}"
+PART_JOINT_REFINE_MARGIN_QUANTILE="${PART_JOINT_REFINE_MARGIN_QUANTILE:-0.01}"
+PART_JOINT_REFINE_NEIGHBORHOOD="${PART_JOINT_REFINE_NEIGHBORHOOD:-6}"
+PART_JOINT_REFINE_MIN_VOTE_GAIN="${PART_JOINT_REFINE_MIN_VOTE_GAIN:-0.0}"
+PART_JOINT_REFINE_PRESERVE_SMALL_CLASSES="${PART_JOINT_REFINE_PRESERVE_SMALL_CLASSES:-32}"
+PART_JOINT_SAVE_LOGITS="${PART_JOINT_SAVE_LOGITS:-0}"
 EXTRA_ARGS="${EXTRA_ARGS:-}"
 
 if [ "$SMOKE" = "1" ]; then
@@ -63,8 +74,19 @@ ARGS=(
     --selection-mode "$SELECTION_MODE"
     --sample-selection-unit "$SAMPLE_SELECTION_UNIT"
     --slat-token-source "$SLAT_TOKEN_SOURCE"
+    --part-joint-candidate-mode "$PART_JOINT_CANDIDATE_MODE"
+    --part-joint-refine-iters "$PART_JOINT_REFINE_ITERS"
+    --part-joint-refine-pairwise "$PART_JOINT_REFINE_PAIRWISE"
+    --part-joint-refine-margin "$PART_JOINT_REFINE_MARGIN"
+    --part-joint-refine-margin-quantile "$PART_JOINT_REFINE_MARGIN_QUANTILE"
+    --part-joint-refine-neighborhood "$PART_JOINT_REFINE_NEIGHBORHOOD"
+    --part-joint-refine-min-vote-gain "$PART_JOINT_REFINE_MIN_VOTE_GAIN"
+    --part-joint-refine-preserve-small-classes "$PART_JOINT_REFINE_PRESERVE_SMALL_CLASSES"
 )
 
+[ -n "$PART_SEG_CKPT" ] && ARGS+=(--part-seg-ckpt "$PART_SEG_CKPT")
+[ "$PART_JOINT_REFINE" = "1" ] && ARGS+=(--part-joint-refine) || ARGS+=(--no-part-joint-refine)
+[ "$PART_JOINT_SAVE_LOGITS" = "1" ] && ARGS+=(--part-joint-save-logits) || ARGS+=(--no-part-joint-save-logits)
 [ "$FORCE" = "1" ] && ARGS+=(--force)
 [ "$OVERWRITE_SELECTION" = "1" ] && ARGS+=(--overwrite-selection)
 
@@ -77,6 +99,7 @@ fi
 echo "[run_ee_eval] repo=$REPO_ROOT"
 echo "[run_ee_eval] out_dir=$OUT_DIR"
 echo "[run_ee_eval] limit=$LIMIT train=$TRAIN_COUNT held=$HELD_COUNT gpus=$GPUS token_source=$SLAT_TOKEN_SOURCE"
+echo "[run_ee_eval] part_seg_ckpt=${PART_SEG_CKPT:-<default>} joint_candidate=$PART_JOINT_CANDIDATE_MODE joint_refine=$PART_JOINT_REFINE save_logits=$PART_JOINT_SAVE_LOGITS"
 
 cd "$REPO_ROOT"
 "$PYTHON" "$REPO_ROOT/scripts/eval/run_eval.py" "${ARGS[@]}"

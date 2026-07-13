@@ -8,6 +8,7 @@ from typing import Any
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torch.utils.checkpoint import checkpoint
 
 from .point_mask_encoder import PointMaskEncoder, PointMaskEncoderOutput
 
@@ -276,6 +277,9 @@ class PromptablePartLatentSegNet(nn.Module):
         voxel_embedding_dim: int = 0,
         refine_mode: str = "token",
         spconv_depth: int = 4,
+        use_body_prompt: bool = False,
+        negative_prompt_channel: bool = False,
+        use_checkpoint: bool = False,
     ) -> None:
         super().__init__()
         self.latent_channels = int(latent_channels)
@@ -290,6 +294,9 @@ class PromptablePartLatentSegNet(nn.Module):
             raise ValueError(f"unknown refine_mode={refine_mode!r}; expected 'token' or 'spconv'")
         self.semantic_classes = int(semantic_classes)
         self.voxel_embedding_dim = max(0, int(voxel_embedding_dim))
+        self.use_body_prompt = bool(use_body_prompt)
+        self.negative_prompt_channel = bool(negative_prompt_channel)
+        self.use_checkpoint = bool(use_checkpoint)
         self.mask_encoder_name = str(mask_encoder)
         if self.mask_encoder_name == "cnn_grid":
             self.mask_encoder = MaskEncoder2D(dim=self.dim, num_views=num_views, mask_size=mask_size)
@@ -316,6 +323,11 @@ class PromptablePartLatentSegNet(nn.Module):
         self.register_buffer("coords3d", coords, persistent=False)
         self.stem = nn.Conv3d(self.latent_channels + (3 if self.use_xyz else 0), self.dim, 1)
         self.pos3d = nn.Parameter(torch.zeros(4096, self.dim))
+        if self.use_body_prompt:
+            self.body_prompt = nn.Parameter(torch.zeros(1, self.dim))
+        if self.negative_prompt_channel:
+            self.negative_prompt_proj = nn.Linear(self.dim, self.dim, bias=False)
+            nn.init.zeros_(self.negative_prompt_proj.weight)
         self.blocks = nn.ModuleList([TrunkBlock(dim=self.dim, heads=heads) for _ in range(self.depth)])
         self.head1_norm = nn.LayerNorm(self.dim)
         self.head1 = nn.Linear(self.dim, 1)
@@ -330,6 +342,8 @@ class PromptablePartLatentSegNet(nn.Module):
 
         _trunc_normal(self.stem)
         nn.init.trunc_normal_(self.pos3d, std=0.02)
+        if self.use_body_prompt:
+            nn.init.trunc_normal_(self.body_prompt, std=0.02)
         _trunc_normal(self.m_emb)
         _trunc_normal(self.head2_in)
         _trunc_normal(self.delta)
@@ -362,6 +376,39 @@ class PromptablePartLatentSegNet(nn.Module):
             if self.voxel_embedding_dim > 0:
                 self.voxel_embed_out = nn.Linear(self.dim, self.voxel_embedding_dim)
                 _trunc_normal(self.voxel_embed_out)
+            if self.use_body_prompt:
+                self.joint_query_norm = nn.LayerNorm(self.dim)
+                self.joint_query_self = nn.MultiheadAttention(self.dim, heads, batch_first=True)
+                self.joint_query_mlp_norm = nn.LayerNorm(self.dim)
+                self.joint_query_mlp = nn.Sequential(
+                    nn.Linear(self.dim, self.dim * 4),
+                    nn.GELU(),
+                    nn.Linear(self.dim * 4, self.dim),
+                )
+                self.joint_summary = nn.Sequential(
+                    nn.LayerNorm(self.dim),
+                    nn.Linear(self.dim, self.dim),
+                    nn.GELU(),
+                )
+                self.joint_voxel_norm = nn.LayerNorm(self.dim)
+                self.joint_kv_norm = nn.LayerNorm(self.dim)
+                self.joint_voxel_cross = nn.MultiheadAttention(self.dim, heads, batch_first=True)
+                self.joint_voxel_mlp_norm = nn.LayerNorm(self.dim)
+                self.joint_voxel_mlp = nn.Sequential(
+                    nn.Linear(self.dim, self.dim * 4),
+                    nn.GELU(),
+                    nn.Linear(self.dim * 4, self.dim),
+                )
+                self.joint_score_voxel_norm = nn.LayerNorm(self.dim)
+                self.joint_score_query_norm = nn.LayerNorm(self.dim)
+                self.joint_score_voxel = nn.Linear(self.dim, self.dim, bias=False)
+                self.joint_score_query = nn.Linear(self.dim, self.dim, bias=False)
+                self.joint_logit_scale = nn.Parameter(torch.tensor(math.log(10.0), dtype=torch.float32))
+                _trunc_normal(self.joint_query_mlp)
+                _trunc_normal(self.joint_summary)
+                _trunc_normal(self.joint_voxel_mlp)
+                _trunc_normal(self.joint_score_voxel)
+                _trunc_normal(self.joint_score_query)
         if self.semantic_classes > 0:
             self.semantic_norm = nn.LayerNorm(self.dim)
             self.semantic_head = nn.Linear(self.dim, self.semantic_classes)
@@ -372,6 +419,246 @@ class PromptablePartLatentSegNet(nn.Module):
         if isinstance(encoded, PointMaskEncoderOutput):
             return encoded.tokens, encoded.key_padding_mask, encoded.no_prompt_mask
         return encoded, None, None
+
+    def _encode_body_prompt(
+        self,
+        batch_size: int,
+        *,
+        device: torch.device,
+        dtype: torch.dtype,
+    ) -> tuple[torch.Tensor, torch.Tensor | None, torch.Tensor | None]:
+        if not self.use_body_prompt or not hasattr(self, "body_prompt"):
+            raise RuntimeError("body prompt requested but model was created with use_body_prompt=False")
+        token = self.body_prompt.to(device=device, dtype=dtype).view(1, 1, self.dim).expand(int(batch_size), -1, -1)
+        return token, None, None
+
+    def _encode_mixed_prompts(
+        self,
+        masks2d: torch.Tensor,
+        *,
+        negative_masks2d: torch.Tensor | None = None,
+        use_body_prompt: bool = False,
+        body_prompt_mask: torch.Tensor | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor | None, torch.Tensor | None]:
+        if bool(use_body_prompt):
+            return self._encode_body_prompt(
+                masks2d.shape[0],
+                device=masks2d.device,
+                dtype=masks2d.dtype,
+            )
+        mask_tokens, mask_token_padding_mask, no_prompt_mask = self._encode_masks(masks2d)
+        if negative_masks2d is not None:
+            if not self.negative_prompt_channel or not hasattr(self, "negative_prompt_proj"):
+                raise RuntimeError("negative prompt masks were provided but model was created with negative_prompt_channel=False")
+            neg = torch.as_tensor(negative_masks2d, device=masks2d.device, dtype=masks2d.dtype)
+            if tuple(neg.shape) != tuple(masks2d.shape):
+                raise ValueError(f"negative_masks2d shape {tuple(neg.shape)} must match masks2d {tuple(masks2d.shape)}")
+            neg_tokens, neg_padding_mask, _neg_no_prompt = self._encode_masks(neg)
+            neg_summary = self._pool_prompt_queries(neg_tokens, neg_padding_mask)
+            neg_context = self.negative_prompt_proj(neg_summary).to(dtype=mask_tokens.dtype)
+            mask_tokens = mask_tokens + neg_context.unsqueeze(1)
+        if self.use_body_prompt and hasattr(self, "body_prompt"):
+            mask_tokens = mask_tokens + self.body_prompt.to(device=mask_tokens.device, dtype=mask_tokens.dtype).sum() * 0.0
+        if body_prompt_mask is None:
+            return mask_tokens, mask_token_padding_mask, no_prompt_mask
+        body_mask = torch.as_tensor(body_prompt_mask, device=masks2d.device, dtype=torch.bool).flatten()
+        if body_mask.numel() != masks2d.shape[0]:
+            raise ValueError(f"body_prompt_mask expected [{masks2d.shape[0]}], got {tuple(body_mask.shape)}")
+        if not bool(body_mask.any()):
+            return mask_tokens, mask_token_padding_mask, no_prompt_mask
+        if not self.use_body_prompt or not hasattr(self, "body_prompt"):
+            raise RuntimeError("body prompt requested but model was created with use_body_prompt=False")
+        mask_tokens = mask_tokens.clone()
+        body_token = self.body_prompt.to(device=mask_tokens.device, dtype=mask_tokens.dtype).view(1, self.dim)
+        mask_tokens[body_mask] = 0.0
+        mask_tokens[body_mask, 0] = body_token
+        if mask_token_padding_mask is None:
+            mask_token_padding_mask = torch.zeros(
+                (masks2d.shape[0], mask_tokens.shape[1]),
+                dtype=torch.bool,
+                device=masks2d.device,
+            )
+        else:
+            mask_token_padding_mask = mask_token_padding_mask.clone()
+        mask_token_padding_mask[body_mask] = True
+        mask_token_padding_mask[body_mask, 0] = False
+        if no_prompt_mask is not None:
+            no_prompt_mask = no_prompt_mask.clone()
+            no_prompt_mask[body_mask] = False
+        return mask_tokens, mask_token_padding_mask, no_prompt_mask
+
+    def _run_trunk_block(
+        self,
+        block: TrunkBlock,
+        x: torch.Tensor,
+        mask_tokens: torch.Tensor,
+        *,
+        mask_token_padding_mask: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        if bool(self.use_checkpoint) and self.training:
+            def fn(x_in: torch.Tensor, mask_tokens_in: torch.Tensor) -> torch.Tensor:
+                return block(x_in, mask_tokens_in, mask_token_padding_mask=mask_token_padding_mask)
+
+            return checkpoint(fn, x, mask_tokens, use_reentrant=False)
+        return block(x, mask_tokens, mask_token_padding_mask=mask_token_padding_mask)
+
+    def _run_sparse_block(
+        self,
+        block: SparseTokenBlock,
+        x: torch.Tensor,
+        mask_tokens: torch.Tensor,
+        *,
+        key_padding_mask: torch.Tensor | None = None,
+        mask_token_padding_mask: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        if bool(self.use_checkpoint) and self.training:
+            def fn(x_in: torch.Tensor, mask_tokens_in: torch.Tensor) -> torch.Tensor:
+                return block(
+                    x_in,
+                    mask_tokens_in,
+                    key_padding_mask=key_padding_mask,
+                    mask_token_padding_mask=mask_token_padding_mask,
+                )
+
+            return checkpoint(fn, x, mask_tokens, use_reentrant=False)
+        return block(
+            x,
+            mask_tokens,
+            key_padding_mask=key_padding_mask,
+            mask_token_padding_mask=mask_token_padding_mask,
+        )
+
+    def _pool_prompt_queries(
+        self,
+        mask_tokens: torch.Tensor,
+        mask_token_padding_mask: torch.Tensor | None,
+    ) -> torch.Tensor:
+        if mask_tokens.dim() != 3:
+            raise ValueError(f"mask_tokens expected [K,T,D], got {tuple(mask_tokens.shape)}")
+        if mask_token_padding_mask is None:
+            return mask_tokens.mean(dim=1)
+        valid = ~mask_token_padding_mask.to(device=mask_tokens.device, dtype=torch.bool)
+        weights = valid.to(dtype=mask_tokens.dtype).unsqueeze(-1)
+        denom = weights.sum(dim=1).clamp_min(1.0)
+        return (mask_tokens * weights).sum(dim=1) / denom
+
+    def _refine_joint_queries(self, queries: torch.Tensor) -> torch.Tensor:
+        if not hasattr(self, "joint_query_self"):
+            raise RuntimeError("joint voxel forward requires use_body_prompt=True")
+        y, _ = self.joint_query_self(
+            self.joint_query_norm(queries),
+            self.joint_query_norm(queries),
+            self.joint_query_norm(queries),
+            need_weights=False,
+        )
+        queries = queries + y
+        queries = queries + self.joint_query_mlp(self.joint_query_mlp_norm(queries))
+        return queries
+
+    def _joint_queries_from_masks(
+        self,
+        part_masks2d: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None, torch.Tensor | None]:
+        if part_masks2d.dim() != 4:
+            raise ValueError(f"part_masks2d expected [K,V,H,W], got {tuple(part_masks2d.shape)}")
+        if part_masks2d.shape[0] <= 0:
+            raise ValueError("forward_joint_voxels requires at least one prompted part")
+        if not self.use_body_prompt or not hasattr(self, "body_prompt"):
+            raise RuntimeError("forward_joint_voxels requires model created with use_body_prompt=True")
+        mask_tokens, mask_token_padding_mask, no_prompt_mask = self._encode_masks(part_masks2d)
+        part_queries = self._pool_prompt_queries(mask_tokens, mask_token_padding_mask)
+        body_query = self.body_prompt.to(device=part_queries.device, dtype=part_queries.dtype).view(1, self.dim)
+        queries = torch.cat([body_query, part_queries], dim=0).unsqueeze(0)
+        queries = self._refine_joint_queries(queries)
+        return queries, mask_tokens, mask_token_padding_mask, no_prompt_mask
+
+    def _joint_voxel_features(
+        self,
+        feat: torch.Tensor,
+        full_occ: torch.Tensor,
+        coords: torch.Tensor,
+    ) -> torch.Tensor:
+        if coords.dim() != 2 or coords.shape[-1] != 3:
+            raise ValueError(f"coords expected [S,3], got {tuple(coords.shape)}")
+        cell = torch.div(coords.clamp(0, 63), 4, rounding_mode="floor")
+        flat_cell = cell[:, 0] * 256 + cell[:, 1] * 16 + cell[:, 2]
+        cell_feat = feat[0, flat_cell]
+        norm_coords = coords.to(dtype=full_occ.dtype) / 63.0 * 2.0 - 1.0
+        voxel_feat = cell_feat + self.voxel_pos(_fourier_3d(norm_coords.float()).to(dtype=cell_feat.dtype))
+        if hasattr(self, "voxel_patch"):
+            padded_occ = F.pad(full_occ.float(), (2, 2, 2, 2, 2, 2))
+            offsets = self.patch5_offsets.to(device=coords.device)
+            patch_idx = coords[:, None, :] + offsets[None, :, :]
+            patch = padded_occ[
+                torch.zeros((coords.shape[0], 1), dtype=torch.long, device=coords.device),
+                0,
+                patch_idx[..., 0],
+                patch_idx[..., 1],
+                patch_idx[..., 2],
+            ]
+            voxel_feat = voxel_feat + self.voxel_patch(patch.to(dtype=cell_feat.dtype))
+        return voxel_feat
+
+    def forward_joint_voxels(
+        self,
+        z_global: torch.Tensor,
+        part_masks2d: torch.Tensor,
+        candidate_cells: torch.Tensor,
+        full_occ: torch.Tensor,
+        *,
+        max_voxels_per_sample: int = 0,
+    ) -> dict[str, torch.Tensor]:
+        if not self.use_voxel_head:
+            raise RuntimeError("PromptablePartLatentSegNet was created without use_voxel_head=True")
+        if z_global.dim() != 5 or z_global.shape[0] != 1:
+            raise ValueError(f"forward_joint_voxels expects z_global [1,C,16,16,16], got {tuple(z_global.shape)}")
+        if candidate_cells.dim() != 4 or tuple(candidate_cells.shape) != (1, 16, 16, 16):
+            raise ValueError(f"candidate_cells expected [1,16,16,16], got {tuple(candidate_cells.shape)}")
+        if full_occ.dim() != 5 or tuple(full_occ.shape) != (1, 1, 64, 64, 64):
+            raise ValueError(f"full_occ expected [1,1,64,64,64], got {tuple(full_occ.shape)}")
+        with _nvtx_range("partseg/joint_query_encode"):
+            queries, mask_tokens, _mask_token_padding_mask, no_prompt_mask = self._joint_queries_from_masks(part_masks2d)
+        with _nvtx_range("partseg/joint_encode_cells"):
+            feat = self.encode_cells(z_global, queries)
+        with _nvtx_range("partseg/joint_voxel_candidates"):
+            cell_mask64 = candidate_cells.bool().unsqueeze(1)
+            cell_mask64 = cell_mask64.repeat_interleave(4, dim=2).repeat_interleave(4, dim=3).repeat_interleave(4, dim=4)
+            valid64 = (full_occ > 0.5) & cell_mask64
+            coords = torch.nonzero(valid64[0, 0], as_tuple=False).long()
+            if coords.numel() == 0:
+                raise ValueError("forward_joint_voxels got empty shared candidate voxels")
+            if int(max_voxels_per_sample) > 0 and coords.shape[0] > int(max_voxels_per_sample):
+                keep = int(max_voxels_per_sample)
+                ids = torch.linspace(0, coords.shape[0] - 1, keep, device=coords.device).round().long()
+                coords = coords.index_select(0, ids)
+        with _nvtx_range("partseg/joint_voxel_cross"):
+            h = self._joint_voxel_features(feat, full_occ, coords).unsqueeze(0)
+            cell_summary = self.joint_summary(feat.mean(dim=1, keepdim=True))
+            kv = torch.cat([queries, cell_summary], dim=1)
+            y, _ = self.joint_voxel_cross(
+                self.joint_voxel_norm(h),
+                self.joint_kv_norm(kv),
+                self.joint_kv_norm(kv),
+                need_weights=False,
+            )
+            h = h + y
+            h = h + self.joint_voxel_mlp(self.joint_voxel_mlp_norm(h))
+        with _nvtx_range("partseg/joint_voxel_output"):
+            voxel_score = self.joint_score_voxel(self.joint_score_voxel_norm(h[0]))
+            query_score = self.joint_score_query(self.joint_score_query_norm(queries[0]))
+            voxel_score = F.normalize(voxel_score.float(), dim=-1, eps=1.0e-6)
+            query_score = F.normalize(query_score.float(), dim=-1, eps=1.0e-6)
+            scale = self.joint_logit_scale.float().exp().clamp(1.0, 100.0)
+            logits = torch.matmul(voxel_score, query_score.transpose(0, 1)) * scale
+        return {
+            "joint_logits": logits,
+            "joint_coords": coords,
+            "joint_queries": queries,
+            "mask_tokens": mask_tokens,
+            "no_prompt_mask": no_prompt_mask,
+            "features": feat,
+            "voxel_features": h[0],
+        }
 
     def encode_cells(
         self,
@@ -393,7 +680,7 @@ class PromptablePartLatentSegNet(nn.Module):
         x = self.stem(stem_in).flatten(2).transpose(1, 2).contiguous()
         x = x + self.pos3d.to(device=x.device, dtype=x.dtype).view(1, 4096, self.dim)
         for block in self.blocks:
-            x = block(x, mask_tokens, mask_token_padding_mask=mask_token_padding_mask)
+            x = self._run_trunk_block(block, x, mask_tokens, mask_token_padding_mask=mask_token_padding_mask)
         if x.shape != (b, 4096, self.dim):
             raise RuntimeError(f"unexpected cell feature shape {tuple(x.shape)}")
         return x
@@ -408,7 +695,23 @@ class PromptablePartLatentSegNet(nn.Module):
         candidate_cells: torch.Tensor | None = None,
         full_occ: torch.Tensor | None = None,
         max_voxels_per_sample: int = 0,
+        negative_masks2d: torch.Tensor | None = None,
+        use_body_prompt: bool = False,
+        body_prompt_mask: torch.Tensor | None = None,
+        joint_voxels: bool = False,
     ) -> dict[str, torch.Tensor]:
+        if bool(joint_voxels):
+            if candidate_cells is None:
+                raise ValueError("candidate_cells is required when joint_voxels=True")
+            if full_occ is None:
+                raise ValueError("full_occ is required when joint_voxels=True")
+            return self.forward_joint_voxels(
+                z_global,
+                masks2d,
+                candidate_cells,
+                full_occ,
+                max_voxels_per_sample=max_voxels_per_sample,
+            )
         if candidate_cells is not None:
             if full_occ is None:
                 raise ValueError("full_occ is required when candidate_cells is provided")
@@ -418,11 +721,19 @@ class PromptablePartLatentSegNet(nn.Module):
                 candidate_cells,
                 full_occ,
                 max_voxels_per_sample=max_voxels_per_sample,
+                negative_masks2d=negative_masks2d,
+                use_body_prompt=bool(use_body_prompt),
+                body_prompt_mask=body_prompt_mask,
             )
         if empty_code is None:
             raise ValueError("empty_code is required for latent forward")
         with _nvtx_range("partseg/mask_encode"):
-            mask_tokens, mask_token_padding_mask, no_prompt_mask = self._encode_masks(masks2d)
+            mask_tokens, mask_token_padding_mask, no_prompt_mask = self._encode_mixed_prompts(
+                masks2d,
+                negative_masks2d=negative_masks2d,
+                use_body_prompt=bool(use_body_prompt),
+                body_prompt_mask=body_prompt_mask,
+            )
         with _nvtx_range("partseg/encode_cells"):
             feat = self.encode_cells(z_global, mask_tokens, mask_token_padding_mask=mask_token_padding_mask)
         m_logit = self.head1(self.head1_norm(feat)).squeeze(-1)
@@ -444,7 +755,7 @@ class PromptablePartLatentSegNet(nn.Module):
         m_embedding = self.m_emb(m_flat.unsqueeze(-1).float())
         h = self.head2_in(torch.cat([feat, m_embedding], dim=-1))
         for block in self.head2_blocks:
-            h = block(h, mask_tokens, mask_token_padding_mask=mask_token_padding_mask)
+            h = self._run_trunk_block(block, h, mask_tokens, mask_token_padding_mask=mask_token_padding_mask)
         delta_flat = self.delta(self.head2_norm(h))
         delta = delta_flat.transpose(1, 2).reshape(z_global.shape[0], self.latent_channels, 16, 16, 16)
         m = m_flat.view(z_global.shape[0], 1, 16, 16, 16)
@@ -474,6 +785,9 @@ class PromptablePartLatentSegNet(nn.Module):
         full_occ: torch.Tensor,
         *,
         max_voxels_per_sample: int = 0,
+        negative_masks2d: torch.Tensor | None = None,
+        use_body_prompt: bool = False,
+        body_prompt_mask: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor | list[torch.Tensor]]:
         if not self.use_voxel_head:
             raise RuntimeError("PromptablePartLatentSegNet was created without use_voxel_head=True")
@@ -482,7 +796,12 @@ class PromptablePartLatentSegNet(nn.Module):
         if full_occ.dim() != 5 or tuple(full_occ.shape[1:]) != (1, 64, 64, 64):
             raise ValueError(f"full_occ expected [B,1,64,64,64], got {tuple(full_occ.shape)}")
 
-        mask_tokens, mask_token_padding_mask, no_prompt_mask = self._encode_masks(masks2d)
+        mask_tokens, mask_token_padding_mask, no_prompt_mask = self._encode_mixed_prompts(
+            masks2d,
+            negative_masks2d=negative_masks2d,
+            use_body_prompt=bool(use_body_prompt),
+            body_prompt_mask=body_prompt_mask,
+        )
         feat = self.encode_cells(z_global, mask_tokens, mask_token_padding_mask=mask_token_padding_mask)
         m_logit = self.head1(self.head1_norm(feat)).squeeze(-1)
         semantic_logits = None
@@ -566,7 +885,8 @@ class PromptablePartLatentSegNet(nn.Module):
             with _nvtx_range("partseg/voxel_refine_token"):
                 h = tokens
                 for block in self.voxel_blocks:
-                    h = block(
+                    h = self._run_sparse_block(
+                        block,
                         h,
                         mask_tokens,
                         key_padding_mask=pad_mask,
@@ -606,6 +926,7 @@ class PromptablePartLatentSegNet(nn.Module):
                 h = tokens.new_zeros((bsz, max_len, self.dim))
         with _nvtx_range("partseg/voxel_output"):
             logits = self.voxel_out(self.voxel_norm(h)).squeeze(-1)
+            logits = logits + m_logit.sum() * 0.0
             logits = logits.masked_fill(pad_mask, -30.0)
         out = {
             "mask_tokens": mask_tokens,

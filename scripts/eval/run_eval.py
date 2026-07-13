@@ -26,7 +26,7 @@ from scripts.eval.tasks import ee_0617  # noqa: E402
 
 
 DEFAULT_LOCAL_PART_SEG_CKPT = Path(
-    "/mnt/robot-data-lab/jzh/art-gen/ckpt/part-prompt-seg/part_promptable_seg_full_S_0616-1/ckpts/step_50000.pt"
+    "/robot/data-lab/jzh/art-gen/ckpts/part-prompt-seg/part_promptable_seg_full_S_0618-1/ckpts/step_100000.pt"
 )
 DEFAULT_LOCAL_SS_FLOW_CKPT = Path(
     "/mnt/robot-data-lab/jzh/art-gen/ckpt/tre-ss-flow/tre-ss-concat-0616-1/ckpts/denoiser_ema0.999_step0012500.pt"
@@ -66,12 +66,54 @@ def parse_args() -> argparse.Namespace:
     ee.add_argument("--tile-size", type=int, default=240)
     ee.add_argument("--panel-cols", type=int, default=4)
     ee.add_argument("--export-mujoco", action="store_true")
+    ee.add_argument("--export-usd", action="store_true")
+    ee.add_argument("--mujoco-textured-assets", action="store_true")
+    ee.add_argument(
+        "--mujoco-appearance-source",
+        choices=("obj-vertex-color", "mesh-vertex-texture", "gaussian-texture"),
+        default="obj-vertex-color",
+    )
+    ee.add_argument("--mujoco-texture-size", type=int, default=512)
+    ee.add_argument("--mujoco-texture-render-resolution", type=int, default=512)
+    ee.add_argument("--mujoco-texture-nviews", type=int, default=30)
+    ee.add_argument("--mujoco-texture-mode", choices=("fast", "opt"), default="fast")
+    ee.add_argument("--fill-hidden-vertex-colors", action="store_true")
+    ee.add_argument("--hidden-color-fill-out-dir", type=Path, default=None)
+    ee.add_argument("--hidden-color-fill-dark-threshold", type=float, default=0.18)
     ee.add_argument(
         "--slat-token-source",
         choices=("live", "cache"),
         default="live",
         help="Use live for the accepted 0617 EE path; cache is diagnostic only.",
     )
+    ee.add_argument(
+        "--part-cc-filter",
+        action="store_true",
+        help="Post-process predicted part voxels by moving small remote connected components back to body.",
+    )
+    ee.add_argument("--part-cc-min-component-voxels", type=int, default=32)
+    ee.add_argument("--part-cc-min-component-fraction", type=float, default=0.05)
+    ee.add_argument("--part-cc-max-component-distance", type=int, default=2)
+    ee.add_argument("--part-cc-max-large-component-distance", type=int, default=None)
+    ee.add_argument("--part-joint-candidate-mode", choices=("proposal", "full_occ"), default="proposal")
+    ee.add_argument("--part-joint-refine", action=argparse.BooleanOptionalAction, default=False)
+    ee.add_argument("--part-joint-refine-iters", type=int, default=1)
+    ee.add_argument("--part-joint-refine-pairwise", type=float, default=3.0)
+    ee.add_argument("--part-joint-refine-margin", type=float, default=0.0)
+    ee.add_argument("--part-joint-refine-margin-quantile", type=float, default=0.01)
+    ee.add_argument("--part-joint-refine-neighborhood", type=int, choices=(6, 18, 26), default=6)
+    ee.add_argument("--part-joint-refine-min-vote-gain", type=float, default=0.0)
+    ee.add_argument("--part-joint-refine-preserve-small-classes", type=int, default=32)
+    ee.add_argument("--part-joint-save-logits", action=argparse.BooleanOptionalAction, default=False)
+    ee.add_argument(
+        "--part-t0-filter",
+        action="store_true",
+        help="Enable T0 joint argmax + competition-band smoothing + CC part boundary postprocess.",
+    )
+    ee.add_argument("--part-t0-part-threshold", type=float, default=0.5)
+    ee.add_argument("--part-t0-margin-threshold", type=float, default=0.35)
+    ee.add_argument("--part-t0-smooth-iters", type=int, default=1)
+    ee.add_argument("--part-t0-disable-cc", action="store_true")
     ee.add_argument("--force", action="store_true")
     ee.add_argument("--force-stage", action="store_true")
     ee.add_argument("--force-export", action="store_true")

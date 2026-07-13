@@ -32,6 +32,16 @@ class CkptConfig:
     slat_steps: int = 25
     slat_seed: int = 42
     part_voxel_threshold: float = 0.5
+    part_joint_candidate_mode: str = "proposal"  # proposal | full_occ ablation
+    part_joint_refine: bool = False
+    part_joint_refine_iters: int = 1
+    part_joint_refine_pairwise: float = 3.0
+    part_joint_refine_margin: float = 0.0
+    part_joint_refine_margin_quantile: float = 0.01
+    part_joint_refine_neighborhood: int = 6
+    part_joint_refine_min_vote_gain: float = 0.0
+    part_joint_refine_preserve_small_classes: int = 32
+    part_joint_save_logits: bool = False
     output_dir: str | Path | None = None
 
 
@@ -42,6 +52,11 @@ class ReconstructInput:
     part_info: Mapping[str, Any] | str | Path | None = None
     ckpt_config: CkptConfig | Mapping[str, Any] | None = None
 ```
+
+The `part_joint_*` controls require a checkpoint trained with
+`args.joint_seg=true`. Enabling refinement/logit export, or selecting
+`full_occ`, with a legacy independent or latent checkpoint is an error rather
+than a silent no-op. The guarded refiner remains disabled by default.
 
 `part_info` 可选；如果提供，推荐沿用数据盘 `reconstruction/part_info/{object_id}/part_info.json` 的结构，其中 `parts[*].label` 是 mask 中的正整数 label，`parts[*].type`/key 作为 part 名称来源。
 

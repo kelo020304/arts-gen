@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "arts_recon_web_shared"
+version = "0.1.0"
+description = "Reusable FastAPI + frontend building blocks for the arts-recon web apps."
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "python-multipart",
+    "numpy",
+    "pillow",
+]
+
+[tool.setuptools.packages.find]
+include = ["shared*"]
+
+[tool.setuptools.package-data]
+shared = ["frontend/**/*"]

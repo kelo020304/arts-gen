@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Generate Mask · SAM 3</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    .two-col { display: flex; gap: 1rem; align-items: stretch; }
+    #left { flex: 0 0 320px; display: flex; flex-direction: column; gap: 0.75rem; }
+    #right { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
+    #canvas-wrap { position: relative; flex: 1; min-height: 480px; background: #111; }
+    #canvas-wrap canvas { max-width: 100%; height: auto; display: block; }
+    .controls { display: flex; gap: 0.5rem; align-items: center; }
+    #score-display { font-family: monospace; opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <header><h1>Generate Mask (SAM 3)</h1></header>
+  <main class="two-col">
+    <section id="left">
+      <div id="upload"></div>
+      <div class="controls">
+        <button id="clear">Clear box</button>
+        <button id="save" disabled>Save mask</button>
+        <span id="score-display"></span>
+      </div>
+      <div id="status"></div>
+      <div id="downloads" hidden>
+        <h3>Outputs</h3>
+        <ul id="dl-list"></ul>
+      </div>
+    </section>
+    <section id="right">
+      <div id="canvas-wrap">
+        <canvas id="image-layer"></canvas>
+        <canvas id="mask-layer"  style="position:absolute; left:0; top:0; opacity:0.45; pointer-events:none;"></canvas>
+        <canvas id="box-layer"   style="position:absolute; left:0; top:0; pointer-events:auto; cursor:crosshair;"></canvas>
+      </div>
+      <div id="meta"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import {setupUpload} from "/static/upload.js";
+    import {setupStatus} from "/static/progress.js";
+
+    const upload = setupUpload(document.getElementById("upload"), [
+      {name: "image", accept: "image/*", label: "Image to segment"},
+    ]);
+    const status = setupStatus(document.getElementById("status"));
+
+    let sessionId = null;
+    let imgW = 0, imgH = 0;
+    let lastBox = null;           // {cx, cy, w, h} normalized — what we send to API
+    let lastBoxPixels = null;     // [x0, y0, x1, y1] in image pixels — for overlay redraw
+    let posPoints = [];           // [{x, y}] in image pixels — alt+click "include" points
+    let negPoints = [];           // [{x, y}] in image pixels — shift+click "exclude" points
+
+    const imageLayer = document.getElementById("image-layer");
+    const maskLayer  = document.getElementById("mask-layer");
+    const boxLayer   = document.getElementById("box-layer");
+    const imageCtx = imageLayer.getContext("2d");
+    const maskCtx  = maskLayer.getContext("2d");
+    const boxCtx   = boxLayer.getContext("2d");
+
+    function sizeCanvases(w, h) {
+      for (const c of [imageLayer, maskLayer, boxLayer]) { c.width = w; c.height = h; }
+    }
+
+    upload.onChange(async () => {
+      if (!upload.isComplete()) return;
+      status.set("running", "Uploading image and embedding…");
+      const fd = upload.getFormData();
+      const r = await fetch("/api/upload", {method: "POST", body: fd});
+      if (!r.ok) { status.set("error", `HTTP ${r.status}: ${await r.text()}`); return; }
+      const result = await r.json();
+      sessionId = result.session_id;
+      imgW = result.width; imgH = result.height;
+      sizeCanvases(imgW, imgH);
+      const img = new Image();
+      img.onload = () => {
+        imageCtx.drawImage(img, 0, 0, imgW, imgH);
+        status.set("ok", "Image ready. Drag a box; shift+click to exclude regions.");
+      };
+      img.src = result.image_url + "?t=" + Date.now();
+      lastBox = null; lastBoxPixels = null; posPoints = []; negPoints = [];
+      maskCtx.clearRect(0, 0, imgW, imgH);
+      boxCtx.clearRect(0, 0, imgW, imgH);
+      document.getElementById("save").disabled = true;
+      document.getElementById("score-display").textContent = "";
+      document.getElementById("downloads").hidden = true;
+    });
+
+    let dragging = false;
+    let dragStart = null;
+    let dragMoved = false;        // tracks whether mousedown turned into an actual drag
+
+    function eventToImageCoords(ev) {
+      const rect = boxLayer.getBoundingClientRect();
+      const scaleX = imgW / rect.width;
+      const scaleY = imgH / rect.height;
+      return {
+        x: (ev.clientX - rect.left) * scaleX,
+        y: (ev.clientY - rect.top)  * scaleY,
+      };
+    }
+
+    function redrawOverlays(liveBox) {
+      boxCtx.clearRect(0, 0, imgW, imgH);
+      const b = liveBox || lastBoxPixels;
+      if (b) {
+        const [x0, y0, x1, y1] = b;
+        boxCtx.strokeStyle = "#22d3ee";
+        boxCtx.lineWidth = Math.max(2, Math.min(imgW, imgH) * 0.003);
+        boxCtx.strokeRect(Math.min(x0,x1), Math.min(y0,y1), Math.abs(x1-x0), Math.abs(y1-y0));
+      }
+      // Click markers — green dot+ for positive, red dot+X for negative.
+      const r = Math.max(7, Math.min(imgW, imgH) * 0.012);
+      const drawMarker = (p, fill, glyph) => {
+        boxCtx.fillStyle = fill;
+        boxCtx.strokeStyle = "#fff";
+        boxCtx.lineWidth = Math.max(2, r * 0.35);
+        boxCtx.beginPath();
+        boxCtx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        boxCtx.fill();
+        boxCtx.stroke();
+        boxCtx.strokeStyle = "#fff";
+        boxCtx.lineWidth = Math.max(2, r * 0.32);
+        const a = r * 0.45;
+        boxCtx.beginPath();
+        if (glyph === "+") {
+          boxCtx.moveTo(p.x - a, p.y); boxCtx.lineTo(p.x + a, p.y);
+          boxCtx.moveTo(p.x, p.y - a); boxCtx.lineTo(p.x, p.y + a);
+        } else {  // "x"
+          boxCtx.moveTo(p.x - a, p.y - a); boxCtx.lineTo(p.x + a, p.y + a);
+          boxCtx.moveTo(p.x - a, p.y + a); boxCtx.lineTo(p.x + a, p.y - a);
+        }
+        boxCtx.stroke();
+      };
+      for (const p of posPoints) drawMarker(p, "#16a34a", "+");
+      for (const p of negPoints) drawMarker(p, "#ef4444", "x");
+    }
+
+    boxLayer.addEventListener("mousedown", (e) => {
+      if (!sessionId) return;
+      if (e.shiftKey || e.altKey) return;     // modifier-clicks are points, not drag
+      dragging = true;
+      dragMoved = false;
+      dragStart = eventToImageCoords(e);
+    });
+    boxLayer.addEventListener("mousemove", (e) => {
+      if (!dragging) return;
+      const cur = eventToImageCoords(e);
+      dragMoved = dragMoved
+        || Math.abs(cur.x - dragStart.x) > 2
+        || Math.abs(cur.y - dragStart.y) > 2;
+      redrawOverlays([dragStart.x, dragStart.y, cur.x, cur.y]);
+    });
+    boxLayer.addEventListener("mouseup", async (e) => {
+      if (!dragging) return;
+      dragging = false;
+      const cur = eventToImageCoords(e);
+      const x0 = Math.max(0, Math.min(imgW, Math.min(dragStart.x, cur.x)));
+      const y0 = Math.max(0, Math.min(imgH, Math.min(dragStart.y, cur.y)));
+      const x1 = Math.max(0, Math.min(imgW, Math.max(dragStart.x, cur.x)));
+      const y1 = Math.max(0, Math.min(imgH, Math.max(dragStart.y, cur.y)));
+      if (!dragMoved || x1 - x0 < 4 || y1 - y0 < 4) {
+        redrawOverlays();   // wipe the live drag rect
+        return;
+      }
+      // New box invalidates any prior refinement clicks.
+      posPoints = []; negPoints = [];
+      lastBoxPixels = [x0, y0, x1, y1];
+      lastBox = {
+        cx: ((x0 + x1) / 2) / imgW,
+        cy: ((y0 + y1) / 2) / imgH,
+        w:  (x1 - x0) / imgW,
+        h:  (y1 - y0) / imgH,
+      };
+      redrawOverlays();
+      await runPredict();
+    });
+
+    // Alt+click = positive (include); Shift+click = negative (exclude).
+    boxLayer.addEventListener("click", async (e) => {
+      if (!sessionId) return;
+      const isPos = e.altKey, isNeg = e.shiftKey;
+      if (!isPos && !isNeg) return;
+      if (!lastBox) {
+        status.set("warn", "Draw a box first, then alt+click to include or shift+click to exclude regions.");
+        return;
+      }
+      const p = eventToImageCoords(e);
+      if (isPos) posPoints.push(p); else negPoints.push(p);
+      redrawOverlays();
+      await runPredict();
+    });
+
+    async function runPredict() {
+      if (!sessionId || !lastBox) return;
+      const np = negPoints.length, pp = posPoints.length;
+      const refineMsg = (pp || np)
+        ? ` (${pp ? `+${pp}` : ""}${pp && np ? " " : ""}${np ? `−${np}` : ""})`
+        : "";
+      status.set("running", `SAM 3 predicting${refineMsg}…`);
+      const body = {
+        ...lastBox,
+        pos_points: posPoints.map(p => [p.x / imgW, p.y / imgH]),
+        neg_points: negPoints.map(p => [p.x / imgW, p.y / imgH]),
+      };
+      const r = await fetch(`/api/sessions/${sessionId}/predict`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) { status.set("error", `HTTP ${r.status}: ${await r.text()}`); return; }
+      const result = await r.json();
+      const maskImg = new Image();
+      maskImg.onload = () => {
+        maskCtx.clearRect(0, 0, imgW, imgH);
+        // Server returns RGBA with red baked in and alpha=mask; one draw, done.
+        maskCtx.drawImage(maskImg, 0, 0, imgW, imgH);
+      };
+      maskImg.onerror = (e) => {
+        status.set("error", "mask image failed to load — check console");
+        console.error("mask load failed", e);
+      };
+      maskImg.src = result.mask_png_base64;
+      document.getElementById("save").disabled = false;
+      document.getElementById("score-display").textContent =
+        `score: ${result.score.toFixed(3)}`;
+      const tip = (posPoints.length || negPoints.length)
+        ? "Alt+click to add more, shift+click to exclude, or click Save."
+        : "Alt+click to add parts, shift+click to exclude. Or click Save.";
+      status.set("ok", `Mask ready (score ${result.score.toFixed(3)}). ${tip}`);
+    }
+
+    document.getElementById("clear").addEventListener("click", () => {
+      boxCtx.clearRect(0, 0, imgW, imgH);
+      maskCtx.clearRect(0, 0, imgW, imgH);
+      lastBox = null; lastBoxPixels = null; posPoints = []; negPoints = [];
+      document.getElementById("save").disabled = true;
+      document.getElementById("score-display").textContent = "";
+    });
+
+    document.getElementById("save").addEventListener("click", async () => {
+      if (!sessionId || !lastBox) return;
+      status.set("running", "Saving to disk…");
+      const body = {
+        ...lastBox,
+        pos_points: posPoints.map(p => [p.x / imgW, p.y / imgH]),
+        neg_points: negPoints.map(p => [p.x / imgW, p.y / imgH]),
+      };
+      const r = await fetch(`/api/sessions/${sessionId}/save`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) { status.set("error", `HTTP ${r.status}: ${await r.text()}`); return; }
+      const result = await r.json();
+      const list = document.getElementById("dl-list");
+      list.innerHTML = "";
+      for (const [name, url] of Object.entries(result.files)) {
+        const li = document.createElement("li");
+        const a = Object.assign(document.createElement("a"),
+                               {href: url, download: url.split("/").pop(), textContent: name});
+        li.appendChild(a); list.appendChild(li);
+      }
+      document.getElementById("downloads").hidden = false;
+      status.set("ok", `Saved. sha=${result.sha}`);
+    });
+  </script>
+</body>
+</html>

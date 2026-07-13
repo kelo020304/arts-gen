@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SuperSplat Viewer</title>
+    <script>
+      window.__fridgeWorkbenchRoot = (() => {
+        const path = window.location.pathname;
+        if (path.endsWith("/static/viewer.html")) return new URL("../", window.location.href).toString();
+        return new URL("./", window.location.href).toString();
+      })();
+      for (const href of ["static/vendor/supersplat/index.css", "static/css/workbench.css"]) {
+        const css = document.createElement("link");
+        css.rel = "stylesheet";
+        css.href = new URL(href, window.__fridgeWorkbenchRoot).toString();
+        document.head.appendChild(css);
+      }
+    </script>
+  </head>
+  <body class="viewerBody">
+    <div id="poster"></div>
+    <div id="ui" class="viewerUi">
+      <div id="loadingWrap" class="viewerLoading">
+        <span id="loadingText">0%</span>
+        <span id="loadingBar"></span>
+      </div>
+      <div id="controlsWrap" class="hidden">
+        <button id="arMode"></button>
+        <button id="vrMode"></button>
+        <button id="enterFullscreen"></button>
+        <button id="exitFullscreen"></button>
+        <button id="info"></button>
+        <button id="settings"></button>
+        <button id="orbitCamera"></button>
+        <button id="flyCamera"></button>
+        <button id="reset"></button>
+        <button id="frame"></button>
+        <button id="play"></button>
+        <button id="pause"></button>
+        <div id="buttonContainer"></div>
+        <div id="timelineContainer"><div id="handle"></div><span id="time"></span></div>
+        <div id="infoPanel" class="hidden">
+          <button id="desktopTab"></button>
+          <button id="touchTab"></button>
+          <div id="desktopInfoPanel"></div>
+          <div id="touchInfoPanel"></div>
+        </div>
+        <div id="settingsPanel" class="hidden">
+          <button id="hqOption"><span id="hqCheck"></span></button>
+          <button id="lqOption"><span id="lqCheck"></span></button>
+        </div>
+        <div id="joystickBase"><div id="joystick"></div></div>
+        <div id="tooltip"></div>
+      </div>
+    </div>
+    <pc-app id="pcapp" backend="webgl2" alpha="false" high-resolution="true">
+      <pc-entity id="viewerCamera" name="camera" position="0 0 3"></pc-entity>
+    </pc-app>
+    <div id="viewerStatus" class="viewerStatus">Loading 3DGS</div>
+    <script type="module">
+      import(new URL("static/js/viewer.js", window.__fridgeWorkbenchRoot).toString());
+    </script>
+  </body>
+</html>

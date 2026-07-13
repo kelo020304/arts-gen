@@ -10,7 +10,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 import torch
 
@@ -34,8 +34,8 @@ from scripts.train.part_promptable_seg.part_promptable_seg_utils import (  # noq
     rows_for_obj_ids,
 )
 
-DEFAULT_BASE_PACKED_V1 = Path("/mnt/robot-data-lab/jzh/art-gen/data/part_promptable_seg_packed_v1")
-DEFAULT_PACKED_V4 = Path(os.environ.get("PACKED_DIR", "/mnt/robot-data-lab/jzh/art-gen/data/part_promptable_seg_packed_v4"))
+DEFAULT_BASE_PACKED_V1 = Path("/robot/data-lab/jzh/art-gen/data/part_promptable_seg_packed_v1")
+DEFAULT_PACKED_V6 = Path(os.environ.get("PACKED_DIR", "/robot/data-lab/jzh/art-gen/data/part_promptable_seg_packed_v6"))
 PACK_COMPLETE_NAME = ".pack_complete"
 
 
@@ -259,6 +259,99 @@ def _shard_metadata(out_dir: Path, shard_entries: list[dict[str, Any]]) -> list[
     return out
 
 
+def _sample_part_row_key(sample: Mapping[str, Any]) -> str:
+    dataset_id = str(sample.get("dataset_id", "") or "")
+    prefix = f"{dataset_id}::" if dataset_id else ""
+    return f"{prefix}{sample['obj_id']}|{int(sample['angle_idx'])}|{sample['part_name']}"
+
+
+def _existing_resume_shards(out_dir: Path) -> list[tuple[int, Path]]:
+    shards = []
+    for path in sorted(Path(out_dir).glob("shard_*.pt")):
+        stem = path.stem
+        try:
+            shard_idx = int(stem.removeprefix("shard_"))
+        except ValueError as exc:
+            raise ValueError(f"unexpected shard name for resume: {path}") from exc
+        shards.append((shard_idx, path))
+    for expected, (shard_idx, path) in enumerate(shards):
+        if shard_idx != expected:
+            raise ValueError(f"resume requires contiguous shards from 0; expected {expected:06d}, got {path.name}")
+    return shards
+
+
+def _resume_state_from_shards(
+    *,
+    out_dir: Path,
+    rows: list[Any],
+    shard_size: int,
+) -> dict[str, Any]:
+    entries: list[dict[str, Any]] = []
+    shard_meta_entries: list[dict[str, Any]] = []
+    shard_items: list[dict[str, Any]] = []
+    resume_rows = 0
+    next_shard_idx = 0
+    shards = _existing_resume_shards(out_dir)
+    if not shards:
+        return {
+            "entries": entries,
+            "shard_meta_entries": shard_meta_entries,
+            "shard_items": shard_items,
+            "resume_rows": 0,
+            "next_shard_idx": 0,
+            "resume_shards": 0,
+        }
+    for pos, (shard_idx, path) in enumerate(shards):
+        try:
+            items = torch.load(path, map_location="cpu", weights_only=False)
+        except Exception as exc:
+            raise RuntimeError(f"failed to load existing resume shard {path}") from exc
+        if not isinstance(items, list):
+            raise ValueError(f"{path} expected list payload for resume, got {type(items).__name__}")
+        if len(items) > int(shard_size):
+            raise ValueError(f"{path} has {len(items)} rows, exceeds shard_size={int(shard_size)}")
+        is_last = pos == len(shards) - 1
+        if not is_last and len(items) != int(shard_size):
+            raise ValueError(f"{path} is not the last shard but has {len(items)} rows, expected {int(shard_size)}")
+        shard_name = path.name
+        for local_idx, sample in enumerate(items):
+            global_idx = resume_rows + local_idx
+            if global_idx >= len(rows):
+                raise ValueError(f"existing resume shards contain more rows than current split rows at {path}:{local_idx}")
+            expected_key = part_row_key(rows[global_idx])
+            got_key = _sample_part_row_key(sample)
+            if got_key != expected_key:
+                raise ValueError(
+                    f"resume shard prefix mismatch at global row {global_idx}: "
+                    f"{path.name}[{local_idx}] got {got_key!r}, expected {expected_key!r}"
+                )
+            entries.append({
+                "key": expected_key,
+                "shard": shard_name,
+                "index": int(local_idx),
+                "dataset_id": rows[global_idx].dataset_id,
+                "obj_id": rows[global_idx].obj_id,
+                "angle_idx": int(rows[global_idx].angle_idx),
+                "part_name": rows[global_idx].part_name,
+                "raw_count": int(rows[global_idx].raw_count),
+            })
+        resume_rows += len(items)
+        if is_last and len(items) < int(shard_size):
+            shard_items = items
+            next_shard_idx = shard_idx
+        else:
+            shard_meta_entries.append({"name": shard_name, "rows": len(items)})
+            next_shard_idx = shard_idx + 1
+    return {
+        "entries": entries,
+        "shard_meta_entries": shard_meta_entries,
+        "shard_items": shard_items,
+        "resume_rows": int(resume_rows),
+        "next_shard_idx": int(next_shard_idx),
+        "resume_shards": len(shards),
+    }
+
+
 def _is_realappliance_row(row: Any) -> bool:
     text = " ".join(
         str(getattr(row, name, "") or "")
@@ -297,7 +390,7 @@ def _select_limited_rows(rows: list[Any], limit: int) -> list[Any]:
 def pack_promptable_seg_dataset(
     *,
     split_json: Path = OFFICIAL_SPLIT_PATH,
-    out_dir: Path = DEFAULT_PACKED_V4,
+    out_dir: Path = DEFAULT_PACKED_V6,
     shard_size: int = 512,
     limit: int = 0,
     include_heldout: bool = True,
@@ -308,6 +401,7 @@ def pack_promptable_seg_dataset(
     base_packed_dir: Path | None = None,
     progress_every: int = 1000,
     source_fp: str | None = None,
+    resume: bool = False,
 ) -> dict[str, Any]:
     split_json = Path(split_json)
     out_dir = Path(out_dir)
@@ -315,6 +409,8 @@ def pack_promptable_seg_dataset(
     base_packed_dir = optional_path_arg(base_packed_dir)
     if base_packed_dir is not None and Path(base_packed_dir).resolve() == out_dir.resolve():
         raise ValueError(f"base_packed_dir must differ from out_dir, got {out_dir}")
+    if bool(resume) and bool(overwrite):
+        raise ValueError("resume and overwrite cannot both be true")
     if index_path.exists() and not bool(overwrite):
         raise FileExistsError(f"{index_path} exists; pass overwrite=True to rebuild")
     if bool(overwrite):
@@ -355,7 +451,9 @@ def pack_promptable_seg_dataset(
     if int(mask_audit_views) > 0:
         audit = audit_promptable_mask_visibility(base, rows, expected_views=int(mask_audit_views))
         records = list(audit["records"])
-        undetectable = [rec for rec in records if rec["classification"] == "undetectable_selected_views"]
+        undetectable_selected = [rec for rec in records if rec["classification"] == "undetectable_selected_views"]
+        undetectable_all = [rec for rec in records if rec["classification"] == "undetectable_all_views"]
+        undetectable = [*undetectable_selected, *undetectable_all]
         absent = [rec for rec in records if rec["classification"] == "label_absent_all_views"]
         label_absent_ratio = len(absent) / max(1, len(records))
         mask_audit_meta = {
@@ -366,6 +464,8 @@ def pack_promptable_seg_dataset(
         mask_audit_meta.update({
             "filter_undetectable": bool(filter_undetectable),
             "undetectable_rows": len(undetectable),
+            "undetectable_selected_rows": len(undetectable_selected),
+            "undetectable_all_views_rows": len(undetectable_all),
             "label_absent_rows": len(absent),
         })
         audit_dir = out_dir / "mask_audit"
@@ -373,10 +473,13 @@ def pack_promptable_seg_dataset(
         (audit_dir / "records.json").write_text(json.dumps(records, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         (audit_dir / "summary.json").write_text(json.dumps(mask_audit_meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         (audit_dir / "undetectable.json").write_text(json.dumps(undetectable, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        (audit_dir / "undetectable_selected_views.json").write_text(json.dumps(undetectable_selected, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        (audit_dir / "undetectable_all_views.json").write_text(json.dumps(undetectable_all, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         (audit_dir / "label_absent_all_views.json").write_text(json.dumps(absent, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         print(
             f"[pack-mask-audit] total={len(records)} visible={audit['class_counts'].get('visible_selected_views', 0)} "
-            f"undetectable={len(undetectable)} ({len(undetectable) / max(1, len(records)):.4%}) "
+            f"undetectable={len(undetectable)} ({len(undetectable) / max(1, len(records)):.4%}; "
+            f"selected={len(undetectable_selected)} all_views={len(undetectable_all)}) "
             f"label_absent={len(absent)} ({label_absent_ratio:.4%}) out={audit_dir}",
             flush=True,
         )
@@ -402,16 +505,32 @@ def pack_promptable_seg_dataset(
 
     packed_source = PackedSourceReader(base_packed_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    entries = []
-    shard_items = []
+    entries: list[dict[str, Any]] = []
+    shard_items: list[dict[str, Any]] = []
     shard_meta_entries: list[dict[str, Any]] = []
     shard_idx = 0
+    start_idx = 0
+    resume_shards = 0
+    if bool(resume):
+        state = _resume_state_from_shards(out_dir=out_dir, rows=rows, shard_size=int(shard_size))
+        entries = state["entries"]
+        shard_items = state["shard_items"]
+        shard_meta_entries = state["shard_meta_entries"]
+        shard_idx = int(state["next_shard_idx"])
+        start_idx = int(state["resume_rows"])
+        resume_shards = int(state["resume_shards"])
+        print(
+            f"[pack-resume] validated shards={resume_shards} rows={start_idx} "
+            f"next_shard={shard_idx:06d} partial_rows={len(shard_items)}",
+            flush=True,
+        )
     t0 = time.time()
     total_rows = len(rows)
     source_fp = source_fp or source_fingerprint(split_json, base_packed_dir=base_packed_dir, pack_limit=limit)
     reused_base_rows = 0
     materialized_rows = 0
-    for idx, row in enumerate(rows):
+    for idx in range(start_idx, len(rows)):
+        row = rows[idx]
         packed_sample = None
         if _is_legacy_physx_row(row):
             packed_sample = packed_source.get(_legacy_part_row_key(row))
@@ -470,6 +589,9 @@ def pack_promptable_seg_dataset(
         "shard_size": int(shard_size),
         "pack_limit": int(limit),
         "base_packed_dir": str(base_packed_dir) if base_packed_dir is not None else None,
+        "resume": bool(resume),
+        "resume_existing_shards": int(resume_shards),
+        "resume_existing_rows": int(start_idx),
         "reused_base_rows": int(reused_base_rows),
         "materialized_rows": int(materialized_rows),
         "semantic_vocab": semantic_vocab,
@@ -492,6 +614,9 @@ def pack_promptable_seg_dataset(
         "split_json": str(split_json),
         "base_packed_dir": str(base_packed_dir) if base_packed_dir is not None else None,
         "source_fingerprint": source_fp,
+        "resume": bool(resume),
+        "resume_existing_shards": int(resume_shards),
+        "resume_existing_rows": int(start_idx),
         "created_unix": time.time(),
         "elapsed_s": elapsed,
         "size_bytes": int(size_bytes),
@@ -541,6 +666,7 @@ def ensure_packed_dataset(
             base_packed_dir=base_packed_dir,
             progress_every=progress_every,
             source_fp=fp,
+            resume=False,
         ),
     }
 
@@ -548,7 +674,7 @@ def ensure_packed_dataset(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--split-json", type=Path, default=OFFICIAL_SPLIT_PATH)
-    parser.add_argument("--out-dir", type=Path, default=DEFAULT_PACKED_V4)
+    parser.add_argument("--out-dir", type=Path, default=DEFAULT_PACKED_V6)
     parser.add_argument("--shard-size", type=int, default=512)
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--include-heldout", action=argparse.BooleanOptionalAction, default=True)
@@ -558,6 +684,7 @@ def main() -> int:
     parser.add_argument("--fail-label-absent-ratio", type=float, default=0.02)
     parser.add_argument("--base-packed-dir", type=optional_path_arg, default=None)
     parser.add_argument("--progress-every", type=int, default=1000)
+    parser.add_argument("--resume", action=argparse.BooleanOptionalAction, default=False)
     args = parser.parse_args()
 
     pack_promptable_seg_dataset(
@@ -572,6 +699,7 @@ def main() -> int:
         fail_label_absent_ratio=float(args.fail_label_absent_ratio),
         base_packed_dir=args.base_packed_dir,
         progress_every=int(args.progress_every),
+        resume=bool(args.resume),
     )
     return 0
 

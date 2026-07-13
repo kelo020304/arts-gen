@@ -302,6 +302,37 @@ class PartSSLatentFlowDataset(Dataset):
             f"part_name={part['part_name']} target_slot={target_slot}"
         )
 
+    def _part_original_labels(self, sample: Dict[str, Any], part: Dict[str, Any]) -> List[int]:
+        target_part = dict(part.get("target_part", {}))
+        labels: List[int] = []
+        seen: set[int] = set()
+
+        def add(value: Any) -> None:
+            if value is None:
+                return
+            if isinstance(value, (list, tuple, set)):
+                for item in value:
+                    add(item)
+                return
+            label = int(value)
+            if label not in seen:
+                labels.append(label)
+                seen.add(label)
+
+        add(target_part.get("original_label"))
+        for key in ("prompt_original_labels", "merged_original_labels", "target_original_labels"):
+            add(target_part.get(key))
+            add(part.get(key))
+
+        target_slot = int(part["target_slot"])
+        for orig_label, local_slot in sample.get("label_remap", {}).items():
+            if int(local_slot) == target_slot:
+                add(orig_label)
+
+        if not labels:
+            labels.append(self._part_original_label(sample, part))
+        return labels
+
     def _compute_part_token_weights(
         self,
         sample: Dict[str, Any],
@@ -331,13 +362,13 @@ class PartSSLatentFlowDataset(Dataset):
         )
         target_h = patch_grid_h * patch_h
         target_w = patch_grid_w * patch_w
-        original_labels = [self._part_original_label(sample, part) for part in parts]
         mask_paths = self._iter_mask_paths(sample)
         if len(mask_paths) != len(sample["view_indices"]):
             raise ValueError(
                 f"len(mask_paths)={len(mask_paths)} does not match "
                 f"len(view_indices)={len(sample['view_indices'])}"
             )
+        original_label_sets = [self._part_original_labels(sample, part) for part in parts]
 
         for row, mask_path in enumerate(mask_paths):
             if not mask_path.is_file():
@@ -352,8 +383,8 @@ class PartSSLatentFlowDataset(Dataset):
             mask_2d = self._pad_crop_mask(mask_2d, target_h, target_w)
             cells = mask_2d.reshape(patch_grid_h, patch_h, patch_grid_w, patch_w)
             cells = cells.transpose(0, 2, 1, 3).reshape(patch_count, patch_h * patch_w)
-            for part_idx, original_label in enumerate(original_labels):
-                counts = (cells == int(original_label)).sum(axis=1).astype(np.float32, copy=False)
+            for part_idx, labels in enumerate(original_label_sets):
+                counts = np.isin(cells, np.asarray(labels, dtype=cells.dtype)).sum(axis=1).astype(np.float32, copy=False)
                 weights[part_idx, row, patch_start:patch_start + patch_count] = torch.from_numpy(counts)
 
         flat = weights.reshape(len(parts), -1)

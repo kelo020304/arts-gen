@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "texture"
+version = "0.1.0"
+description = "Clean API + CLI wrapping SAM 3D Objects Stage B (voxel coords + image+mask -> Gaussian splat + mesh)."
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "torch",
+    "hydra-core",
+    "omegaconf",
+    "Pillow",
+    "trimesh",
+]
+
+[project.scripts]
+texture = "texture.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["texture*"]

@@ -13,6 +13,7 @@ if str(TRELLIS) not in sys.path:
     sys.path.insert(0, str(TRELLIS))
 from scripts.train.part_promptable_seg.train_part_promptable_seg import (  # noqa: E402
     ObjectGroupBatchSampler,
+    PackedObjectGroupBatchSampler,
     embedding_partition_loss,
     pairwise_overlap_from_coords,
     partition_coords_by_embedding,
@@ -26,6 +27,13 @@ class Row:
     angle_idx: int
     part_name: str
     dataset_id: str = "ds"
+    raw_count: int = 1
+
+
+@dataclass(frozen=True)
+class PackedDatasetStub:
+    rows: list[Row]
+    entries_for_rows: list[dict[str, str]]
 
 
 def _batch(n: int = 2) -> dict:
@@ -158,3 +166,44 @@ def test_object_group_batch_sampler_groups_same_object_angle_rows() -> None:
     for group in ([0, 1, 2], [3, 4], [5]):
         assert any(all(idx in batch for idx in group) for batch in batches)
     assert all(len(batch) <= 4 for batch in batches)
+
+
+def test_packed_object_group_batch_sampler_balances_distributed_batches() -> None:
+    rows = [
+        Row("a", 0, "body", raw_count=40),
+        Row("a", 0, "drawer_0", raw_count=10),
+        Row("b", 0, "body", raw_count=30),
+        Row("b", 0, "door_0", raw_count=15),
+        Row("c", 1, "body", raw_count=20),
+        Row("c", 1, "knob_0", raw_count=5),
+    ]
+    dataset = PackedDatasetStub(
+        rows=rows,
+        entries_for_rows=[
+            {"shard": "s0", "key": "a0"},
+            {"shard": "s0", "key": "a1"},
+            {"shard": "s1", "key": "b0"},
+            {"shard": "s1", "key": "b1"},
+            {"shard": "s2", "key": "c0"},
+            {"shard": "s2", "key": "c1"},
+        ],
+    )
+
+    batches_by_rank = [
+        list(
+            PackedObjectGroupBatchSampler(
+                dataset,
+                batch_size=2,
+                shuffle=True,
+                seed=7,
+                num_replicas=8,
+                rank=rank,
+            )
+        )
+        for rank in range(8)
+    ]
+
+    assert all(len(batches) == 1 for batches in batches_by_rank)
+    assert all(len(batch) <= 2 for batches in batches_by_rank for batch in batches)
+    for group in ([0, 1], [2, 3], [4, 5]):
+        assert any(all(idx in batch for idx in group) for batches in batches_by_rank for batch in batches)

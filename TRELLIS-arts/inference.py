@@ -158,10 +158,29 @@ def _resolve(path: str) -> str:
 
 
 def _load_state_dict(ckpt_abs: str, device: str = "cuda") -> Dict[str, torch.Tensor]:
+    ckpt_abs = _resolve_weight_pointer(ckpt_abs)
     if ckpt_abs.endswith(".safetensors"):
         from safetensors.torch import load_file
         return load_file(ckpt_abs)
     return torch.load(ckpt_abs, map_location=device, weights_only=True)
+
+
+def _resolve_weight_pointer(path: str) -> str:
+    """Resolve local text pointer files used to avoid duplicating big weights."""
+    if not os.path.isfile(path) or os.path.getsize(path) > 4096:
+        return path
+    try:
+        with open(path, "rb") as f:
+            payload = f.read(4096)
+        text = payload.decode("utf-8").strip()
+    except UnicodeDecodeError:
+        return path
+    if not text or "\n" in text or "\r" in text:
+        return path
+    if not (text.endswith(".safetensors") or text.endswith(".pt") or text.endswith(".pth")):
+        return path
+    resolved = text if os.path.isabs(text) else os.path.normpath(os.path.join(os.path.dirname(path), text))
+    return resolved if os.path.isfile(resolved) else path
 
 
 def _load_json(path: str) -> Dict[str, Any]:
@@ -176,28 +195,56 @@ def _load_json(path: str) -> Dict[str, Any]:
 def _load_dinov2() -> torch.nn.Module:
     """Load DINOv2-L/14-reg from vendored files; never require network."""
     torch_home = os.environ.get("TORCH_HOME", os.path.expanduser("~/.cache/torch"))
+    shared_torch_home = os.path.join(
+        "/robot/data-lab/jzh/art-gen/third-party-weights",
+        "trellis",
+        "shared",
+        "torch_hub",
+    )
     candidate_repos = [
         os.path.join(PROJECT_ROOT, "pretrained", "torch_hub", "hub", "facebookresearch_dinov2_main"),
         os.path.join(PROJECT_ROOT, "pretrained", "dinov2"),
         os.path.join(torch_home, "hub", "facebookresearch_dinov2_main"),
+        os.path.join(shared_torch_home, "hub", "facebookresearch_dinov2_main"),
     ]
     dinov2_repo = next(
         (repo for repo in candidate_repos if os.path.isfile(os.path.join(repo, "hubconf.py"))),
         "",
     )
-    if not dinov2_repo:
-        raise FileNotFoundError(
-            "DINOv2 local repo not found; expected one of: "
-            + ", ".join(candidate_repos)
+    if dinov2_repo:
+        if dinov2_repo not in sys.path:
+            sys.path.insert(0, dinov2_repo)
+        model = torch.hub.load(dinov2_repo, "dinov2_vitl14_reg", source="local", pretrained=False)
+    else:
+        candidate_package_roots = [
+            os.environ.get("DINOV2_PACKAGE_ROOT", ""),
+            os.path.join(PROJECT_ROOT, "sam3d_cu118_src_deps", "MoGe", "moge", "model"),
+            os.path.join(PROJECT_ROOT, "sam3d_cu118_deps", "MoGe", "moge", "model"),
+        ]
+        dinov2_package_root = next(
+            (
+                root for root in candidate_package_roots
+                if root and os.path.isfile(os.path.join(root, "dinov2", "hub", "backbones.py"))
+            ),
+            "",
         )
-    if dinov2_repo not in sys.path:
-        sys.path.insert(0, dinov2_repo)
-    model = torch.hub.load(dinov2_repo, "dinov2_vitl14_reg", source="local", pretrained=False)
+        if not dinov2_package_root:
+            raise FileNotFoundError(
+                "DINOv2 local repo/package not found; expected one of: "
+                + ", ".join(candidate_repos + candidate_package_roots)
+            )
+        if dinov2_package_root not in sys.path:
+            sys.path.insert(0, dinov2_package_root)
+        from dinov2.hub.backbones import dinov2_vitl14_reg
+        model = dinov2_vitl14_reg(pretrained=False)
 
     candidate_weights = [
+        os.environ.get("DINOV2_WEIGHTS", ""),
         os.path.join(PROJECT_ROOT, "pretrained", "torch_hub", "checkpoints", "dinov2_vitl14_reg4_pretrain.pth"),
         os.path.join(torch_home, "hub", "checkpoints", "dinov2_vitl14_reg4_pretrain.pth"),
         os.path.join(torch_home, "checkpoints", "dinov2_vitl14_reg4_pretrain.pth"),
+        os.path.join(shared_torch_home, "hub", "checkpoints", "dinov2_vitl14_reg4_pretrain.pth"),
+        os.path.join(shared_torch_home, "checkpoints", "dinov2_vitl14_reg4_pretrain.pth"),
     ]
     weights_path = next((path for path in candidate_weights if os.path.isfile(path)), "")
     if not weights_path:
@@ -406,7 +453,7 @@ def _load_slat_decoder(ckpt_path: str) -> torch.nn.Module:
     which already implements the json+safetensors load (D-09 / D-30).
     """
     from trellis.utils.arts.slat_render_utils import load_slat_decoder
-    ckpt_abs = _resolve(ckpt_path)
+    ckpt_abs = _resolve_weight_pointer(_resolve(ckpt_path))
     # load_slat_decoder takes a basename without extension.
     basename = ckpt_abs[:-len(".safetensors")] if ckpt_abs.endswith(".safetensors") else ckpt_abs
     return load_slat_decoder(basename)
@@ -418,7 +465,7 @@ def _load_slat_vae_decoder(ckpt_path: str) -> torch.nn.Module:
     import json
     from safetensors.torch import load_file
 
-    ckpt_abs = _resolve(ckpt_path)
+    ckpt_abs = _resolve_weight_pointer(_resolve(ckpt_path))
     base, ext = os.path.splitext(ckpt_abs)
     config_path = base + ".json"
     weights_path = ckpt_abs if ext == ".safetensors" else base + ".safetensors"
@@ -833,7 +880,7 @@ def run_slat_flow(images: List[Image.Image], coords: torch.Tensor,
     if not images:
         raise ValueError("run_slat_flow requires at least 1 image")
 
-    tokens = _images_to_tokens(images)              # [V,1370,1024]
+    tokens = _images_to_tokens(images)              # [V,1374,1024]
     V, T, D = tokens.shape
     return run_slat_flow_from_tokens(tokens.reshape(V * T, D), coords, ckpt_path, num_steps=num_steps, seed=seed)
 

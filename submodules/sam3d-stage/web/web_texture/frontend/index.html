@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Stage B · Texture</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header><h1>Texture (Stage B)</h1></header>
+  <main class="two-col">
+    <section id="left">
+      <div id="upload"></div>
+      <details>
+        <summary>Optional uploads (pose.json, pointmap_unnorm.npy)</summary>
+        <div id="upload-aux"></div>
+      </details>
+      <div class="controls">
+        <label>Seed override: <input id="seed" type="number" placeholder="(from pose.json)"></label>
+        <fieldset>
+          <legend>Formats</legend>
+          <label><input type="checkbox" value="gaussian" checked> Gaussian</label>
+          <label><input type="checkbox" value="mesh" checked> Mesh GLB</label>
+        </fieldset>
+        <label><input id="postopt" type="checkbox"> Layout postopt (requires pointmap)</label>
+        <button id="run">Generate</button>
+      </div>
+      <div id="status"></div>
+      <div id="downloads" hidden>
+        <h3>Outputs</h3>
+        <ul id="dl-list"></ul>
+      </div>
+    </section>
+    <section id="right">
+      <div class="viewer-toggle">
+        <button id="show-gs" class="active">Splat</button>
+        <button id="show-mesh">Mesh</button>
+      </div>
+      <div id="splat-host" style="width:100%; flex:1; min-height:480px; display:block;"></div>
+      <canvas id="mesh-canvas" style="width:100%; flex:1; min-height:480px; display:none;"></canvas>
+      <div id="meta"></div>
+    </section>
+  </main>
+  <script type="module">
+    import {setupUpload} from "/static/upload.js?v=4";
+    import {setupStatus} from "/static/progress.js?v=4";
+    import {createGsViewer} from "/static/gs_viewer.js?v=4";
+    import {createSuperSplatViewer} from "/static/supersplat_viewer.js?v=5";
+    import {createAxesOverlay} from "/static/axes_overlay.js?v=8";
+
+    const upload = setupUpload(document.getElementById("upload"), [
+      {name: "surface_npy", accept: ".npy",    label: "surface.npy"},
+      {name: "image",       accept: "image/*", label: "RGB image"},
+      {name: "mask",        accept: "image/*", label: "Mask PNG"},
+    ]);
+    const uploadAux = setupUpload(document.getElementById("upload-aux"), [
+      {name: "pose_json",           accept: ".json", label: "pose.json (optional)"},
+      {name: "pointmap_unnorm_npy", accept: ".npy",  label: "pointmap_unnorm.npy (only for layout postopt)"},
+    ]);
+    const status = setupStatus(document.getElementById("status"));
+    const splatViewer = createSuperSplatViewer(document.getElementById("splat-host"));
+    const meshViewer  = createGsViewer(document.getElementById("mesh-canvas"));
+
+    // XYZ axes gizmo overlay (lives in #right, reads whichever viewer is active)
+    let currentMode = "gs";
+    createAxesOverlay(
+      document.getElementById("right"),
+      () => currentMode === "gs"   ? splatViewer.getCameraQuat()
+          : currentMode === "mesh" ? meshViewer.getCameraQuat()
+          : null,
+    );
+
+    let lastResult = null;
+    document.getElementById("run").addEventListener("click", async () => {
+      if (!upload.isComplete()) {
+        status.set("warn", "Please pick surface.npy + image + mask first.");
+        return;
+      }
+      const fd = upload.getFormData();
+      const aux = uploadAux.getFormData();
+      for (const [k, v] of aux.entries()) fd.append(k, v);
+
+      const seedVal = document.getElementById("seed").value;
+      if (seedVal !== "") fd.append("seed", seedVal);
+
+      const fmts = Array.from(document.querySelectorAll("fieldset input:checked"))
+                        .map(el => el.value);
+      fd.append("formats", fmts.join(","));
+      fd.append("with_layout_postprocess",
+                document.getElementById("postopt").checked ? "true" : "false");
+
+      status.set("running", "Running Stage B on remote GPU…");
+      const r = await fetch("/api/run", {method: "POST", body: fd});
+      if (!r.ok) { status.set("error", `HTTP ${r.status}: ${await r.text()}`); return; }
+      lastResult = await r.json();
+      showViewer("gs");
+
+      const list = document.getElementById("dl-list");
+      list.innerHTML = "";
+      for (const [name, url] of Object.entries(lastResult.files)) {
+        const li = document.createElement("li");
+        const a = Object.assign(document.createElement("a"), {href: url, download: name, textContent: name});
+        li.appendChild(a); list.appendChild(li);
+      }
+      document.getElementById("downloads").hidden = false;
+      document.getElementById("meta").textContent =
+        `${lastResult.num_gaussians ?? '?'} gaussians · sha ${lastResult.sha}`;
+      status.set("ok", "Done.");
+    });
+
+    const splatHost = document.getElementById("splat-host");
+    const meshCanvas = document.getElementById("mesh-canvas");
+
+    async function showViewer(which) {
+      if (!lastResult) return;
+      document.getElementById("show-gs").classList.toggle("active", which === "gs");
+      document.getElementById("show-mesh").classList.toggle("active", which === "mesh");
+      if (which === "gs" && lastResult.files.splat_ply) {
+        currentMode = "gs";
+        splatHost.style.display = "block";
+        meshCanvas.style.display = "none";
+        meshViewer.clear();
+        await splatViewer.loadPly(lastResult.files.splat_ply);
+      } else if (which === "mesh" && lastResult.files.mesh_glb) {
+        currentMode = "mesh";
+        splatHost.style.display = "none";
+        meshCanvas.style.display = "block";
+        splatViewer.clear();
+        await meshViewer.loadGlb(lastResult.files.mesh_glb);
+      }
+    }
+    document.getElementById("show-gs").addEventListener("click", () => showViewer("gs"));
+    document.getElementById("show-mesh").addEventListener("click", () => showViewer("mesh"));
+  </script>
+</body>
+</html>

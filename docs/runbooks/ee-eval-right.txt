@@ -1,0 +1,486 @@
+# 0617 EE Eval 正确跑法
+
+本文档是 0617 accepted end-to-end eval 的权威入口。重构后不要再找旧的
+`scripts/dev/run_0617_*`；真实逻辑已经搬进 `scripts/eval/`。
+
+## 一句话结论
+
+正确链路是：
+
+```text
+rendered multi-view images
+  -> SS flow concat 生成 whole-object 64^3 voxel
+  -> PromptablePartLatentSegNet 生成 per-part voxel
+  -> SLat flow 对 whole object 只跑一次
+  -> whole voxel 扣掉所有 part voxel 得到 body_without_parts
+  -> 按 body_without_parts / part voxel coords 从 whole SLat 切出各组件
+  -> decode_slat 输出 mesh + gaussian
+```
+
+关键约束：
+
+- `SS_FLOW_FUSION_MODE=concat`。
+- `--slat-token-source live` 是正式口径；`cache` 只允许诊断。
+- 每个 object 的 SLat flow 只调用一次，summary 里必须是 `"flow_calls": 1`。
+- part 输出来自 whole SLat sparse coords 的子集，不再对每个 part 单独跑 SLat flow。
+- 图上必须同时包含 `overall`、去除所有 part 后的 `body_without_parts`、以及每个 part。
+- 默认 part-seg ckpt 是 S 架构 `part_promptable_seg_full_S_0618-1`
+  step 100000。0706 起后续 ee-eval 默认按这个权重走。
+  0706 old-vs-M+CC A/B 结论仍保留：M step30000 + CC 未胜出，不能替换当前 S 默认。
+
+## 当前代码入口
+
+标准 bash：
+
+```bash
+bash scripts/eval/run_ee_eval.bash
+```
+
+统一 Python CLI：
+
+```bash
+/opt/venvs/arts-gen/bin/python scripts/eval/run_eval.py ee_0617
+```
+
+实际实现文件：
+
+```text
+scripts/eval/run_eval.py
+scripts/eval/tasks/ee_0617.py
+scripts/eval/tasks/ee_0617_batch.py
+scripts/eval/tasks/ee_0617_single.py
+```
+
+旧路径 `scripts/dev/run_0617_128ee_batch.py` 已废弃，不应再被 import 或调用。
+
+## 环境
+
+默认 Python：
+
+```bash
+export ARTS_GEN_ENV_DIR=/opt/venvs/arts-gen
+export PYTHON=/opt/venvs/arts-gen/bin/python
+```
+
+必要环境变量：
+
+```bash
+export PYTHONPATH=/root/code/arts-gen:/root/code/arts-gen/TRELLIS-arts:${PYTHONPATH:-}
+export SPCONV_ALGO=native
+export ATTN_BACKEND=sdpa
+export SPARSE_ATTN_BACKEND=sdpa
+export SS_FLOW_FUSION_MODE=concat
+```
+
+`scripts/eval/run_ee_eval.bash` 会设置这些默认值。
+
+## 默认数据与权重
+
+数据配置：
+
+```text
+/root/code/arts-gen/TRELLIS-arts/configs/arts/part_ss_latent_flow/part_ss_latent_flow.yaml
+```
+
+split：
+
+```text
+/mnt/robot-data-lab/jzh/art-gen-output/part_promptable_seg/manifests/split_official_verse_realappliance_v3.json
+```
+
+v5 packed index：
+
+```text
+/robot/data-lab/jzh/art-gen/data/part_promptable_seg_packed_v5/index.json
+```
+
+part-seg：
+
+```text
+/robot/data-lab/jzh/art-gen/ckpts/part-prompt-seg/part_promptable_seg_full_S_0618-1/ckpts/step_100000.pt
+```
+
+SS flow：
+
+```text
+/mnt/robot-data-lab/jzh/art-gen-output/tre-ss-concat-0616-1/ckpts/denoiser_ema0.999_step0012500.pt
+```
+
+SS decoder：
+
+```text
+/root/code/arts-gen/pretrained/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16.safetensors
+```
+
+SLat flow：
+
+```text
+/root/code/arts-gen/pretrained/TRELLIS-image-large/ckpts/slat_flow_img_dit_L_64l8p2_fp16.safetensors
+```
+
+SLat mesh decoder：
+
+```text
+/root/code/arts-gen/pretrained/TRELLIS-image-large/ckpts/slat_dec_mesh_swin8_B_64l8m256c_fp16.safetensors
+```
+
+SLat gaussian decoder：
+
+```text
+/root/code/arts-gen/pretrained/TRELLIS-image-large/ckpts/slat_dec_gs_swin8_B_64l8gs32_fp16.safetensors
+```
+
+Gaussian render preset：
+
+```text
+scaleq997_abs020_scale0.75_opx1.5
+max_scale_quantile=0.997
+max_scale_abs=0.020
+scale_mult=0.75
+opacity_mult=1.5
+kernel_size=0.05
+```
+
+## Smoke 跑法
+
+单 object smoke：
+
+```bash
+SMOKE=1 GPUS=0 bash scripts/eval/run_ee_eval.bash
+```
+
+等价 Python 命令：
+
+```bash
+PYTHONPATH=/root/code/arts-gen:/root/code/arts-gen/TRELLIS-arts \
+SPCONV_ALGO=native ATTN_BACKEND=sdpa SPARSE_ATTN_BACKEND=sdpa SS_FLOW_FUSION_MODE=concat \
+/opt/venvs/arts-gen/bin/python scripts/eval/run_eval.py ee_0617 \
+  --out-dir /mnt/robot-data-lab/jzh/art-gen/ee-eval/smoke-$(date -u +%Y%m%dT%H%M%SZ) \
+  --limit 1 \
+  --train-count 1 \
+  --held-count 0 \
+  --gpus 0 \
+  --selection-mode samples \
+  --sample-selection-unit objects \
+  --slat-token-source live \
+  --force \
+  --overwrite-selection
+```
+
+通过标准：
+
+- `metrics.json` 里 `"status": "passed"`。
+- `done=1`、`failed=0`。
+- 至少有一组 `*__summary.json`、`*__gaussian.png`、`*__mesh.png`、`*__diagnostic.png`。
+- summary 中：
+  - `status == "done"`
+  - `ss_stage.fusion_mode == "concat"`
+  - `part_stage.backend == "promptable_seg"`
+  - `slat_stage.flow_calls == 1`
+  - `slat_stage.condition.token_source == "live_official_trellis_rgba"`
+  - `components` 里存在 `label == "body_without_parts"`
+
+## 128 object 标准跑法
+
+```bash
+OUT_DIR=/mnt/robot-data-lab/jzh/art-gen/ee-eval/ee_0617_128_$(date -u +%Y%m%dT%H%M%SZ) \
+LIMIT=128 TRAIN_COUNT=85 HELD_COUNT=43 GPUS=0,1,2,3 \
+SLAT_TOKEN_SOURCE=live \
+bash scripts/eval/run_ee_eval.bash
+```
+
+说明：
+
+- `LIMIT=128`。
+- `TRAIN_COUNT=85`、`HELD_COUNT=43` 是原 0617 128ee 口径。
+- 默认 `SELECTION_MODE=samples`、`SAMPLE_SELECTION_UNIT=objects`，会从 v5 packed index 确定性选 unique object 的第一个有效 angle。
+
+## 1024 object 跑法
+
+```bash
+OUT_DIR=/mnt/robot-data-lab/jzh/art-gen/ee-eval/0626-1024-1 \
+LIMIT=1024 TRAIN_COUNT=1024 HELD_COUNT=0 GPUS=0,1,2,3 \
+SLAT_TOKEN_SOURCE=live \
+bash scripts/eval/run_ee_eval.bash
+```
+
+如需重新覆盖已有 selection：
+
+```bash
+OUT_DIR=/mnt/robot-data-lab/jzh/art-gen/ee-eval/0626-1024-1 \
+LIMIT=1024 TRAIN_COUNT=1024 HELD_COUNT=0 GPUS=0,1,2,3 \
+SLAT_TOKEN_SOURCE=live OVERWRITE_SELECTION=1 FORCE=1 \
+bash scripts/eval/run_ee_eval.bash
+```
+
+## 大批量 pair 跑法
+
+v5 packed index 在当前 allowed datasets 下有 4535 个 unique object、38926 个 unique obj-angle
+pair。需要超过 4535 个样本时不能继续用 `SAMPLE_SELECTION_UNIT=objects`，应使用 pair 口径：
+
+```bash
+OUT_DIR=/mnt/robot-data-lab/jzh/art-gen/ee-eval/0701-38926-1 \
+LIMIT=38926 TRAIN_COUNT=38926 HELD_COUNT=0 GPUS=0,1,2,3,4,5,6,7 \
+ALLOWED_DATASETS=phyx-verse,realappliance,physx-0511-drawer-door \
+SAMPLE_SELECTION_UNIT=pairs \
+SLAT_TOKEN_SOURCE=live \
+EXTRA_ARGS="--split-json /robot/data-lab/jzh/art-gen/ee-eval/0701-38926-1/_inputs/split_from_packed_index.json --packed-index /robot/data-lab/jzh/art-gen/data/part_promptable_seg_packed_v5/index.json --force-export" \
+bash scripts/eval/run_ee_eval.bash
+```
+
+pair selection 是 round-robin：先覆盖所有 eligible object 的第一个可用 angle，再覆盖第二个
+angle，以此类推。因此前 9000 个 pair 会覆盖全部 4535 个 unique object，而不是连续跑同一个
+object 的多个 angle。
+
+## 输出结构
+
+输出目录是 flat layout：
+
+```text
+OUT_DIR/
+├── metrics.json
+├── failed_objects.json
+├── run_config.json
+├── selection.json
+├── progress_batch.jsonl
+├── _batch_logs/
+├── _platform_runs/
+├── DATASET__OBJECT__angle_00__summary.json
+├── DATASET__OBJECT__angle_00__gaussian.png
+├── DATASET__OBJECT__angle_00__mesh.png
+└── DATASET__OBJECT__angle_00__diagnostic.png
+```
+
+`_platform_runs/` 里保存 SS 和 part stage 中间产物：
+
+```text
+voxel.npz
+ss_latent.npy
+parts/part_XX_voxel.npz
+```
+
+加 `--export-mujoco` 时会额外输出：
+
+```text
+DATASET__OBJECT__angle_00__mujoco/
+├── DATASET__OBJECT__angle_00.xml
+└── assets/*.obj
+```
+
+注意：默认 ee-eval 产出的是 mesh/Gaussian preview PNG 和 summary；MuJoCo OBJ/XML 是可选导出。
+隐藏面黑色顶点的经典补色后处理可用 `--fill-hidden-vertex-colors` 打开，默认关闭；它要求同时加
+`--export-mujoco`，只改导出的组件 OBJ 顶点色，不改几何和核心 eval 指标。
+mesh/Gaussian panel 的组件顺序是 `overall`、`body_without_parts`、然后是各个 part。
+`body_without_parts` 是 whole-object voxel 扣掉所有 part voxel union 后，从同一次 whole SLat
+中按 residual coords 切出来再 decode 的结果。
+
+### MuJoCo R-D 后处理要求
+
+RealAppliance drawer/滑动件交付必须走 R-D MuJoCo 导出，不允许回退到 raw/GT mesh：
+
+- mesh 本身按 decoded SLat mesh / decoded Gaussian baked texture 输出；不要为了方向改写 OBJ 顶点。
+- Z-forward 修正在 MJCF root object body 上完成：
+  `<body name="object" pos="0 0 0" quat="0.707106781 0.707106781 0 0">`
+- RealAppliance `joint=prismatic` 或 `joint_type=B` 的预测 part 在自己的 body 内写 slide joint：
+  `axis="0 0 1"`，不要用 `0 1 0` 或 `0 -1 0` 作为最终方案。
+- drawer body 内必须有 inertial、slide joint、drawer geom；如果浅蓝/玻璃窗还在 body mesh 里，
+  从预测 body textured OBJ 按浅蓝连通分量切出 `assets/drawer_glass/mesh.obj`，并把
+  `drawer_glass_visual` 挂到 drawer body 下，确保 qpos 变化时同 body 同运动。
+- 写 actuator/keyframe：
+  `<position name="a_00_00" joint="j_00_00" ctrlrange="0 0.381732268" ctrllimited="true" kp="5" />`
+  和 `<key name="home" qpos="0" />`。
+- 删除所有 floor/blue checker 内容；MJCF 不写 `blue_checker` texture/material，不写
+  `<geom name="floor" ... />`。
+- MuJoCo 3.2.7 兼容：不要写 `inertia="shell"`；默认 visual geom 用 group 0；compiler/statistic：
+  `<compiler angle="radian" meshdir="." texturedir="." balanceinertia="true" inertiagrouprange="3 5" />`
+  和 `<statistic center="0 0 0" extent="1.6" meansize="0.05" />`。
+
+R-D 验证：
+
+```bash
+/home/mi/mujoco-3.2.7/bin/compile path/to/object.xml /tmp/compiled.xml
+
+/opt/venvs/arts-gen/bin/python scripts/eval/post/validate_mujoco_rd.py \
+  --xml path/to/object.xml
+```
+
+`validate_mujoco_rd.py` 会检查 `nq=1,nv=1,nu=1,njnt=1`、`jnt_axis=[0,0,1]`、
+`floor_count=0`、`shell_count=0`、`missing_assets=[]`、glass 和 drawer 是否同 body，
+并渲染 `mujoco_qpos_compare.png` 对比 qpos=0 和 `0.381732268`。
+如果当前机器没有 `/home/mi/mujoco-3.2.7/bin/compile`，报告中会标记
+`compile.available=false`；在有该二进制的机器上会自动执行 compile。
+
+RA drawer 40 等间距批跑：
+
+注意：`0708-ra-40` 口径是 40 个 unique RealAppliance object，每个 object 只选一个 angle；
+不是 40 个 obj-angle pair。selector 会生成 filtered manifest/split，每个 row 只保留一个
+prismatic/B target part，保证每个 MJCF 只有一个 drawer slide joint。
+
+RealAppliance drawer/door/lid 目标要把跟随 moving group 的 fixed child 一起并入目标：
+
+- selector 必须回读 `reconstruction/part_info/<object_id>/part_info.json`。
+- 对选中的 moving part，取其 `joint_group_id`；凡是 `joint_type=E`/`joint=fixed` 且
+  `parent_group == moving.joint_group_id`，或 fixed child 的 `joint_group_id` 与 moving group 相同，
+  都作为同一逻辑 movable part 的 child label。
+- filtered manifest 中这些 label 必须一起写入 `target_original_labels`，并在 `label_remap`
+  里映射到同一个 local slot 1；target part 里同步写 `prompt_original_labels` /
+  `merged_original_labels`。
+- 如果 child voxel 存在，selector 在输出目录生成非破坏式 union voxel：
+  `_data_configs/realappliance/merged_voxels/<object>/angle_<idx>/64/ind_<part>.npy`，
+  并把 target part 的 `paths.part_voxel` 指向该 union 文件。
+- 这只修新生成的 manifest/pack。旧 `part_promptable_seg_packed_v5` 已经把 RA003 这类样本固化成
+  单 label 监督，不能靠换权重自动恢复；需要用修复后的 manifest 重 pack 成 v6，再 fine-tune 或重训。
+- v6 canonical 路径固定放在 `/robot/data-lab/jzh/art-gen/data`：
+  split 是 `/robot/data-lab/jzh/art-gen/data/part_promptable_seg_manifests/v6/split_official_verse_realappliance_0511dd_v6.json`，
+  packed dataset 是 `/robot/data-lab/jzh/art-gen/data/part_promptable_seg_packed_v6`。
+
+RA003 验证基准：`炸篮_0` parent label 是 10，fixed child `part_05_0` label 是 7。
+修复后应看到 `target_original_labels=[10,7]`、`label_remap={"10":1,"7":1}`；
+选中视角 2D prompt 像素从 label10 的 34073 增到 label10/7 union 的 45123。
+
+```bash
+/opt/venvs/arts-gen/bin/python scripts/eval/selection/select_ra_prismatic_equal40.py \
+  --out-dir /robot/data-lab/jzh/art-gen/ee-eval/0708-ra-40 \
+  --limit 40 --train-count 40
+
+PYTHONPATH=/root/code/arts-gen:/root/code/arts-gen/TRELLIS-arts:${PYTHONPATH:-} \
+/opt/venvs/arts-gen/bin/python scripts/eval/run_eval.py ee_0617 \
+  --out-dir /robot/data-lab/jzh/art-gen/ee-eval/0708-ra-40 \
+  --limit 40 --train-count 40 --held-count 0 --gpus 0,1,2,3,4,5,6,7 \
+  --allowed-datasets realappliance --selection-mode samples --sample-selection-unit objects \
+  --split-json /robot/data-lab/jzh/art-gen/ee-eval/0708-ra-40/_data_configs/realappliance/ra_prismatic_one_part_40objects_split.json \
+  --slat-token-source live \
+  --ss-decoder-ckpt /robot/data-lab/jzh/art-gen/third-party-weights/trellis/pretrained/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16.safetensors \
+  --ss-flow-ckpt /robot/data-lab/jzh/art-gen/ckpts/tre-ss-flow/tre-ss-concat-0616-1/ckpts/denoiser_ema0.999_step0012500.pt \
+  --export-mujoco --mujoco-textured-assets --mujoco-appearance-source gaussian-texture \
+  --mujoco-texture-size 1024 --mujoco-texture-render-resolution 768 \
+  --mujoco-texture-nviews 32 --mujoco-texture-mode fast \
+  --force --force-export
+```
+
+## metrics.json 关键字段
+
+`metrics.json` 由 `scripts/eval/tasks/ee_0617.py` 汇总，关键字段：
+
+```text
+schema = arts-gen.eval.ee_0617.v1
+status = passed | failed
+backend = scripts/eval/tasks/ee_0617_batch.py
+requested_limit
+selected_total
+summary_count
+done
+skipped
+failed
+artifact_counts.gaussian_png
+artifact_counts.mesh_png
+artifact_counts.diagnostic_png
+artifact_counts.summary_json
+key_fields.slat_flow_calls_min
+key_fields.slat_flow_calls_max
+key_fields.body_without_parts_count
+failed_objects
+```
+
+正确 run 应满足：
+
+- `status == "passed"`
+- `failed == 0`
+- `summary_count == requested_limit`
+- `artifact_counts.summary_json == requested_limit`
+- `artifact_counts.gaussian_png == requested_limit`
+- `artifact_counts.mesh_png == requested_limit`
+- `artifact_counts.diagnostic_png == requested_limit`
+- `key_fields.slat_flow_calls_min == 1`
+- `key_fields.slat_flow_calls_max == 1`
+- `key_fields.body_without_parts_count == requested_limit`
+
+## 单 object 直接调试
+
+需要固定某个 object/angle 时可直接跑 single runner：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=/root/code/arts-gen:/root/code/arts-gen/TRELLIS-arts \
+SPCONV_ALGO=native ATTN_BACKEND=sdpa SPARSE_ATTN_BACKEND=sdpa SS_FLOW_FUSION_MODE=concat \
+/opt/venvs/arts-gen/bin/python scripts/eval/tasks/ee_0617_single.py \
+  --out-dir /mnt/robot-data-lab/jzh/art-gen/ee-eval/single-debug \
+  --dataset-id phyx-verse \
+  --object-id 05a035c3347645b8a7ceb6d65f825ac3 \
+  --angle 0 \
+  --gpu 0 \
+  --slat-token-source live \
+  --force-stage \
+  --force-export
+```
+
+single runner 会先确保 SS 和 part stage 已有：
+
+```text
+_platform_runs/.../voxel.npz
+_platform_runs/.../parts/part_*_voxel.npz
+```
+
+然后只跑一次 whole-object SLat flow，再按 residual body coords 和 part coords 切分并 decode。
+
+## 常见误区
+
+- 不要用 `--slat-token-source cache` 作为正式指标。cache 只用于诊断。
+- 不要把 `SS_FLOW_FUSION_MODE` 改成非 `concat`。
+- 不要回退到 `scripts/dev/run_0617_128ee_batch.py`。
+- 不要对每个 part 单独调用 SLat flow。正确 summary 里 `flow_calls` 必须等于 1。
+- 不要只看 parts；正式图上还必须有 `body_without_parts`，即去除所有 part 后的剩余 body。
+- 不要随手把默认 part-seg ckpt 替换成其它训练目录；当前默认是 S0618-1 step100000。M step30000 + CC 已测但未胜出，不能作为默认替换。
+
+## 现场检查命令
+
+看一个输出目录是否符合口径：
+
+```bash
+/opt/venvs/arts-gen/bin/python - <<'PY'
+import json
+from pathlib import Path
+
+out = Path("/mnt/robot-data-lab/jzh/art-gen/ee-eval/0626-1024-1")
+m = json.loads((out / "metrics.json").read_text())
+print("status", m["status"])
+print("done", m["done"], "failed", m["failed"], "requested", m["requested_limit"])
+print("artifacts", m["artifact_counts"])
+print("flow_calls", m["key_fields"].get("slat_flow_calls_min"), m["key_fields"].get("slat_flow_calls_max"))
+print("body_without_parts", m["key_fields"].get("body_without_parts_count"))
+print("failed_objects", len(m.get("failed_objects", [])))
+PY
+```
+
+抽查 summary：
+
+```bash
+/opt/venvs/arts-gen/bin/python - <<'PY'
+import json
+from pathlib import Path
+
+out = Path("/mnt/robot-data-lab/jzh/art-gen/ee-eval/0626-1024-1")
+for p in sorted(out.glob("*__summary.json"))[:3]:
+    s = json.loads(p.read_text())
+    print(p.name)
+    print("  status", s.get("status"))
+    print("  ss_fusion", s.get("ss_stage", {}).get("fusion_mode"))
+    print("  part_backend", s.get("part_stage", {}).get("backend"))
+    print("  flow_calls", s.get("slat_stage", {}).get("flow_calls"))
+    print("  token_source", s.get("slat_stage", {}).get("condition", {}).get("token_source"))
+    print("  has_body_without_parts", any(c.get("label") == "body_without_parts" for c in s.get("components", [])))
+PY
+```
+
+## 维护要求
+
+如果以后改 `scripts/eval/run_eval.py`、`scripts/eval/run_ee_eval.bash` 或
+`scripts/eval/tasks/ee_0617*.py` 的默认参数，必须同步更新本文档。尤其是：
+
+- part-seg ckpt
+- SS flow ckpt
+- split / packed index
+- `slat-token-source`
+- `flow_calls == 1` 的 pipeline contract
+- `body_without_parts` residual-body rendering contract
+- 输出 artifact 判定

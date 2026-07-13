@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: texture
+Version: 0.1.0
+Summary: Clean API + CLI wrapping SAM 3D Objects Stage B (voxel coords + image+mask -> Gaussian splat + mesh).
+Requires-Python: >=3.10
+Requires-Dist: numpy
+Requires-Dist: torch
+Requires-Dist: hydra-core
+Requires-Dist: omegaconf
+Requires-Dist: Pillow
+Requires-Dist: trimesh

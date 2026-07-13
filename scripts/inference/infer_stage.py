@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from __future__ import annotations
-import argparse, os, subprocess, sys, types
+import argparse, os, random, subprocess, sys, types
 from pathlib import Path
 import numpy as np
 REPO = Path(__file__).resolve().parents[2]
@@ -59,6 +59,21 @@ DECODE_GLUE = REPO/"submodules/sam3d-stage/infer_glue/decode_ss_glue.py"
 
 def _die(msg, code=2): print(f"[infer_stage][ERROR] {msg}", file=sys.stderr); sys.exit(code)
 
+def _seed_all(seed: int | None) -> None:
+    if seed is None:
+        return
+    seed_i = int(seed)
+    random.seed(seed_i)
+    np.random.seed(seed_i % (2**32))
+    try:
+        import torch
+
+        torch.manual_seed(seed_i)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed_i)
+    except Exception:
+        pass
+
 def _run_dir(a):
     root = Path(a.root)
     object_id = str(a.object_id)
@@ -108,6 +123,7 @@ def _cleanup_stage_outputs(run_dir: Path, stage: str) -> None:
         for pattern in ("part_*_latent.npy", "part_*_meta.json", "part_*_voxel.npz"):
             for path in parts.glob(pattern):
                 _unlink_if_exists(path)
+        _unlink_if_exists(parts / "joint_partition.npz")
     elif stage == "slat" and parts.is_dir():
         for pattern in ("overall.glb", "overall.ply", "body.glb", "body.ply", "body_voxel.npz", "part_*.glb", "part_*.ply"):
             for path in parts.glob(pattern):
@@ -129,16 +145,29 @@ def main():
     p.add_argument("--ss-decoder-ckpt", default=SS_DECODER_CKPT)
     p.add_argument("--ss-encoder-ckpt", default=SS_ENCODER_CKPT)
     p.add_argument("--ss-flow-ckpt", default=""); p.add_argument("--gpu", default="0")
+    p.add_argument("--seed", type=int, default=None,
+                   help="Optional deterministic seed for SS flow and promptable part segmentation setup.")
     p.add_argument("--part-backend", default="part_flow", choices=["part_flow", "promptable_seg"],
                    help="part 阶段后端：part_flow=扩散式 part latent flow；promptable_seg=part-promptable segmentation")
     p.add_argument("--decode-backend", default="trellis", choices=["sam3d", "trellis"],
                    help="part latent 解码后端：trellis=TRELLIS ss_dec_conv3d（TRELLIS SS 空间的 ckpt，如 0526）；sam3d=sam3d ss_decoder")
+    p.add_argument("--part-joint-candidate-mode", default="proposal", choices=["proposal", "full_occ"])
+    p.add_argument("--part-joint-refine", action=argparse.BooleanOptionalAction, default=False)
+    p.add_argument("--part-joint-refine-iters", type=int, default=1)
+    p.add_argument("--part-joint-refine-pairwise", type=float, default=3.0)
+    p.add_argument("--part-joint-refine-margin", type=float, default=0.0)
+    p.add_argument("--part-joint-refine-margin-quantile", type=float, default=0.01)
+    p.add_argument("--part-joint-refine-neighborhood", type=int, choices=[6, 18, 26], default=6)
+    p.add_argument("--part-joint-refine-min-vote-gain", type=float, default=0.0)
+    p.add_argument("--part-joint-refine-preserve-small-classes", type=int, default=32)
+    p.add_argument("--part-joint-save-logits", action=argparse.BooleanOptionalAction, default=False)
     p.add_argument("--slat-scope", default="parts", choices=["parts", "whole", "both"],
                    help="slat 阶段解码范围：parts=现有 body+parts；whole=整体 voxel+图；both=两者都写出")
     p.add_argument("--overwrite", action="store_true",
                    help="确认覆盖当前 run 下该 stage 的既有产物；只清理本 stage 输出")
     a = p.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = a.gpu       # glue 恒用 cuda:0
+    _seed_all(a.seed)
     rd = _run_dir(a); rd.mkdir(parents=True, exist_ok=True)
     dry = os.environ.get("INFER_DRY_RUN") == "1"
     view_mode = a.view
@@ -239,7 +268,10 @@ def _run_trellis_ss_flow_stage(a, rd: Path, dc: dict, item: dict, mat: dict) -> 
         os.environ.get("SS_FLOW_FUSION_MODE")
         or ("concat" if "tre-ss-concat" in str(a.ss_flow_ckpt) else "multidiffusion")
     )
-    z_global = run_ss_flow_from_tokens(cond_tokens, a.ss_flow_ckpt, fusion_mode=ss_fusion_mode)
+    ss_kwargs = {}
+    if getattr(a, "seed", None) is not None:
+        ss_kwargs["seed"] = int(a.seed)
+    z_global = run_ss_flow_from_tokens(cond_tokens, a.ss_flow_ckpt, fusion_mode=ss_fusion_mode, **ss_kwargs)
     z_np = _as_numpy(z_global).astype(np.float32)
     if z_np.shape != (8, 16, 16, 16):
         raise ValueError(f"TRELLIS SS flow latent 形状异常 {z_np.shape}（期望 (8,16,16,16)）")
@@ -248,7 +280,8 @@ def _run_trellis_ss_flow_stage(a, rd: Path, dc: dict, item: dict, mat: dict) -> 
     save_voxel(rd, coords, resolution=64, source="trellis_ss_flow")
     print(
         "[infer_stage] ss(mode B): TRELLIS SS flow "
-        f"fusion={ss_fusion_mode} views={view_indices} tokens={token_path} ckpt={a.ss_flow_ckpt} "
+        f"fusion={ss_fusion_mode} seed={getattr(a, 'seed', None)} "
+        f"views={view_indices} tokens={token_path} ckpt={a.ss_flow_ckpt} "
         f"-> latent={rd/'ss_latent.npy'} "
         f"voxel={rd/'voxel.npz'}"
     )
@@ -326,6 +359,16 @@ def _dispatch(a, rd, dry, view_mode):
                 part_seg_ckpt=a.part_seg_ckpt,
                 ss_decoder_ckpt=(a.ss_decoder_ckpt or SS_DECODER_CKPT),
                 decode_backend=a.decode_backend,
+                joint_candidate_mode=a.part_joint_candidate_mode,
+                joint_refine=bool(a.part_joint_refine),
+                joint_refine_iters=int(a.part_joint_refine_iters),
+                joint_refine_pairwise=float(a.part_joint_refine_pairwise),
+                joint_refine_margin=float(a.part_joint_refine_margin),
+                joint_refine_margin_quantile=float(a.part_joint_refine_margin_quantile),
+                joint_refine_neighborhood=int(a.part_joint_refine_neighborhood),
+                joint_refine_min_vote_gain=float(a.part_joint_refine_min_vote_gain),
+                joint_refine_preserve_small_classes=int(a.part_joint_refine_preserve_small_classes),
+                joint_save_logits=bool(a.part_joint_save_logits),
             )
         else:
             from inference_pipeline import part_flow_stage

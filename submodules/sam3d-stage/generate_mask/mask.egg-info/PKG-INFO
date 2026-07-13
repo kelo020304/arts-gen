@@ -1,0 +1,8 @@
+Metadata-Version: 2.4
+Name: mask
+Version: 0.1.0
+Summary: Interactive box-prompted segmentation wrapping Meta's SAM 3.
+Requires-Python: >=3.10
+Requires-Dist: numpy
+Requires-Dist: pillow
+Requires-Dist: torch
