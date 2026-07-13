@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "web_generate_mask"
+version = "0.1.0"
+description = "FastAPI web app for interactive box-prompted segmentation with SAM 3."
+requires-python = ">=3.10"
+dependencies = [
+    "arts_recon_web_shared",
+    "mask",
+    "fastapi",
+    "uvicorn[standard]",
+    "pillow",
+]
+
+[tool.setuptools]
+packages = ["backend"]

@@ -1,0 +1,228 @@
+你是一个负责编辑飞书项目汇报文档的 Codex/写作助手。请基于下面材料，把内容整理成一篇面向项目交付汇报的飞书文档，要求结构清晰、表达偏业务交付视角，但保留必要技术事实。
+
+文档主题：
+Part-Prompt-Seg 项目交付汇报
+
+写作目标：
+1. 不是写论文方法介绍，而是写项目交付进展汇报。
+2. 面向团队/负责人阅读，重点说明“交付了什么、解决了什么问题、当前验证到什么程度、下一步怎么推进”。
+3. 语言用中文，正式但不要过度学术化。
+4. 内容可直接放入飞书文档，建议使用标题、分段、表格或项目符号。
+5. 不要夸大效果。当前 T1 只有 smoke/早期训练验证，不能写成已经稳定提升。
+
+建议文档结构：
+
+# Part-Prompt-Seg 项目交付汇报
+
+## 1. 项目背景与目标
+- 说明 part-prompt-seg 是 3D 可动部件生成链路中的部件分割模块。
+- 上游输入来自多视角 RGB 和 2D part masks / VLM 语义部件提示。
+- 目标是输出 64^3 部件级 voxel，再接入后续 SLat 解码生成 per-part mesh / Gaussian。
+- 用一句链路描述：
+  多视角 RGB + 2D part masks -> SS latent -> Promptable Part Seg -> 64^3 part voxel -> per-part mesh / Gaussian
+
+## 2. 本阶段交付范围
+请按“已交付能力”组织，而不是按代码文件罗列。
+
+可写要点：
+- 核心模型 PromptablePartLatentSegNet 已接入主链路。
+- 支持 z_global [B,8,16,16,16] 作为整体物体 SS latent 输入。
+- 支持 4 视角 2D part mask prompt，使用 fg_points prompt encoder 编码为 prompt tokens。
+- 模型通过 3D trunk tokens 与 mask prompt cross-attention 完成 2D prompt 到 3D 部件区域的映射。
+- 当前主线使用 voxel route：
+  - 先预测 16^3 cell mask；
+  - 再在 whole occupancy 的 64^3 候选体素上做 part/background 分类；
+  - 输出 per-part voxel。
+- 已打通后续 SLat 解码，支持生成 mesh / Gaussian 预览产物。
+
+## 3. 工程链路与可复用资产
+请说明这些内容已经工程化，而不是停留在实验代码。
+
+可写要点：
+- 训练入口：
+  scripts/train/part_promptable_seg/run_train.bash
+- 核心训练逻辑：
+  scripts/train/part_promptable_seg/train_part_promptable_seg.py
+- 模型实现：
+  TRELLIS-arts/trellis/models/part_seg/promptable_latent_seg.py
+- 推理 stage：
+  TRELLIS-arts/inference_pipeline/part_prompt_seg_stage.py
+- ee-eval 接入后可产出：
+  - metrics.json
+  - diagnostic preview
+  - part_*_voxel.npz
+  - mesh preview PNG
+  - Gaussian preview PNG
+- 已明确 checkpoint 加载契约：
+  - 模型 import path 保持为 trellis.models.part_seg.promptable_latent_seg.PromptablePartLatentSegNet
+  - 推理侧会从 ckpt args / state dict 自动解析 dim、depth、head_depth、heads、mask_encoder、use_voxel_head、semantic_classes、voxel_embedding_dim 等参数。
+  - 不在推理中写死 S/M 模型尺寸。
+
+## 4. 本轮 T1 增量能力
+这一节重点写“本轮新增优化点”和“为什么做”。
+
+### 4.1 Negative Prompt Channel
+事实：
+- 训练时基于同一个 dataset_id、obj_id、angle_idx 分组，将其他部件的 2D masks 做 union，构造 negative_masks2d。
+- negative masks 通过与正向 prompt 相同的 prompt encoder 编码。
+- 编码后池化为 summary，经 zero-init 的 negative_prompt_proj 投入正向 prompt tokens。
+- zero-init 设计保证初始状态与旧模型等价。
+- smoke 中 zero-init equivalence check 已通过，max_abs=0。
+
+交付价值：
+- 帮助模型区分目标部件与相邻/相似部件。
+- 降低 part 间串扰和误归属风险。
+
+### 4.2 Boundary-band Hard Supervision
+事实：
+- 在 16^3 cell mask 上计算边界 band。
+- 检测 6-neighbor label change 后做 dilation。
+- T1 配置使用 boundary_band_radius=2。
+- 开启 boundary hard mining，对边界区域中 top 20% difficult samples 额外加权。
+- T1 配置：
+  - boundary_weight=2.0
+  - boundary_hard_mining=True
+  - boundary_hard_mining_topk=0.2
+  - boundary_hard_mining_weight=2.0
+
+交付价值：
+- 强化部件边界学习。
+- 面向相邻部件粘连、边界不清晰的问题做针对性优化。
+
+### 4.3 Structured Voxel Corruption
+事实：
+- 只扰动输入 full_occ，不扰动 target part voxels。
+- 扰动包含：
+  - occupied voxel dropout
+  - dilation shell voxel addition
+  - exterior speckle addition
+- T1 配置：
+  - drop_prob=0.03
+  - shell_prob=0.08
+  - speckle_prob=0.0003
+- 已生成 voxel corruption 可视化样例，确认逻辑生效。
+
+交付价值：
+- 提升模型对 whole occupancy 噪声的鲁棒性。
+- 降低推理阶段上游 reconstruction 偏差对 part segmentation 的影响。
+
+## 5. 训练配置与对照实验设计
+请写成“本轮实验设计”，突出 CTRL vs T1。
+
+共同配置：
+- 使用 old promptable per-part binary segmentation 路线。
+- joint_seg=False。
+- route=voxel。
+- MODEL_SIZE=S，即 dim=256、depth=6、heads=8。
+- head_depth=2、voxel_depth=3、spconv_depth=4。
+- mask_encoder=fg_points。
+- warm start 使用旧 baseline：
+  /robot/data-lab/jzh/art-gen/ckpt/part-prompt-seg/part_promptable_seg_full_S_0616-1/ckpts/step_50000.pt
+- 数据使用 packed v5：
+  /robot/data-lab/jzh/art-gen/data/part_promptable_seg_packed_v5
+- batch=24，eval_batch=8，lr=2e-4，warmup_steps=1000。
+- precision=fp16，PROMPTSEG_FP16_INIT_SCALE=128。
+- semantic_aux=True，semantic_loss_weight=0.1。
+- mask_target=support，support_multiplier=4.0。
+- small_oversample=2，realappliance_target_share=0.14。
+
+CTRL 配置：
+- boundary_band_radius=1
+- boundary_hard_mining=False
+- negative_prompt_channel=False
+- voxel_corrupt=False
+
+T1 配置：
+- boundary_band_radius=2
+- boundary_hard_mining=True
+- boundary_hard_mining_topk=0.2
+- boundary_hard_mining_weight=2.0
+- negative_prompt_channel=True
+- negative_prompt_equivalence_check=True
+- voxel_corrupt=True
+- voxel_corrupt_drop_prob=0.03
+- voxel_corrupt_shell_prob=0.08
+- voxel_corrupt_speckle_prob=0.0003
+
+## 6. 已完成验证
+请客观写，不要夸大。
+
+已验证项：
+- 核心文件 py_compile 通过：
+  - scripts/train/part_promptable_seg/train_part_promptable_seg.py
+  - scripts/train/part_promptable_seg/part_promptable_seg_utils.py
+  - TRELLIS-arts/trellis/models/part_seg/promptable_latent_seg.py
+- warm-start 路径可用。
+- 0616-1 baseline checkpoint 可加载到当前模型/训练脚本。
+- CTRL 100-step smoke 完成。
+- T1 100-step smoke 完成。
+- T1 negative prompt zero-init equivalence check 通过。
+- smoke 期间没有生成 nonfinite_batches.jsonl，说明 fp16 smoke 未触发非有限梯度批次记录。
+- voxel corruption 可视化已生成，扰动逻辑符合预期。
+- ee-eval smoke 链路能产出 metrics、part voxel、mesh/Gaussian preview。
+
+smoke 指标可写：
+- CTRL step 100:
+  - loss=0.3672
+  - held Predcand=0.7948
+  - nonfinite_grad_streak=0
+- T1 step 100:
+  - loss=0.5400
+  - held Predcand=0.7611
+  - negative prompt equivalence passed
+  - nonfinite_grad_streak=0
+
+解释：
+- smoke 结果只说明训练链路、前向/反向和新增模块可运行。
+- 100-step 不能作为最终效果结论。
+- T1 是否优于 CTRL 或 old baseline，需要看 15K/30K 长训和部署体量 ee-eval。
+
+当前磁盘状态补充：
+- S-t1-0707 目录已有 run_metadata.json 和少量 train_metrics.jsonl，显示训练初始化/早期 step 已跑到 step 50。
+- 但目前未看到完整 checkpoint/eval 目录，不能写成完整训练完成。
+- S-ctrl-0707 目录当前未发现。
+
+## 7. 当前结论
+请写成清晰的项目状态结论。
+
+建议表述：
+- part-prompt-seg 主链路已经工程化交付，具备训练、推理、评估和下游 mesh/Gaussian 资产产出能力。
+- 本轮 T1 新增 negative prompt、boundary hard mining、structured voxel corruption 三个优化方向，并完成 smoke 级验证。
+- 当前 T1 处于“功能已接入、训练可运行、效果待长训验证”的状态。
+- 不能把 T1 描述为已经稳定提升，只能描述为具备进入正式对照实验的条件。
+
+## 8. 风险与问题
+请保持真实。
+
+可写风险：
+- T1 当前缺少完整长训结果，效果收益仍未确认。
+- tiny/small 部件仍是历史风险点，容易出现召回不足或边界错误。
+- T1 同时引入三个机制，若效果变化不明显，需要 ablation 才能定位收益来源。
+- 上游 whole occupancy 质量会影响 part voxel segmentation，仍需关注真实推理链路中的输入偏差。
+
+## 9. 下一步计划
+请写成行动项。
+
+建议行动项：
+1. 补齐 CTRL 与 T1 对照训练，至少拿到 15K checkpoint。
+2. 用 old 0616-1、CTRL、T1 三列做部署体量 ee-eval 对比。
+3. 15K 决策标准：
+   - T1 deployment cell_iou 不低于 old baseline；
+   - T1 boundary 相关指标相较 old baseline 有明确提升；
+   - T1 明显优于 CTRL。
+4. 若 T1 与 CTRL 接近，拆分做 ablation：
+   - negative prompt only
+   - boundary hard mining only
+   - voxel corruption only
+5. 针对 tiny/small part 单独做 case review，必要时调整采样、loss reweight 或 prompt 构造策略。
+
+写作风格要求：
+- 用“已交付”“已完成验证”“当前状态”“下一步”这种汇报口径。
+- 不要只堆技术名词，每个技术点要写交付价值。
+- 不要写“显著提升”“效果稳定优于”这类没有长训证据的话。
+- 如果使用表格，建议表格包括：
+  - 模块/能力/交付内容/验证状态
+  - CTRL/T1 配置差异
+  - 已验证项/验证结果/结论
+- 文档结尾给出一句总括：
+  “当前 part-prompt-seg 已具备工程交付基础，T1 优化已完成功能接入和 smoke 验证，下一阶段重点是通过 CTRL/T1 长训对照确认真实收益并决定是否进入默认配置。”

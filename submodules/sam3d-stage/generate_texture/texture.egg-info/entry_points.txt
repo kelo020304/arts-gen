@@ -1,0 +1,2 @@
+[console_scripts]
+texture = texture.cli:main

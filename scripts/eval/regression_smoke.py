@@ -49,13 +49,13 @@ SS_FLOW_CKPT = Path(
 PART_SEG_CKPT = Path(
     os.environ.get(
         "REGRESSION_PART_SEG_CKPT",
-        "/mnt/robot-data-lab/jzh/art-gen/ckpt/part-prompt-seg/part_promptable_seg_full_S_0616-1/ckpts/step_50000.pt",
+        "/robot/data-lab/jzh/art-gen/ckpts/part-prompt-seg/part_promptable_seg_full_S_0618-1/ckpts/step_100000.pt",
     )
 )
 PART_SEG_WARM = Path(
     os.environ.get(
         "REGRESSION_PART_SEG_WARM",
-        "/mnt/robot-data-lab/jzh/art-gen/ckpt/part-prompt-seg/part_promptable_seg_full_S_0616-1/ckpts/step_50000.pt",
+        "/robot/data-lab/jzh/art-gen/ckpts/part-prompt-seg/part_promptable_seg_full_S_0618-1/ckpts/step_100000.pt",
     )
 )
 

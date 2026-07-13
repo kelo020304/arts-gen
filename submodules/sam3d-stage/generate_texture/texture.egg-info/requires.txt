@@ -1,0 +1,6 @@
+numpy
+torch
+hydra-core
+omegaconf
+Pillow
+trimesh

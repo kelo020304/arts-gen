@@ -146,11 +146,24 @@ def _command(out_dir: Path, sample, args: argparse.Namespace, stage: str):
         data_config=str(args.data_config),
         angle_idx=int(sample.angle_idx),
         part_seg_ckpt=str(args.part_seg_ckpt),
+        part_joint_candidate_mode=str(getattr(args, "part_joint_candidate_mode", "proposal")),
+        part_joint_refine=bool(getattr(args, "part_joint_refine", False)),
+        part_joint_refine_iters=int(getattr(args, "part_joint_refine_iters", 1)),
+        part_joint_refine_pairwise=float(getattr(args, "part_joint_refine_pairwise", 3.0)),
+        part_joint_refine_margin=float(getattr(args, "part_joint_refine_margin", 0.0)),
+        part_joint_refine_margin_quantile=float(getattr(args, "part_joint_refine_margin_quantile", 0.01)),
+        part_joint_refine_neighborhood=int(getattr(args, "part_joint_refine_neighborhood", 6)),
+        part_joint_refine_min_vote_gain=float(getattr(args, "part_joint_refine_min_vote_gain", 0.0)),
+        part_joint_refine_preserve_small_classes=int(
+            getattr(args, "part_joint_refine_preserve_small_classes", 32)
+        ),
+        part_joint_save_logits=bool(getattr(args, "part_joint_save_logits", False)),
         ss_flow_ckpt=str(args.ss_flow_ckpt),
         ss_decoder_ckpt=str(args.ss_decoder_ckpt),
         part_backend="promptable_seg",
         decode_backend="trellis",
         gpu_ids=str(args.gpu),
+        seed=getattr(args, "seed", None),
         overwrite=True,
     )
     return build_infer_command(req, repo_root=REPO_ROOT)

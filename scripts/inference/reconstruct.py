@@ -31,10 +31,16 @@ from inference_pipeline.part_prompt_seg_stage import (  # noqa: E402
     _coords_from_voxel_output,
     _decode_latent_to_coords,
     _downsample_binary_mask,
+    _joint_argmax_part_voxels,
     _load_prompt_seg_model,
     _mask_morphology,
+    _validate_joint_partition_request,
 )
 from inference_pipeline.voxel_io import save_voxel  # noqa: E402
+from scripts.eval.post.part_connected_components import (  # noqa: E402
+    filter_part_connected_components,
+    unique_coords,
+)
 from trellis.modules.sparse import SparseTensor  # noqa: E402
 from trellis.utils.arts.slat_asset_writer import save_decoded_slat_assets  # noqa: E402
 
@@ -43,7 +49,7 @@ DEFAULT_SS_FLOW_CKPT = Path(
     "/mnt/robot-data-lab/jzh/art-gen/ckpt/tre-ss-flow/tre-ss-concat-0616-1/ckpts/denoiser_ema0.999_step0012500.pt"
 )
 DEFAULT_PART_SEG_CKPT = Path(
-    "/mnt/robot-data-lab/jzh/art-gen/ckpt/part-prompt-seg/part_promptable_seg_full_S_0616-1/ckpts/step_50000.pt"
+    "/mnt/robot-data-lab/jzh/art-gen/ckpt/part-prompt-seg/part-prompt-seg-L-0709-1-joint/ckpts/step_100000.pt"
 )
 DEFAULT_SS_DECODER_CKPT = Path(
     "pretrained/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16.safetensors"
@@ -73,6 +79,21 @@ class CkptConfig:
     slat_steps: int = 25
     slat_seed: int = 42
     part_voxel_threshold: float = 0.5
+    part_joint_candidate_mode: str = "proposal"
+    part_joint_refine: bool = True
+    part_joint_refine_iters: int = 1
+    part_joint_refine_pairwise: float = 3.0
+    part_joint_refine_margin: float = 0.0
+    part_joint_refine_margin_quantile: float = 0.01
+    part_joint_refine_neighborhood: int = 6
+    part_joint_refine_min_vote_gain: float = 0.0
+    part_joint_refine_preserve_small_classes: int = 32
+    part_joint_save_logits: bool = False
+    part_cc_filter: bool = True
+    part_cc_min_component_voxels: int = 32
+    part_cc_min_component_fraction: float = 0.05
+    part_cc_max_component_distance: int = 2
+    part_cc_max_large_component_distance: int | None = 4
     output_dir: str | Path | None = None
 
 
@@ -231,6 +252,20 @@ def _part_labels_from_info(part_info: dict[str, Any] | None) -> dict[int, str]:
     return out
 
 
+def _body_label_from_info(part_info: dict[str, Any] | None) -> int | None:
+    labels = _part_labels_from_info(part_info)
+    body = [
+        label_id
+        for label_id, text in labels.items()
+        if any(term in str(text).lower() for term in ("body", "base"))
+    ]
+    if not body:
+        return None
+    if len(body) > 1:
+        raise ValueError(f"part_info contains multiple body/base labels: {body}")
+    return int(body[0])
+
+
 def _validate_inputs(
     images: Sequence[Image.Image],
     masks: Sequence[np.ndarray],
@@ -292,12 +327,31 @@ def _predict_part_voxels(
     masks: Sequence[np.ndarray],
     part_ids: Sequence[int],
     part_names: Mapping[int, str],
+    body_part_id: int | None = None,
     part_seg_ckpt: Path,
     ss_decoder_ckpt: Path,
     voxel_threshold: float,
+    joint_candidate_mode: str,
+    joint_refine: bool,
+    joint_refine_iters: int,
+    joint_refine_pairwise: float,
+    joint_refine_margin: float,
+    joint_refine_margin_quantile: float,
+    joint_refine_neighborhood: int,
+    joint_refine_min_vote_gain: float,
+    joint_refine_preserve_small_classes: int,
+    joint_save_logits_path: Path | None,
 ) -> tuple[dict[int, np.ndarray], dict[int, dict[str, Any]]]:
     model, empty_code, ckpt_args = _load_prompt_seg_model(str(part_seg_ckpt))
     route = str(ckpt_args.get("route", "latent"))
+    joint_seg = bool(ckpt_args.get("joint_seg", False))
+    _validate_joint_partition_request(
+        route=route,
+        joint_seg=joint_seg,
+        candidate_mode=str(joint_candidate_mode),
+        refine=bool(joint_refine),
+        save_logits=joint_save_logits_path is not None,
+    )
     z_global_b = z_global.unsqueeze(0).float().cuda()
     if tuple(z_global_b.shape) != (1, 8, 16, 16, 16):
         raise ValueError(f"z_global shape invalid: {tuple(z_global_b.shape)}")
@@ -305,7 +359,63 @@ def _predict_part_voxels(
     part_coords: dict[int, np.ndarray] = {}
     meta: dict[int, dict[str, Any]] = {}
     with torch.no_grad():
+        if route == "voxel" and joint_seg:
+            part_masks2d = []
+            ordered_names = []
+            for part_id in part_ids:
+                masks2d = _part_masks_tensor(masks, int(part_id)).unsqueeze(0).cuda()
+                visible_views = int((masks2d.flatten(2).sum(dim=2) > 0).sum().item())
+                if visible_views <= 0:
+                    raise ValueError(f"part_id={part_id} has no visible prompt views")
+                part_masks2d.append(masks2d)
+                ordered_names.append(str(part_names.get(int(part_id), f"part_{int(part_id):02d}")))
+            body_masks2d = None
+            if body_part_id is not None:
+                body_masks2d = _part_masks_tensor(masks, int(body_part_id)).unsqueeze(0).cuda()
+                visible_views = int((body_masks2d.flatten(2).sum(dim=2) > 0).sum().item())
+                if visible_views <= 0:
+                    raise ValueError(f"body_part_id={body_part_id} has no visible prompt views")
+            joint_coords, joint_meta = _joint_argmax_part_voxels(
+                model,
+                z_global=z_global_b,
+                full_occ=full_occ,
+                part_masks2d=part_masks2d,
+                part_names=ordered_names,
+                body_masks2d=body_masks2d,
+                max_voxels_per_sample=int(ckpt_args.get("infer_voxel_max_tokens", 0) or 0),
+                candidate_mode=str(joint_candidate_mode),
+                refine=bool(joint_refine),
+                refine_iters=int(joint_refine_iters),
+                refine_pairwise=float(joint_refine_pairwise),
+                refine_margin=float(joint_refine_margin),
+                refine_margin_quantile=float(joint_refine_margin_quantile),
+                refine_neighborhood=int(joint_refine_neighborhood),
+                refine_min_vote_gain=float(joint_refine_min_vote_gain),
+                refine_preserve_small_classes=int(joint_refine_preserve_small_classes),
+                save_logits_path=joint_save_logits_path,
+            )
+            for part_id, name in zip(part_ids, ordered_names):
+                coords = np.asarray(joint_coords[name], dtype=np.int32).reshape(-1, 3)
+                part_coords[int(part_id)] = coords
+                meta[int(part_id)] = {
+                    **joint_meta[name],
+                    "part_id": int(part_id),
+                    "group_local_to_part_id": {
+                        int(pos) + 1: int(pid)
+                        for pos, pid in enumerate(part_ids)
+                    },
+                }
+            meta[-1] = {
+                **joint_meta["part_body"],
+                "part_id": -1,
+                "group_local_to_part_id": {
+                    int(pos) + 1: int(pid)
+                    for pos, pid in enumerate(part_ids)
+                },
+            }
         for part_id in part_ids:
+            if route == "voxel" and joint_seg:
+                continue
             masks2d = _part_masks_tensor(masks, int(part_id)).unsqueeze(0).cuda()
             visible_views = int((masks2d.flatten(2).sum(dim=2) > 0).sum().item())
             if visible_views <= 0:
@@ -367,9 +477,86 @@ def _sparse_subset_from_coords(slat: SparseTensor, coords: np.ndarray, label: st
 def _labeled_voxel(part_coords: Mapping[int, np.ndarray]) -> np.ndarray:
     volume = np.zeros((64, 64, 64), dtype=np.int32)
     for part_id, coords in part_coords.items():
+        if int(part_id) < 0:
+            continue
         c = np.asarray(coords, dtype=np.int64).reshape(-1, 3)
         if c.size:
             volume[c[:, 0], c[:, 1], c[:, 2]] = int(part_id)
+    return volume
+
+
+def _residual_body_coords(
+    whole_coords: np.ndarray,
+    part_coords: Mapping[int, np.ndarray],
+    part_ids: Sequence[int],
+) -> np.ndarray:
+    whole = unique_coords(whole_coords)
+    if whole.size == 0:
+        return whole
+    part_arrays = [
+        unique_coords(part_coords.get(int(part_id), np.empty((0, 3), dtype=np.int32)))
+        for part_id in part_ids
+    ]
+    nonempty = [coords for coords in part_arrays if coords.size]
+    if not nonempty:
+        return whole
+    part_union = unique_coords(np.concatenate(nonempty, axis=0))
+    resolution = 64
+    whole_keys = (
+        whole[:, 0].astype(np.int64) * resolution * resolution
+        + whole[:, 1].astype(np.int64) * resolution
+        + whole[:, 2].astype(np.int64)
+    )
+    part_keys = (
+        part_union[:, 0].astype(np.int64) * resolution * resolution
+        + part_union[:, 1].astype(np.int64) * resolution
+        + part_union[:, 2].astype(np.int64)
+    )
+    return whole[~np.isin(whole_keys, part_keys)].astype(np.int32, copy=False)
+
+
+def _apply_part_cc_filter(
+    part_coords: dict[int, np.ndarray],
+    *,
+    whole_coords: np.ndarray,
+    part_ids: Sequence[int],
+    part_names: Mapping[int, str],
+    min_component_voxels: int,
+    min_component_fraction: float,
+    max_component_distance: int,
+    max_large_component_distance: int | None,
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for part_index, part_id in enumerate(part_ids):
+        label = str(part_names.get(int(part_id), f"part_{int(part_id):02d}"))
+        filtered, record = filter_part_connected_components(
+            part_coords[int(part_id)],
+            part_index=int(part_index),
+            part_name=label,
+            min_component_voxels=int(min_component_voxels),
+            min_component_fraction=float(min_component_fraction),
+            max_component_distance=int(max_component_distance),
+            max_large_component_distance=max_large_component_distance,
+        )
+        part_coords[int(part_id)] = filtered
+        records.append({**record, "part_id": int(part_id)})
+
+    # Joint segmentation owns body explicitly. Removed islands return to body
+    # instead of punching holes in the reconstructed whole object.
+    if -1 in part_coords:
+        part_coords[-1] = _residual_body_coords(whole_coords, part_coords, part_ids)
+    return records
+
+
+def _joint_labeled_voxel(part_coords: Mapping[int, np.ndarray], part_ids: Sequence[int]) -> np.ndarray:
+    volume = np.zeros((64, 64, 64), dtype=np.int32)
+    body = np.asarray(part_coords.get(-1, np.empty((0, 3), dtype=np.int32)), dtype=np.int64).reshape(-1, 3)
+    if body.size:
+        volume[body[:, 0], body[:, 1], body[:, 2]] = 1
+    for group_col, part_id in enumerate(part_ids, start=1):
+        coords = np.asarray(part_coords.get(int(part_id), np.empty((0, 3), dtype=np.int32)), dtype=np.int64).reshape(-1, 3)
+        if coords.size:
+            volume[coords[:, 0], coords[:, 1], coords[:, 2]] = int(group_col) + 1
     return volume
 
 
@@ -452,8 +639,12 @@ def reconstruct(
     pil_images = [_load_image(item) for item in raw_images]
     np_masks = [_load_mask(item) for item in raw_masks]
     info = _load_part_info(raw_part_info)
-    part_ids = _validate_inputs(pil_images, np_masks, info)
+    all_part_ids = _validate_inputs(pil_images, np_masks, info)
     part_names = _part_labels_from_info(info)
+    body_part_id = _body_label_from_info(info)
+    part_ids = [part_id for part_id in all_part_ids if body_part_id is None or int(part_id) != int(body_part_id)]
+    if not part_ids:
+        raise ValueError("no non-body part labels remain after excluding body/base label")
     rgba_images = [_rgba_with_mask_alpha(image, mask) for image, mask in zip(pil_images, np_masks)]
 
     ss_flow_ckpt = _resolve_existing(cfg.ss_flow_ckpt, "SS-flow ckpt")
@@ -462,6 +653,11 @@ def reconstruct(
     slat_flow_ckpt = _resolve_existing(cfg.slat_flow_ckpt, "SLat flow ckpt")
     slat_mesh_decoder_ckpt = _resolve_existing(cfg.slat_mesh_decoder_ckpt, "SLat mesh decoder ckpt")
     slat_gaussian_decoder_ckpt = _resolve_existing(cfg.slat_gaussian_decoder_ckpt, "SLat gaussian decoder ckpt")
+    out_dir = None if cfg.output_dir is None else Path(cfg.output_dir).expanduser().resolve()
+    if out_dir is not None:
+        out_dir.mkdir(parents=True, exist_ok=True)
+    if bool(cfg.part_joint_save_logits) and out_dir is None:
+        raise ValueError("part_joint_save_logits=True requires CkptConfig.output_dir")
 
     cond_tokens = inference._images_to_tokens(rgba_images).detach().float().cpu()
     z_global = inference.run_ss_flow_from_tokens(
@@ -478,10 +674,43 @@ def reconstruct(
         masks=np_masks,
         part_ids=part_ids,
         part_names=part_names,
+        body_part_id=body_part_id,
         part_seg_ckpt=part_seg_ckpt,
         ss_decoder_ckpt=ss_decoder_ckpt,
         voxel_threshold=float(cfg.part_voxel_threshold),
+        joint_candidate_mode=str(cfg.part_joint_candidate_mode),
+        joint_refine=bool(cfg.part_joint_refine),
+        joint_refine_iters=int(cfg.part_joint_refine_iters),
+        joint_refine_pairwise=float(cfg.part_joint_refine_pairwise),
+        joint_refine_margin=float(cfg.part_joint_refine_margin),
+        joint_refine_margin_quantile=float(cfg.part_joint_refine_margin_quantile),
+        joint_refine_neighborhood=int(cfg.part_joint_refine_neighborhood),
+        joint_refine_min_vote_gain=float(cfg.part_joint_refine_min_vote_gain),
+        joint_refine_preserve_small_classes=int(cfg.part_joint_refine_preserve_small_classes),
+        joint_save_logits_path=(out_dir / "joint_partition.npz") if bool(cfg.part_joint_save_logits) and out_dir is not None else None,
     )
+    cc_filter_records: list[dict[str, Any]] = []
+    if bool(cfg.part_cc_filter):
+        cc_filter_records = _apply_part_cc_filter(
+            part_coords,
+            whole_coords=whole_coords,
+            part_ids=part_ids,
+            part_names=part_names,
+            min_component_voxels=int(cfg.part_cc_min_component_voxels),
+            min_component_fraction=float(cfg.part_cc_min_component_fraction),
+            max_component_distance=int(cfg.part_cc_max_component_distance),
+            max_large_component_distance=cfg.part_cc_max_large_component_distance,
+        )
+        records_by_part_id = {int(record["part_id"]): record for record in cc_filter_records}
+        for part_id in part_ids:
+            part_meta[int(part_id)]["pred_voxel_count_before_cc"] = int(
+                records_by_part_id[int(part_id)]["original_voxels"]
+            )
+            part_meta[int(part_id)]["pred_voxel_count"] = int(part_coords[int(part_id)].shape[0])
+            part_meta[int(part_id)]["cc_filter"] = records_by_part_id[int(part_id)]
+        if -1 in part_coords:
+            part_meta[-1]["pred_voxel_count"] = int(part_coords[-1].shape[0])
+            part_meta[-1]["source"] = "whole_minus_cc_filtered_part_union"
 
     whole_coords_t = torch.from_numpy(np.ascontiguousarray(whole_coords.astype(np.int64, copy=False))).long()
     overall_slat = inference.run_slat_flow_from_tokens(
@@ -492,10 +721,12 @@ def reconstruct(
         seed=int(cfg.slat_seed),
     )
 
-    out_dir = None if cfg.output_dir is None else Path(cfg.output_dir).expanduser().resolve()
     if out_dir is not None:
-        out_dir.mkdir(parents=True, exist_ok=True)
         save_voxel(out_dir, whole_coords, resolution=64, source="reconstruct_ss_flow", basename="whole_voxel")
+        if -1 in part_coords:
+            body_dir = out_dir / "part_body"
+            save_voxel(body_dir, part_coords[-1], resolution=64, source="promptable_seg_joint", basename="voxel")
+            _write_json(body_dir / "meta.json", part_meta[-1])
 
     decoded_overall = inference.decode_slat_assets(
         overall_slat,
@@ -555,7 +786,8 @@ def reconstruct(
         )
         parts.append(part_record)
 
-    labeled = _labeled_voxel(part_coords)
+    joint_seg = -1 in part_coords
+    labeled = _joint_labeled_voxel(part_coords, part_ids) if joint_seg else _labeled_voxel(part_coords)
     if out_dir is not None:
         np.save(out_dir / "labeled_voxel.npy", labeled.astype(np.int32))
 
@@ -585,7 +817,24 @@ def reconstruct(
             "seed": int(cfg.slat_seed),
             "overall_assets": overall_assets,
         },
-        "joint_status": "TODO_no_cotrain_ckpt",
+        "part_cc_filter": {
+            "enabled": bool(cfg.part_cc_filter),
+            "min_component_voxels": int(cfg.part_cc_min_component_voxels),
+            "min_component_fraction": float(cfg.part_cc_min_component_fraction),
+            "max_component_distance": int(cfg.part_cc_max_component_distance),
+            "max_large_component_distance": cfg.part_cc_max_large_component_distance,
+            "reassigned_to_body_voxels": int(
+                sum(record["reassigned_to_body_voxels"] for record in cc_filter_records)
+            ),
+            "records": cc_filter_records,
+        },
+        "joint_status": "joint_single_owner_body" if joint_seg else "TODO_no_cotrain_ckpt",
+        "label_encoding": (
+            {"0": "empty", "1": "body", "2..K+1": "part group order"}
+            if joint_seg
+            else {"0": "empty", "positive": "input part_id"}
+        ),
+        "body": _as_jsonable(part_meta.get(-1)) if joint_seg else None,
         "seconds": round(time.time() - started, 3),
     }
     result = ArtObject(
@@ -631,6 +880,16 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--smoke-from-dataset", action="store_true")
     parser.add_argument("--part-seg-ckpt", default=None, help="Explicit override, useful if runbook ckpt path is not mounted.")
     parser.add_argument("--ss-flow-ckpt", default=None)
+    parser.add_argument(
+        "--part-cc-filter",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Filter remote connected components before part SLat slicing (enabled by default).",
+    )
+    parser.add_argument("--part-cc-min-component-voxels", type=int, default=None)
+    parser.add_argument("--part-cc-min-component-fraction", type=float, default=None)
+    parser.add_argument("--part-cc-max-component-distance", type=int, default=None)
+    parser.add_argument("--part-cc-max-large-component-distance", type=int, default=None)
     parser.add_argument("--quick-steps", action="store_true", help="Use 2 SS/SLat steps for interface smoke only.")
     return parser.parse_args()
 
@@ -652,6 +911,16 @@ def main() -> int:
         cfg_payload["part_seg_ckpt"] = args.part_seg_ckpt
     if args.ss_flow_ckpt:
         cfg_payload["ss_flow_ckpt"] = args.ss_flow_ckpt
+    for field in (
+        "part_cc_filter",
+        "part_cc_min_component_voxels",
+        "part_cc_min_component_fraction",
+        "part_cc_max_component_distance",
+        "part_cc_max_large_component_distance",
+    ):
+        value = getattr(args, field)
+        if value is not None:
+            cfg_payload[field] = value
     if args.quick_steps:
         cfg_payload.setdefault("ss_steps", 2)
         cfg_payload.setdefault("slat_steps", 2)

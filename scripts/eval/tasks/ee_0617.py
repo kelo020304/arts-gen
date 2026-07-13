@@ -33,7 +33,15 @@ def _write_json(path: Path, payload: Any) -> None:
 
 
 def _fix_mount_path(value: str) -> str:
-    return str(value).replace("/robot/data-lab", "/mnt/robot-data-lab")
+    path = Path(str(value))
+    if path.exists():
+        return str(path)
+    text = str(value)
+    if text.startswith("/robot/data-lab"):
+        mnt_path = Path(text.replace("/robot/data-lab", "/mnt/robot-data-lab", 1))
+        if mnt_path.exists():
+            return str(mnt_path)
+    return text
 
 
 def _resolve_manifest(data_root: str, value: str) -> str:
@@ -156,8 +164,72 @@ def _command(args: Any) -> list[str]:
         "--slat-token-source",
         str(args.slat_token_source),
     ]
+    if getattr(args, "part_cc_filter", False):
+        cmd.append("--part-cc-filter")
+    cc_enabled = bool(
+        getattr(args, "part_cc_filter", False)
+        or (getattr(args, "part_t0_filter", False) and not getattr(args, "part_t0_disable_cc", False))
+    )
+    if cc_enabled:
+        cmd += [
+            "--part-cc-min-component-voxels",
+            str(int(args.part_cc_min_component_voxels)),
+            "--part-cc-min-component-fraction",
+            str(float(args.part_cc_min_component_fraction)),
+            "--part-cc-max-component-distance",
+            str(int(args.part_cc_max_component_distance)),
+        ]
+    if args.part_cc_max_large_component_distance is not None:
+        cmd += [
+            "--part-cc-max-large-component-distance",
+            str(int(args.part_cc_max_large_component_distance)),
+        ]
+    cmd += ["--part-joint-candidate-mode", str(getattr(args, "part_joint_candidate_mode", "proposal"))]
+    cmd += ["--part-joint-refine-iters", str(int(getattr(args, "part_joint_refine_iters", 1)))]
+    cmd += ["--part-joint-refine-pairwise", str(float(getattr(args, "part_joint_refine_pairwise", 3.0)))]
+    cmd += ["--part-joint-refine-margin", str(float(getattr(args, "part_joint_refine_margin", 0.0)))]
+    cmd += [
+        "--part-joint-refine-margin-quantile",
+        str(float(getattr(args, "part_joint_refine_margin_quantile", 0.01))),
+    ]
+    cmd += ["--part-joint-refine-neighborhood", str(int(getattr(args, "part_joint_refine_neighborhood", 6)))]
+    cmd += ["--part-joint-refine-min-vote-gain", str(float(getattr(args, "part_joint_refine_min_vote_gain", 0.0)))]
+    cmd += [
+        "--part-joint-refine-preserve-small-classes",
+        str(int(getattr(args, "part_joint_refine_preserve_small_classes", 32))),
+    ]
+    cmd.append("--part-joint-refine" if bool(getattr(args, "part_joint_refine", False)) else "--no-part-joint-refine")
+    cmd.append("--part-joint-save-logits" if bool(getattr(args, "part_joint_save_logits", False)) else "--no-part-joint-save-logits")
+    if getattr(args, "part_t0_filter", False):
+        cmd.append("--part-t0-filter")
+        cmd += [
+            "--part-t0-part-threshold",
+            str(float(args.part_t0_part_threshold)),
+            "--part-t0-margin-threshold",
+            str(float(args.part_t0_margin_threshold)),
+            "--part-t0-smooth-iters",
+            str(int(args.part_t0_smooth_iters)),
+        ]
+        if getattr(args, "part_t0_disable_cc", False):
+            cmd.append("--part-t0-disable-cc")
     if args.export_mujoco:
         cmd.append("--export-mujoco")
+    if getattr(args, "export_usd", False):
+        cmd.append("--export-usd")
+    if getattr(args, "mujoco_textured_assets", False):
+        cmd.append("--mujoco-textured-assets")
+        cmd += [
+            "--mujoco-appearance-source",
+            str(args.mujoco_appearance_source),
+            "--mujoco-texture-size",
+            str(int(args.mujoco_texture_size)),
+            "--mujoco-texture-render-resolution",
+            str(int(args.mujoco_texture_render_resolution)),
+            "--mujoco-texture-nviews",
+            str(int(args.mujoco_texture_nviews)),
+            "--mujoco-texture-mode",
+            str(args.mujoco_texture_mode),
+        ]
     if args.force:
         cmd.append("--force")
     if args.force_stage:
@@ -194,26 +266,48 @@ def _summarize_outputs(args: Any, *, returncode: int, seconds: float, command: l
     components = [int(summary.get("component_count", 0)) for summary in summaries]
     gaussians_after: list[float] = []
     mesh_vertices: list[float] = []
+    body_coords: list[int] = []
+    body_matched_coords: list[int] = []
     for summary in summaries:
         for comp in summary.get("components", []) or []:
             stats = comp.get("gs_preset") or {}
             gaussians_after.append(_safe_float(stats.get("gaussians_after")))
             mesh_vertices.append(_safe_float(comp.get("mesh_vertices")))
+            if comp.get("label") == "body_without_parts":
+                body_coords.append(int(comp.get("coords", 0)))
+                body_matched_coords.append(int(comp.get("matched_coords", 0)))
     gaussians_after = [v for v in gaussians_after if math.isfinite(v)]
     mesh_vertices = [v for v in mesh_vertices if math.isfinite(v)]
     selected_total = sum(len(selection.get("samples", {}).get(split, [])) for split in ("train", "held"))
+    requested_limit = int(args.limit)
+    artifact_counts = {
+        "gaussian_png": len(list(out_dir.glob("*__gaussian.png"))),
+        "mesh_png": len(list(out_dir.glob("*__mesh.png"))),
+        "diagnostic_png": len(list(out_dir.glob("*__diagnostic.png"))),
+        "summary_json": len(summaries),
+    }
+    dry_run = bool(getattr(args, "dry_run", False))
+    outputs_complete = (
+        len(summaries) == requested_limit
+        and all(count == requested_limit for count in artifact_counts.values())
+        and len(body_coords) == requested_limit
+        and bool(flow_calls)
+        and min(flow_calls) == 1
+        and max(flow_calls) == 1
+    )
 
     metrics = {
         "schema": "arts-gen.eval.ee_0617.v1",
-        "status": "passed" if returncode == 0 and not failed else "failed",
+        "status": "passed" if returncode == 0 and not failed and (dry_run or outputs_complete) else "failed",
         "out_dir": str(out_dir),
         "backend": "scripts/eval/tasks/ee_0617_batch.py",
         "command": command,
         "seconds": round(float(seconds), 3),
-        "requested_limit": int(args.limit),
+        "requested_limit": requested_limit,
         "selected_total": int(selected_total),
         "summary_count": len(summaries),
-        "done": len(done_rows),
+        "done": len(summaries),
+        "progress_done": len(done_rows),
         "skipped": len(skipped_rows),
         "failed": len(failed),
         "returncode": int(returncode),
@@ -230,20 +324,23 @@ def _summarize_outputs(args: Any, *, returncode: int, seconds: float, command: l
             "ss_flow_fusion_mode": "concat",
             "part_backend": "promptable_seg",
             "slat_token_source": str(args.slat_token_source),
-            "slat_flow_calls_per_object": "one whole-object call; per-part SLat sliced by voxel coords",
+            "slat_flow_calls_per_object": "one whole-object call; body_without_parts and per-part SLat sliced by voxel coords",
             "gs_preset": run_config.get("gs_preset", {}),
+            "part_cc_filter": run_config.get("part_cc_filter", {}),
+            "part_t0_filter": run_config.get("part_t0_filter", {}),
+            "part_joint_partition": run_config.get("part_joint_partition", {}),
         },
-        "artifact_counts": {
-            "gaussian_png": len(list(out_dir.glob("*__gaussian.png"))),
-            "mesh_png": len(list(out_dir.glob("*__mesh.png"))),
-            "diagnostic_png": len(list(out_dir.glob("*__diagnostic.png"))),
-            "summary_json": len(summaries),
-        },
+        "artifact_counts": artifact_counts,
         "key_fields": {
             "objects_complete": len(summaries),
             "slat_flow_calls_min": min(flow_calls) if flow_calls else None,
             "slat_flow_calls_max": max(flow_calls) if flow_calls else None,
             "components_mean": (sum(components) / len(components)) if components else None,
+            "body_without_parts_count": len(body_coords),
+            "body_without_parts_coords_min": min(body_coords) if body_coords else None,
+            "body_without_parts_coords_max": max(body_coords) if body_coords else None,
+            "body_without_parts_matched_min": min(body_matched_coords) if body_matched_coords else None,
+            "body_without_parts_matched_max": max(body_matched_coords) if body_matched_coords else None,
             "gaussians_after_mean": (sum(gaussians_after) / len(gaussians_after)) if gaussians_after else None,
             "mesh_vertices_mean": (sum(mesh_vertices) / len(mesh_vertices)) if mesh_vertices else None,
         },

@@ -1,0 +1,22 @@
+dataset_name: Mi-PhysX
+data_root: /robot/data-lab/Mi-PhysX
+joint_transform:
+  num_angles: 10
+  articulated_objects: all
+  static_objects: []
+render:
+  resolution: 512
+  blender: /home/cfy/Downloads/software/blender-4.4.0-linux-x64/blender
+voxel:
+  resolution: 64
+feature:
+  model: dinov2_vitl14_reg
+  dinov2_repo: pretrained/dinov2
+  torch_hub_dir: pretrained/torch_hub
+trellis:
+  root: pretrained/TRELLIS
+  ss_encoder: pretrained/TRELLIS-image-large/ckpts/ss_enc_conv3d_16l8_fp16
+  ss_decoder: pretrained/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16
+  slat_encoder: pretrained/TRELLIS-image-large/ckpts/slat_enc_swin8_B_64l8_fp16
+vlm:
+  image_prefix: /media/cfy/cfy/arts

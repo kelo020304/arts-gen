@@ -29,6 +29,16 @@ class InferJobRequest:
     ss_encoder_ckpt: str = ""
     ss_flow_ckpt: str = ""
     part_backend: str = "part_flow"
+    part_joint_candidate_mode: str = "proposal"
+    part_joint_refine: bool = False
+    part_joint_refine_iters: int = 1
+    part_joint_refine_pairwise: float = 3.0
+    part_joint_refine_margin: float = 0.0
+    part_joint_refine_margin_quantile: float = 0.01
+    part_joint_refine_neighborhood: int = 6
+    part_joint_refine_min_vote_gain: float = 0.0
+    part_joint_refine_preserve_small_classes: int = 32
+    part_joint_save_logits: bool = False
     # part 阶段逐 part latent 的解码后端：
     #   trellis → TRELLIS SparseStructureDecoder（ss_dec_conv3d）。0526 这类用 TRELLIS
     #             SS VAE 训练的 part flow ckpt 必须用它（latent 在 TRELLIS SS 空间）。
@@ -40,6 +50,7 @@ class InferJobRequest:
     #   both  → 同一 run 下同时写 overall 与 body/parts。
     slat_scope: str = "parts"
     gpu_ids: str = "0"
+    seed: int | None = None
     sam3d_python: str = ""
     sam3d_pipeline_yaml: str = ""
     overwrite: bool = False
@@ -93,8 +104,24 @@ def build_infer_command(req, *, repo_root: Path) -> CommandSpec:
         args += ["--ss-encoder-ckpt", req.ss_encoder_ckpt]
     if req.ss_flow_ckpt:
         args += ["--ss-flow-ckpt", req.ss_flow_ckpt]
+    if req.seed is not None:
+        args += ["--seed", str(int(req.seed))]
     if req.part_backend:
         args += ["--part-backend", req.part_backend]
+    if req.part_backend == "promptable_seg":
+        args += ["--part-joint-candidate-mode", str(req.part_joint_candidate_mode)]
+        args += ["--part-joint-refine-iters", str(int(req.part_joint_refine_iters))]
+        args += ["--part-joint-refine-pairwise", str(float(req.part_joint_refine_pairwise))]
+        args += ["--part-joint-refine-margin", str(float(req.part_joint_refine_margin))]
+        args += ["--part-joint-refine-margin-quantile", str(float(req.part_joint_refine_margin_quantile))]
+        args += ["--part-joint-refine-neighborhood", str(int(req.part_joint_refine_neighborhood))]
+        args += ["--part-joint-refine-min-vote-gain", str(float(req.part_joint_refine_min_vote_gain))]
+        args += [
+            "--part-joint-refine-preserve-small-classes",
+            str(int(req.part_joint_refine_preserve_small_classes)),
+        ]
+        args += ["--part-joint-refine" if req.part_joint_refine else "--no-part-joint-refine"]
+        args += ["--part-joint-save-logits" if req.part_joint_save_logits else "--no-part-joint-save-logits"]
     if req.decode_backend:
         args += ["--decode-backend", req.decode_backend]
     if req.slat_scope:

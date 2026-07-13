@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Stage A · Surface Voxel</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header><h1>Surface Voxel (Stage A)</h1></header>
+  <main class="two-col">
+    <section id="left">
+      <div id="upload"></div>
+      <details>
+        <summary>Compare with ground truth (optional)</summary>
+        <div id="upload-gt"></div>
+        <p style="font-size:11px; color:var(--muted); margin:6px 0 0;">
+          GT format: <code>(N, 3)</code> int64 .npy, values in [0, 63] —
+          same shape as the predicted <code>surface.npy</code>.
+        </p>
+      </details>
+      <div class="controls">
+        <label>Seed: <input id="seed" type="number" value="42"></label>
+        <label><input id="keep-aux" type="checkbox" checked> Keep layout aux (pointmap)</label>
+        <button id="run">Generate</button>
+      </div>
+      <div id="status"></div>
+      <div id="compare-panel" hidden style="padding:10px 12px; background:var(--panel-soft); border:1px solid var(--border); border-radius:6px; font-size:12px;">
+        <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:6px;">
+          <strong>IoU:</strong> <span id="iou-value" style="font-size:18px; font-weight:600; color:var(--accent);"></span>
+        </div>
+        <div id="compare-counts" style="color:var(--muted); margin-bottom:6px;"></div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <span><span style="display:inline-block;width:10px;height:10px;background:#22c55e;border-radius:2px;"></span> TP (correct)</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;"></span> FP (over-predict)</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#3b82f6;border-radius:2px;"></span> FN (missed)</span>
+        </div>
+      </div>
+      <div id="downloads" hidden>
+        <h3>Outputs</h3>
+        <ul id="dl-list"></ul>
+      </div>
+    </section>
+    <section id="right">
+      <canvas id="viewer"></canvas>
+      <div id="meta"></div>
+    </section>
+  </main>
+  <script type="module">
+    import {setupUpload} from "/static/upload.js?v=5";
+    import {setupStatus} from "/static/progress.js?v=5";
+    import {createVoxelViewer} from "/static/voxel_viewer.js?v=5";
+
+    const upload = setupUpload(document.getElementById("upload"), [
+      {name: "image", accept: "image/*", label: "RGB image"},
+      {name: "mask",  accept: "image/*", label: "Mask PNG"},
+    ]);
+    const uploadGt = setupUpload(document.getElementById("upload-gt"), [
+      {name: "gt_voxel_npy", accept: ".npy", label: "Ground-truth surface.npy"},
+    ]);
+    const status = setupStatus(document.getElementById("status"));
+    const viewer = createVoxelViewer(document.getElementById("viewer"));
+
+    document.getElementById("run").addEventListener("click", async () => {
+      if (!upload.isComplete()) {
+        status.set("warn", "Please pick image + mask first.");
+        return;
+      }
+      const fd = upload.getFormData();
+      // Optional GT
+      const gtFd = uploadGt.getFormData();
+      for (const [k, v] of gtFd.entries()) fd.append(k, v);
+      const hasGt = uploadGt.isComplete();
+
+      fd.append("seed", document.getElementById("seed").value);
+      fd.append("keep_layout_aux", document.getElementById("keep-aux").checked ? "true" : "false");
+      status.set("running", "Running Stage A on remote GPU…");
+      const r = await fetch("/api/run", {method: "POST", body: fd});
+      if (!r.ok) { status.set("error", `HTTP ${r.status}: ${await r.text()}`); return; }
+      const result = await r.json();
+
+      // Visualize: either single-color predicted (no GT) or 3-color TP/FP/FN (with GT)
+      if (result.compare) {
+        const c = result.compare;
+        const layers = [
+          {coords: c.layers.tp.coords, color: c.layers.tp.color, opacity: 1.0},
+          {coords: c.layers.fp.coords, color: c.layers.fp.color, opacity: 0.85},
+          {coords: c.layers.fn.coords, color: c.layers.fn.color, opacity: 0.85},
+        ];
+        viewer.loadMulti(layers, {gridSize: c.grid_size});
+
+        document.getElementById("iou-value").textContent = c.iou.toFixed(4);
+        document.getElementById("compare-counts").textContent =
+          `pred ${c.pred_count}  ·  gt ${c.gt_count}  ·  TP ${c.tp_count}  ·  FP ${c.fp_count}  ·  FN ${c.fn_count}`;
+        document.getElementById("compare-panel").hidden = false;
+      } else {
+        const preview = await (await fetch(result.coords_preview_url)).json();
+        viewer.load(preview.coords, {gridSize: preview.grid_size});
+        document.getElementById("compare-panel").hidden = true;
+      }
+
+      const list = document.getElementById("dl-list");
+      list.innerHTML = "";
+      for (const [name, url] of Object.entries(result.files)) {
+        const li = document.createElement("li");
+        const a = Object.assign(document.createElement("a"), {href: url, download: name, textContent: name});
+        li.appendChild(a); list.appendChild(li);
+      }
+      document.getElementById("downloads").hidden = false;
+      document.getElementById("meta").textContent =
+        `${result.coords_count} voxels · sha ${result.sha}` +
+        (result.compare ? ` · IoU ${result.compare.iou.toFixed(4)}` : "");
+      status.set("ok",
+        result.compare
+          ? `Done — IoU ${result.compare.iou.toFixed(4)} (TP/FP/FN ${result.compare.tp_count}/${result.compare.fp_count}/${result.compare.fn_count}).`
+          : `Done — ${result.coords_count} voxels.`);
+    });
+  </script>
+</body>
+</html>

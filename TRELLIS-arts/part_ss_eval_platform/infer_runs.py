@@ -95,7 +95,10 @@ def _append_run_overview(runs: list[dict], seen: set[str], run_dir: Path, contai
     resolved = str(run_dir.resolve())
     if resolved in seen:
         return
-    meta = _read_meta(run_dir)
+    try:
+        meta = _read_meta(run_dir)
+    except (json.JSONDecodeError, OSError):
+        return
     object_id = str(meta.get("object_id") or _object_id_from_container(container))
     runs.append({
         "object_id": object_id,

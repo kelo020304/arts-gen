@@ -30,7 +30,7 @@ from trellis.models.sparse_structure_vae import SparseStructureDecoder, SparseSt
 from trellis.trainers.arts.part_ss_latent_flow_eval import coords_iou
 
 
-VEPFS_ROOT = Path(os.environ.get("VEPFS_ROOT", "/mnt/robot-data-lab/jzh"))
+VEPFS_ROOT = Path(os.environ.get("VEPFS_ROOT", "/robot/data-lab/jzh"))
 DATA_ROOT = Path(
     os.environ.get(
         "DATA_ROOT",
@@ -44,14 +44,33 @@ MANIFEST_REL = "manifests/part_completion/arts_mllm_physx-mobility.train.jsonl"
 OFFICIAL_SPLIT_PATH = Path(
     os.environ.get(
         "SPLIT_JSON",
-        str(VEPFS_ROOT / "art-gen-output/part_promptable_seg/manifests/split_official_verse_realappliance_0511dd_v4.json"),
+        str(
+            VEPFS_ROOT
+            / "art-gen/data/part_promptable_seg_manifests/v6/split_official_verse_realappliance_0511dd_v6.json"
+        ),
     )
 )
 PACKED_DATA_ROOT = Path(
-    os.environ.get("PACKED_DIR", str(VEPFS_ROOT / "art-gen/data/part_promptable_seg_packed_v4"))
+    os.environ.get("PACKED_DIR", str(VEPFS_ROOT / "art-gen/data/part_promptable_seg_packed_v6"))
 )
-SS_ENCODER_CKPT = PROJECT_ROOT / "pretrained/TRELLIS-image-large/ckpts/ss_enc_conv3d_16l8_fp16.safetensors"
-SS_DECODER_CKPT = PROJECT_ROOT / "pretrained/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16.safetensors"
+SS_ENCODER_CKPT = Path(
+    os.environ.get(
+        "PROMPTSEG_SS_ENCODER_CKPT",
+        os.environ.get(
+            "SS_ENCODER_CKPT",
+            str(PROJECT_ROOT / "pretrained/TRELLIS-image-large/ckpts/ss_enc_conv3d_16l8_fp16.safetensors"),
+        ),
+    )
+)
+SS_DECODER_CKPT = Path(
+    os.environ.get(
+        "PROMPTSEG_SS_DECODER_CKPT",
+        os.environ.get(
+            "SS_DECODER_CKPT",
+            str(PROJECT_ROOT / "pretrained/TRELLIS-image-large/ckpts/ss_dec_conv3d_16l8_fp16.safetensors"),
+        ),
+    )
+)
 DECODE_THRESHOLD = 0.0
 
 
@@ -484,13 +503,17 @@ def audit_promptable_mask_visibility(
                 expected_views=int(expected_views),
             )
         counts_by_view, missing_views = cache[cache_key]
-        label = int(row.original_label)
+        if hasattr(row_base, "_part_original_labels"):
+            part = sample["parts"][int(row.part_idx)]
+            labels = [int(label) for label in row_base._part_original_labels(sample, part)]
+        else:
+            labels = [int(row.original_label)]
         selected_counts = {
-            int(view_idx): int(counts_by_view.get(int(view_idx), {}).get(label, 0))
+            int(view_idx): int(sum(counts_by_view.get(int(view_idx), {}).get(label, 0) for label in labels))
             for view_idx in row.view_indices
         }
         all_counts = {
-            int(view_idx): int(view_counts.get(label, 0))
+            int(view_idx): int(sum(view_counts.get(label, 0) for label in labels))
             for view_idx, view_counts in sorted(counts_by_view.items())
         }
         selected_nonempty = [view_idx for view_idx, count in selected_counts.items() if count > 0]
@@ -502,7 +525,7 @@ def audit_promptable_mask_visibility(
         elif all_pixels > 0:
             cls = "undetectable_selected_views"
         else:
-            cls = "label_absent_all_views"
+            cls = "undetectable_all_views"
         class_counts[cls] = class_counts.get(cls, 0) + 1
         records.append({
             "key": part_row_key(row),
@@ -514,7 +537,8 @@ def audit_promptable_mask_visibility(
             "part_name": row.part_name,
             "part_idx": int(row.part_idx),
             "semantic_type": row.semantic_type,
-            "original_label": label,
+            "original_label": int(row.original_label),
+            "prompt_original_labels": labels,
             "raw_count": int(row.raw_count),
             "selected_view_indices": [int(v) for v in row.view_indices],
             "selected_visible_pixels": selected_pixels,
@@ -750,25 +774,37 @@ class PromptablePartDataset(Dataset):
     def __len__(self) -> int:
         return len(self.rows)
 
-    def _load_masks2d(self, sample: dict[str, Any], original_label: int) -> torch.Tensor:
+    @staticmethod
+    def _normalize_original_labels(original_label: int | Iterable[int]) -> np.ndarray:
+        if isinstance(original_label, (int, np.integer)):
+            labels = [int(original_label)]
+        else:
+            labels = [int(label) for label in original_label]
+        if not labels:
+            raise ValueError("expected at least one original label for prompt mask")
+        return np.asarray(labels, dtype=np.int64)
+
+    def _load_masks2d(self, sample: dict[str, Any], original_label: int | Iterable[int]) -> torch.Tensor:
         if isinstance(self.base_ds, MultiPromptableBaseDataset):
             raise TypeError("_load_masks2d requires a concrete PartSSLatentFlowDataset")
+        labels = self._normalize_original_labels(original_label)
         views = []
         for mask_path in self.base_ds._iter_mask_paths(sample):
             label_map = np.asarray(np.load(mask_path))
-            views.append(downsample_binary_mask(label_map == int(original_label), self.mask_size))
+            views.append(downsample_binary_mask(np.isin(label_map, labels), self.mask_size))
         return torch.from_numpy(np.stack(views, axis=0)).float()
 
     def _load_masks2d_from_base(
         self,
         base_ds: PartSSLatentFlowDataset,
         sample: dict[str, Any],
-        original_label: int,
+        original_label: int | Iterable[int],
     ) -> torch.Tensor:
+        labels = self._normalize_original_labels(original_label)
         views = []
         for mask_path in base_ds._iter_mask_paths(sample):
             label_map = np.asarray(np.load(mask_path))
-            views.append(downsample_binary_mask(label_map == int(original_label), self.mask_size))
+            views.append(downsample_binary_mask(np.isin(label_map, labels), self.mask_size))
         return torch.from_numpy(np.stack(views, axis=0)).float()
 
     def __getitem__(self, idx: int) -> dict[str, Any]:
@@ -779,6 +815,10 @@ class PromptablePartDataset(Dataset):
             base_ds = self.base_ds
         sample = base_ds.samples[row.sample_idx]
         part = sample["parts"][row.part_idx]
+        if hasattr(base_ds, "_part_original_labels"):
+            prompt_original_labels = [int(label) for label in base_ds._part_original_labels(sample, part)]
+        else:
+            prompt_original_labels = [int(row.original_label)]
         raw_coords = base_ds._load_raw_ind_coords(sample, part)
         z_global = base_ds._load_dense_latent(
             base_ds._rooted(sample["z_global_rel"]),
@@ -794,7 +834,7 @@ class PromptablePartDataset(Dataset):
         out = {
             "z_global": z_global,
             "latent_gt": z_part,
-            "masks2d": self._load_masks2d_from_base(base_ds, sample, row.original_label),
+            "masks2d": self._load_masks2d_from_base(base_ds, sample, prompt_original_labels),
             "m_gt": raw_coords_to_mask16(raw_coords),
             "raw_coords": raw_coords,
             "raw_count": torch.tensor(float(row.raw_count), dtype=torch.float32),
@@ -808,6 +848,10 @@ class PromptablePartDataset(Dataset):
             "part_idx": row.part_idx,
             "original_label": row.original_label,
             "view_indices": torch.tensor(row.view_indices, dtype=torch.long),
+            "data_root": row.data_root,
+            "manifest_path": row.manifest_path,
+            "category": row.category,
+            "object_name": row.object_name,
         }
         out["m_boundary"] = boundary_band_mask(out["m_gt"], radius=1).to(dtype=torch.uint8)
         if self.include_whole_coords:
@@ -888,6 +932,11 @@ class PackedPromptablePartDataset(Dataset):
         sample["view_indices"] = sample["view_indices"].long()
         sample["raw_count"] = torch.tensor(float(sample["raw_count"]), dtype=torch.float32)
         sample.setdefault("dataset_id", entry.get("dataset_id", ""))
+        row = self.rows[int(idx)]
+        sample.setdefault("data_root", row.data_root)
+        sample.setdefault("manifest_path", row.manifest_path)
+        sample.setdefault("category", row.category)
+        sample.setdefault("object_name", row.object_name)
         sample["semantic_type_id"] = torch.tensor(
             self.semantic_vocab.get(str(sample["semantic_type"]), -1),
             dtype=torch.long,
@@ -1032,6 +1081,10 @@ def collate_promptable_parts(batch: list[dict[str, Any]]) -> dict[str, Any]:
         "semantic_type_id": torch.stack([item["semantic_type_id"] for item in batch], dim=0),
         "part_idx": [item["part_idx"] for item in batch],
         "original_label": [item["original_label"] for item in batch],
+        "data_root": [str(item.get("data_root", "")) for item in batch],
+        "manifest_path": [str(item.get("manifest_path", "")) for item in batch],
+        "category": [str(item.get("category", "")) for item in batch],
+        "object_name": [str(item.get("object_name", "")) for item in batch],
     }
     if all("whole_coords" in item for item in batch):
         out["whole_coords"] = [item["whole_coords"] for item in batch]

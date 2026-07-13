@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "codex": {
+      "type": "stdio",
+      "command": "/home/cfy/.local/bin/codex",
+      "args": ["mcp-server"],
+      "env": {
+        "PATH": "/home/cfy/.nvm/versions/node/v18.20.8/bin:/home/cfy/.local/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    },
+    "codex-parallel": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["codex-as-mcp@latest"],
+      "env": {
+        "PATH": "/home/cfy/.nvm/versions/node/v18.20.8/bin:/home/cfy/.local/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    }
+  }
+}

@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "TRELLIS-arts"))
@@ -50,3 +51,49 @@ def test_load_voxel_reads_part_npz_metadata(tmp_path):
     assert voxel["coords"].shape == (1, 3)
     assert voxel["resolution"] == 64
     assert voxel["source"] == "trellis_ss_flow"
+
+
+@pytest.mark.parametrize(
+    ("route", "joint_seg", "candidate_mode", "refine", "save_logits"),
+    [
+        ("voxel", False, "proposal", True, False),
+        ("voxel", False, "proposal", False, True),
+        ("voxel", False, "full_occ", False, False),
+        ("latent", False, "proposal", True, False),
+    ],
+)
+def test_joint_partition_options_require_joint_voxel_checkpoint(
+    route,
+    joint_seg,
+    candidate_mode,
+    refine,
+    save_logits,
+):
+    with pytest.raises(ValueError, match="args.joint_seg=true"):
+        part_prompt_seg_stage._validate_joint_partition_request(
+            route=route,
+            joint_seg=joint_seg,
+            candidate_mode=candidate_mode,
+            refine=refine,
+            save_logits=save_logits,
+        )
+
+
+def test_joint_partition_defaults_remain_valid_for_legacy_checkpoint():
+    part_prompt_seg_stage._validate_joint_partition_request(
+        route="voxel",
+        joint_seg=False,
+        candidate_mode="proposal",
+        refine=False,
+        save_logits=False,
+    )
+
+
+def test_joint_partition_options_are_valid_for_joint_voxel_checkpoint():
+    part_prompt_seg_stage._validate_joint_partition_request(
+        route="voxel",
+        joint_seg=True,
+        candidate_mode="full_occ",
+        refine=True,
+        save_logits=True,
+    )

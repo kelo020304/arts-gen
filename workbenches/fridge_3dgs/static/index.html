@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EE Eval Workbench</title>
+    <script>
+      window.__fridgeWorkbenchAssetVersion = "20260713-ee-eval-e2e-v1";
+      window.__fridgeWorkbenchRoot = (() => {
+        const path = window.location.pathname;
+        if (path.endsWith("/static/index.html")) return new URL("../", window.location.href).toString();
+        return new URL("./", window.location.href).toString();
+      })();
+      const css = document.createElement("link");
+      css.rel = "stylesheet";
+      const cssUrl = new URL("static/css/workbench.css", window.__fridgeWorkbenchRoot);
+      cssUrl.searchParams.set("v", window.__fridgeWorkbenchAssetVersion);
+      css.href = cssUrl.toString();
+      document.head.appendChild(css);
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brandMark">EE</span>
+        <strong>EE Eval Workbench</strong>
+        <span id="sessionPath" class="muted"></span>
+      </div>
+      <nav class="stageTabs" aria-label="Stages">
+        <button class="stageTab active" data-stage="views"><span>01</span>Inputs</button>
+        <button class="stageTab" data-stage="renders"><span>02</span>Views</button>
+        <button class="stageTab" data-stage="masks"><span>03</span>Masks</button>
+        <button class="stageTab" data-stage="ssflow"><span>04</span>Run</button>
+        <button class="stageTab" data-stage="partseg"><span>05</span>Results</button>
+        <button class="stageTab" data-stage="export"><span>06</span>Export</button>
+      </nav>
+      <div class="statusLine">
+        <span id="pointCloudBadge" class="badge">PLY</span>
+        <span id="sam3Badge" class="badge">SAM3</span>
+        <span id="contractBadge" class="badge">Contract</span>
+      </div>
+    </header>
+
+    <main>
+      <section id="stage-views" class="stage active">
+        <div class="inputSourceBar">
+          <div>
+            <div class="sectionTitle">View Source</div>
+            <div id="inputSourceSummary" class="muted"></div>
+          </div>
+          <div class="toolRow segmented sourceModeTabs" aria-label="View source">
+            <button id="sourceDatasetBtn" data-input-mode="dataset">Dataset</button>
+            <button id="sourceUploadBtn" data-input-mode="upload" class="active">Wild Images</button>
+            <button id="source3dgsBtn" data-input-mode="3dgs">3DGS Capture</button>
+          </div>
+        </div>
+
+        <div id="datasetWorkspace" class="datasetWorkspace sourceWorkspace" hidden>
+          <div class="datasetPicker">
+            <div>
+              <div class="sectionTitle">Dataset sample</div>
+              <div class="muted">RGB and integer 2D masks are loaded through the dataset adapter.</div>
+            </div>
+            <label>
+              <span>Object</span>
+              <select id="datasetObjectSelect"></select>
+            </label>
+            <label>
+              <span>Angle</span>
+              <select id="datasetAngleSelect"></select>
+            </label>
+            <label>
+              <span>Views</span>
+              <select id="datasetViewCount">
+                <option value="4">4</option>
+                <option value="3">3</option>
+                <option value="2">2</option>
+                <option value="1">1</option>
+              </select>
+            </label>
+            <button id="datasetLoadBtn" class="primary">Load sample</button>
+          </div>
+          <div id="datasetSummary" class="datasetSummary"></div>
+        </div>
+
+        <div id="threeDgsWorkspace" class="viewerLayout sourceWorkspace">
+          <div class="viewerPane">
+            <iframe id="viewerFrame" title="SuperSplat viewer"></iframe>
+            <div class="viewerTools">
+              <button id="viewerFrameBtn" title="Frame">Frame</button>
+              <button id="viewerResetBtn" title="Reset">Reset</button>
+              <button id="viewerNearBtn" title="Move camera closer">Near</button>
+              <button id="viewerFarBtn" title="Move camera farther">Far</button>
+              <button id="viewerCaptureBtn" class="primary">Capture Active Slot</button>
+            </div>
+          </div>
+          <aside class="sidePane">
+            <div class="sectionTitle">View Slots</div>
+            <div id="viewSlotList" class="slotList"></div>
+            <div class="sectionTitle">Object Orientation</div>
+            <div class="orientationPanel">
+              <div class="orientationGrid">
+                <label><span>X</span><input id="orientX" type="number" step="5" value="0" /></label>
+                <label><span>Y</span><input id="orientY" type="number" step="5" value="225" /></label>
+                <label><span>Z</span><input id="orientZ" type="number" step="5" value="180" /></label>
+              </div>
+              <div class="toolRow">
+                <button id="orientApplyBtn">Apply</button>
+                <button id="orientXPlusBtn">X +90</button>
+                <button id="orientXMinusBtn">X -90</button>
+              </div>
+              <div class="toolRow">
+                <button id="orientDefaultBtn">Fridge Front</button>
+                <button id="orientSuperSplatBtn">Y 45</button>
+                <button id="orientZeroBtn">Raw 0</button>
+              </div>
+            </div>
+            <div class="sectionTitle">View Angle</div>
+            <div class="viewAnglePanel">
+              <button data-view-slot="0">Front</button>
+              <button data-view-slot="1">Left 30</button>
+              <button data-view-slot="2">Right 30</button>
+              <button data-view-slot="3">Side</button>
+            </div>
+            <div class="captureHint">
+              Left-drag the 3DGS view, use wheel or Near/Far for distance, then capture the active slot.
+            </div>
+          </aside>
+        </div>
+
+        <div id="uploadWorkspace" class="uploadWorkspace sourceWorkspace" hidden>
+          <div class="uploadToolbar">
+            <div>
+              <div class="sectionTitle">Wild RGB input</div>
+              <div id="uploadSelectionSummary" class="muted">0/4 selected</div>
+            </div>
+            <div class="toolRow">
+              <button id="chooseFourViewsBtn">Choose 1-4 Images</button>
+              <button id="clearFourViewsBtn">Clear</button>
+              <button id="importFourViewsBtn" class="primary" disabled>Import Views</button>
+            </div>
+          </div>
+          <input id="fourViewInput" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" multiple hidden />
+          <input id="singleViewInput" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" hidden />
+          <div id="uploadPreviewGrid" class="uploadPreviewGrid"></div>
+        </div>
+      </section>
+
+      <section id="stage-renders" class="stage">
+        <div class="sectionHeader">
+          <div>
+            <div class="sectionTitle">Input Views</div>
+            <div id="renderSummary" class="muted"></div>
+          </div>
+          <button id="refreshSessionBtn">Refresh</button>
+        </div>
+        <div id="renderGrid" class="renderGrid"></div>
+      </section>
+
+      <section id="stage-masks" class="stage">
+        <div class="sectionHeader">
+          <div>
+            <div class="sectionTitle">2D Mask Workbench</div>
+            <div id="maskModeHint" class="muted">Dataset masks load directly; wild images use positive and negative SAM3 points.</div>
+          </div>
+        </div>
+        <div class="maskLayout">
+          <aside class="maskTools">
+            <div class="sectionTitle">Views</div>
+            <div id="maskViewList" class="compactList"></div>
+
+            <div class="sectionTitle">Labels</div>
+            <div id="labelList" class="labelList"></div>
+            <button id="addLabelBtn">Add Label</button>
+
+            <div class="sectionTitle">Manual Edge Fix</div>
+            <div class="toolRow segmented">
+              <button id="paintToolBtn">Paint Fix</button>
+              <button id="eraseToolBtn">Erase</button>
+            </div>
+            <label class="rangeRow">
+              <span>Size</span>
+              <input id="brushSize" type="range" min="2" max="96" value="18" />
+              <output id="brushSizeOut">18</output>
+            </label>
+            <div class="toolRow">
+              <button id="clearLabelBtn">Clear Label</button>
+              <button id="clearMaskBtn">Clear Mask</button>
+            </div>
+            <button id="saveMaskBtn" class="primary">Save Mask</button>
+          </aside>
+
+          <div class="editorPane">
+            <div id="editorViewport" class="editorViewport">
+              <img id="editImage" alt="" />
+              <canvas id="maskCanvas"></canvas>
+            </div>
+          </div>
+
+          <aside class="samPane">
+            <div class="sectionHeader slim">
+              <div class="sectionTitle">SAM3</div>
+              <button id="sam3StartBtn">Start SAM3</button>
+            </div>
+            <div id="sam3Status" class="logBox small"></div>
+            <div class="fieldStack">
+              <label>
+                <span>Prompt</span>
+                <input id="samPrompt" type="text" value="movable part" />
+              </label>
+              <div class="promptPresets">
+                <button data-sam-prompt="object body" data-label-id="1">Body</button>
+                <button data-sam-prompt="door" data-label-id="2">Door</button>
+                <button data-sam-prompt="drawer" data-label-id="3">Drawer</button>
+              </div>
+              <label>
+                <span>Threshold</span>
+                <input id="samThreshold" type="number" min="0" max="1" step="0.05" value="0.5" />
+              </label>
+              <button id="samTextBtn" class="primary">SAM3 Text</button>
+            </div>
+            <div class="toolRow segmented">
+              <button id="pointPosBtn" class="active">+ Point</button>
+              <button id="pointNegBtn">- Point</button>
+              <button id="pointClearBtn">Clear</button>
+            </div>
+            <button id="samPointBtn" class="primary">SAM3 Points</button>
+            <div id="samCandidates" class="candidateList"></div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="stage-export" class="stage">
+        <div class="sectionHeader">
+          <div>
+            <div class="sectionTitle">Model Inputs</div>
+            <div id="exportSummary" class="muted"></div>
+          </div>
+          <button id="finalizeBtn" class="primary">Finalize Export</button>
+        </div>
+        <div class="exportLayout">
+          <div id="inputContract" class="infoPanel"></div>
+          <pre id="manifestBox" class="jsonBox"></pre>
+        </div>
+      </section>
+
+      <section id="stage-ssflow" class="stage">
+        <div class="reconLayout">
+          <aside class="sidePane">
+            <div class="sectionTitle">EE Eval Inputs</div>
+            <div id="ssInputContract" class="infoPanel"></div>
+            <div class="sectionTitle">SS Flow / Decoder Ckpts</div>
+            <div id="ssCkptList" class="ckptList"></div>
+            <label class="checkRow">
+              <input id="ssQuickSteps" type="checkbox" checked />
+              <span>Quick steps</span>
+            </label>
+            <button id="checkDinoBtn">Check DINO Tokens</button>
+            <button id="startSsFlowBtn" class="primary">Run End-to-End EE Eval</button>
+          </aside>
+          <div class="reconMain">
+            <div id="dinoCheckStatus" class="logBox small"></div>
+            <div id="dinoPreviewGrid" class="renderGrid compact"></div>
+            <div id="ssStatus" class="logBox"></div>
+            <div id="ssOutputs" class="outputGrid"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="stage-partseg" class="stage">
+        <div class="reconLayout">
+          <aside class="sidePane">
+            <div class="sectionTitle">Mask Labels</div>
+            <div id="partMaskSummary" class="infoPanel"></div>
+            <div class="sectionTitle">Part Seg Ckpts</div>
+            <div id="partCkptList" class="ckptList"></div>
+            <label class="checkRow">
+              <input id="partQuickSteps" type="checkbox" checked />
+              <span>Quick steps</span>
+            </label>
+            <button id="startPartSegBtn" disabled>Run from Stage 04</button>
+            <div class="sectionTitle">Kin Agent Handoff</div>
+            <div class="hingeBox">
+              <button disabled>Build Kinematic Task</button>
+              <button disabled>Open Workbench</button>
+            </div>
+          </aside>
+          <div class="reconMain">
+            <div id="partStatus" class="logBox"></div>
+            <div id="partOutputs" class="outputGrid"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer id="appStatus" class="appStatus">Loading</footer>
+    <script type="module">
+      const appUrl = new URL("static/js/app.js", window.__fridgeWorkbenchRoot);
+      appUrl.searchParams.set("v", window.__fridgeWorkbenchAssetVersion);
+      import(appUrl.toString());
+    </script>
+  </body>
+</html>

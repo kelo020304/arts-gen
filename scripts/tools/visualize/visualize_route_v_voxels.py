@@ -76,12 +76,16 @@ def load_model(ckpt_path: Path, device: torch.device) -> tuple[PromptablePartLat
         heads=int(args.get("heads", 8)),
         use_xyz=stem_channels == 11,
         use_voxel_head=True,
+        voxel_depth=int(args.get("voxel_depth", 3)),
+        refine_mode=str(args.get("refine_mode", "token")),
+        spconv_depth=int(args.get("spconv_depth", 4)),
         mask_encoder=mask_encoder,
         point_k_boundary=int(args.get("point_k_boundary", 32)),
         point_k_interior=int(args.get("point_k_interior", 32)),
         point_resample_points=bool(args.get("point_resample_points", False)),
         semantic_classes=semantic_classes_from_ckpt(ckpt),
         voxel_embedding_dim=voxel_embedding_dim_from_ckpt(ckpt),
+        use_body_prompt=bool(args.get("joint_seg", False)) or "body_prompt" in state,
     ).to(device)
     model.load_state_dict(state, strict=True)
     model.eval()

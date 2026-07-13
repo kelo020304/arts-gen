@@ -1,0 +1,2 @@
+[console_scripts]
+surface-voxel = surface_voxel.cli:main

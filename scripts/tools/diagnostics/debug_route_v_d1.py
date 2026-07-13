@@ -79,16 +79,25 @@ def append_code_update(text: str) -> None:
 def load_model(ckpt_path: Path, device: torch.device) -> tuple[PromptablePartLatentSegNet, torch.Tensor, dict[str, Any]]:
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
     args = ckpt.get("args", {})
+    state = ckpt["model"]
     model = PromptablePartLatentSegNet(
         dim=int(args.get("dim", 256)),
         depth=int(args.get("depth", 6)),
         head_depth=int(args.get("head_depth", 2)),
         heads=int(args.get("heads", 8)),
         use_voxel_head=True,
+        voxel_depth=int(args.get("voxel_depth", 3)),
+        refine_mode=str(args.get("refine_mode", "token")),
+        spconv_depth=int(args.get("spconv_depth", 4)),
+        mask_encoder=str(args.get("mask_encoder", "cnn_grid")),
+        point_k_boundary=int(args.get("point_k_boundary", 32)),
+        point_k_interior=int(args.get("point_k_interior", 32)),
+        point_resample_points=bool(args.get("point_resample_points", False)),
         semantic_classes=semantic_classes_from_ckpt(ckpt),
         voxel_embedding_dim=voxel_embedding_dim_from_ckpt(ckpt),
+        use_body_prompt=bool(args.get("joint_seg", False)) or "body_prompt" in state,
     ).to(device)
-    model.load_state_dict(ckpt["model"], strict=True)
+    model.load_state_dict(state, strict=True)
     model.eval()
     empty_code = ckpt["empty_code"].float()
     return model, empty_code, args

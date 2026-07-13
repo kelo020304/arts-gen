@@ -36,13 +36,22 @@ def test_build_cmd_forwards_slat_scope(tmp_path):
 def test_build_cmd_forwards_promptable_seg_backend(tmp_path):
     req = InferJobRequest(stage="part", object_id="o", root=str(tmp_path), run_id="r1",
         mode="B", view="four", data_config="/c.yaml", part_backend="promptable_seg",
-        part_seg_ckpt="/seg/latest.pt", ss_flow_ckpt="/ss/denoiser.pt")
+        part_seg_ckpt="/seg/latest.pt", ss_flow_ckpt="/ss/denoiser.pt",
+        part_joint_candidate_mode="full_occ", part_joint_refine=True,
+        part_joint_refine_iters=1, part_joint_refine_pairwise=0.8,
+        part_joint_refine_margin=0.12, part_joint_refine_neighborhood=18,
+        part_joint_refine_min_vote_gain=0.1, part_joint_save_logits=True)
     cmd = build_infer_command(req, repo_root=Path("/repo"))
     assert "--part-backend" in cmd.args
     assert cmd.args[cmd.args.index("--part-backend") + 1] == "promptable_seg"
     assert "--part-seg-ckpt" in cmd.args
     assert cmd.args[cmd.args.index("--part-seg-ckpt") + 1] == "/seg/latest.pt"
     assert "--part-flow-ckpt" not in cmd.args
+    assert cmd.args[cmd.args.index("--part-joint-candidate-mode") + 1] == "full_occ"
+    assert "--part-joint-refine" in cmd.args
+    assert cmd.args[cmd.args.index("--part-joint-refine-iters") + 1] == "1"
+    assert cmd.args[cmd.args.index("--part-joint-refine-neighborhood") + 1] == "18"
+    assert "--part-joint-save-logits" in cmd.args
 
 def test_part_requires_part_flow_ckpt_only(tmp_path):
     import pytest
