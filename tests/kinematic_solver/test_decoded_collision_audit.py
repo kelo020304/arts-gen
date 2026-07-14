@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import math
 
 import pytest
@@ -13,6 +14,9 @@ from post_process.kinematic_solver.sdk.kin_agent import KinematicCandidate
 
 trimesh = pytest.importorskip("trimesh")
 pytest.importorskip("open3d")
+
+
+MANIFOLD_AVAILABLE = importlib.util.find_spec("manifold3d") is not None
 
 
 CONFIG = DecodedCollisionAuditConfig(
@@ -43,11 +47,14 @@ def test_clean_slide_is_collision_free():
 
     report = audit_joint_collision(body, moving, candidate, config=CONFIG)
 
-    assert report["status"] == "clear"
+    assert report["status"] == ("clear" if MANIFOLD_AVAILABLE else "approximate_unverified")
     assert report["collision_detected"] is False
-    assert report["requires_review"] is False
-    assert report["narrow_phase"]["exact"] is True
-    assert report["recommended_actions"] == []
+    assert report["requires_review"] is (not MANIFOLD_AVAILABLE)
+    assert report["narrow_phase"]["exact"] is MANIFOLD_AVAILABLE
+    if MANIFOLD_AVAILABLE:
+        assert report["recommended_actions"] == []
+    else:
+        assert report["narrow_phase"]["error"] == "manifold3d unavailable"
 
 
 def test_colliding_slide_is_detected_between_endpoints():
@@ -59,7 +66,7 @@ def test_colliding_slide_is_detected_between_endpoints():
 
     report = audit_joint_collision(body, moving, candidate, config=CONFIG)
 
-    assert report["status"] == "collision"
+    assert report["status"] == ("collision" if MANIFOLD_AVAILABLE else "approximate_collision")
     assert report["collision_detected"] is True
     assert report["requires_review"] is True
     assert report["first_invalid_q"] is not None
@@ -79,10 +86,13 @@ def test_clean_hinge_is_collision_free():
 
     report = audit_joint_collision(body, moving, candidate, config=CONFIG)
 
-    assert report["status"] == "clear"
+    assert report["status"] == ("clear" if MANIFOLD_AVAILABLE else "approximate_unverified")
     assert report["collision_detected"] is False
-    assert report["requires_review"] is False
-    assert report["recommended_actions"] == []
+    assert report["requires_review"] is (not MANIFOLD_AVAILABLE)
+    if MANIFOLD_AVAILABLE:
+        assert report["recommended_actions"] == []
+    else:
+        assert report["narrow_phase"]["error"] == "manifold3d unavailable"
 
 
 def test_colliding_hinge_is_detected_inside_sweep():
@@ -94,7 +104,7 @@ def test_colliding_hinge_is_detected_inside_sweep():
 
     report = audit_joint_collision(body, moving, candidate, config=CONFIG)
 
-    assert report["status"] == "collision"
+    assert report["status"] == ("collision" if MANIFOLD_AVAILABLE else "approximate_collision")
     assert report["collision_detected"] is True
     assert report["first_invalid_q"] is not None
     assert 0.4 < report["first_invalid_q"] < 1.2

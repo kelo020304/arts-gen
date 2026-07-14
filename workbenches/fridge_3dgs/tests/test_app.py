@@ -223,6 +223,10 @@ class FridgeMultiviewImportTest(unittest.TestCase):
             app_module,
             "_ckpt_status",
             return_value={"fixture": {"exists": True, "path": "/fixture"}},
+        ), patch.object(
+            app_module,
+            "_resolve_part_seg_run_id",
+            return_value=Path("/fixture/latest.pt"),
         ), patch.object(app_module.subprocess, "Popen", return_value=FakeProcess()):
             job = app_module._reconstruct_start(app_module.ReconstructRequest(), root)
 
@@ -248,6 +252,10 @@ class FridgeMultiviewImportTest(unittest.TestCase):
             app_module,
             "_ckpt_status",
             return_value={"fixture": {"exists": True, "path": "/fixture"}},
+        ), patch.object(
+            app_module,
+            "_resolve_part_seg_run_id",
+            return_value=Path("/fixture/latest.pt"),
         ), patch.object(app_module.subprocess, "Popen", return_value=FakeProcess()):
             job = app_module._reconstruct_start(app_module.ReconstructRequest(), root)
 
@@ -581,6 +589,8 @@ class FridgeMultiviewImportTest(unittest.TestCase):
         (kin_root / "kinematic_result.json").write_text(json.dumps({
             "format": "arts_gen_kin_agent_v17",
             "summary_path": str(summary_path), "max_iterations": 7, "dataset_id": "realappliance",
+            "motion_observation_root": "", "static_observation_root": "",
+            "static_view_indices": [0, 3, 8, 11],
             "body_source_mesh": str(body), "parts": [{"source_mesh": str(moving)}],
             "xml_path": str(xml_path), "usd_path": str(usd_path),
             "collision_audit_path": str(collision_audit_path),

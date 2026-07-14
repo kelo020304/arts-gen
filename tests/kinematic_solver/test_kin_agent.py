@@ -755,7 +755,7 @@ def test_bundle_runner_combines_decoded_parts(tmp_path: Path):
 
     payload = run_bundle(summary, tmp_path / "run", max_iterations=4)
 
-    assert payload["format"] == "arts_gen_kin_agent_v16"
+    assert payload["format"] == "arts_gen_kin_agent_v17"
     assert len(payload["parts"]) == 2
     assert all(1 <= item["iterations"] < 10 for item in payload["parts"])
     assert all(item["iterations"] <= payload["max_iterations"] for item in payload["parts"])
