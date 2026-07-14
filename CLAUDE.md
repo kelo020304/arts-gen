@@ -66,7 +66,8 @@ Steps 5/8/10/12 need GPU + the `arts-gen` env (we ignore upstream's
 - **Data path**: All generated data under `data/PhysX-Mobility/arts/reconstruction/`
 - **Part mapping**: part_info.json is single source of truth for part labels
 - **Mask format**: [512,512] int32, 0=background, label values from part_info.json
-- **Code update logs**: On the dev machine, update `.txt` maintenance logs by default. For PartMMDiT, use `TRELLIS-arts/code_update/code_update_part_mmdit.txt` as the canonical log; do not rely on the `.md` copy unless the user explicitly asks to sync it.
+- **Specs**: When behavior, data contracts, APIs, or operational guarantees change, update the relevant document under `docs/specs/`.
+- **Code update logs**: After implementation changes, update the relevant existing log under `TRELLIS-arts/code_update/`. Preserve an existing topic's format instead of creating duplicate `.txt` and `.md` copies. For a new topic, use `TRELLIS-arts/code_update/<topic>.md`.
 
 ## Environment
 
@@ -109,35 +110,32 @@ bash scripts/ops/data_pipeline/launch_dataset_preview.sh --data-root /absolute/p
 bash scripts/ops/data_pipeline/launch_dataset_preview.sh --data-root /path --steps 4,11
 ```
 
-## Workflow (Superpowers)
+## Development Workflow
 
-This project uses [obra/superpowers](https://github.com/obra/superpowers) v5+ (installed via `obra/superpowers-marketplace`, user scope) as its development methodology. Each capability is exposed two ways:
-- **User types** `/superpowers:<skill-name>` (e.g. `/superpowers:brainstorming`) — slash command form, visible under `/help` → `custom-commands`
-- **Model invokes** the `Skill` tool with `<skill-name>` — programmatic form, auto-triggered by the `using-superpowers` bootstrap at session start
+Superpowers is not installed or used by this project. Do not invoke or reinstall
+Superpowers skills, and do not create `.superpowers/` artifacts.
 
-Core skills you should reach for (full list in `~/.claude/plugins/cache/superpowers-marketplace/superpowers/<version>/skills/`):
-- `brainstorming` — scope a problem before writing code
-- `writing-plans` — design before implementing
-- `executing-plans` — drive a written plan to completion
-- `systematic-debugging` — methodical bug investigation
-- `test-driven-development` — TDD loop
-- `verification-before-completion` — confirm work meets the goal before declaring done
-- `subagent-driven-development` / `dispatching-parallel-agents` — parallelize via Task agents
-- `using-git-worktrees` — isolate risky work
-- `requesting-code-review` / `receiving-code-review` — review loop
-- `finishing-a-development-branch` — wrap up before PR
+For normal implementation work, inspect the relevant code and proceed directly.
+Do not create a plan document unless the user explicitly asks for a plan (for
+example, says `计划` or `plan`). When documentation changes are needed, keep the
+default scope to:
 
-If a skill applies even at 1% probability, invoke it (per `using-superpowers` policy). User instructions in this CLAUDE.md still override skill defaults.
+- the relevant spec under `docs/specs/`; and
+- the relevant code update log under `TRELLIS-arts/code_update/`.
+
+Do not create brainstorming, milestone, UAT, summary, or other workflow documents
+by default. Verification and focused secondary review are still encouraged, but
+they do not require a workflow document.
 
 ### Frozen planning history
 
 - `.gsd/` — GSD-2 milestones/slices/tasks, last active up to **M001/S02 done, S03 not started**. Treat as **read-only**: don't write new `S##-PLAN.md` / `T##-PLAN.md` / SUMMARY / UAT files there. When you need context on what's been decided or implemented, read `.gsd/STATE.md` and `.gsd/DECISIONS.md`.
 - `docs/archive/v0.1.0-planning/` — older GSD-1 phase artifacts (v0.1.0 milestone, 10 phases all complete). Same rule: read-only.
-- The `M001 S03` work (External Data Conversion) is still real outstanding work — when you pick it up, plan it via superpowers (`brainstorming` skill → `writing-plans` skill), not by extending `.gsd/milestones/M001/`.
+- The `M001 S03` work (External Data Conversion) is still real outstanding work. Do not extend `.gsd/milestones/M001/`; only create a new plan if the user explicitly requests one.
 
 ### Codex review (still recommended)
 
-Independent of methodology: when you make non-trivial code changes, asking a Codex/secondary review pass is still useful. The prior GSD-2 rule mandated a `codex_review.post_execution` block in plan frontmatter — under superpowers there's no equivalent frontmatter slot, so just include 3-4 specific review prompts (in Chinese) inside whatever plan/PR description you write. Focus them on:
+When you make non-trivial code changes, asking a Codex/secondary review pass is still useful. If the user explicitly requested a plan or PR description, include 3-4 specific review prompts (in Chinese). Focus them on:
 - 核心逻辑改动是否正确
 - 跨脚本的数据路径一致性
 - 是否有非预期的副作用
@@ -327,15 +325,12 @@ easydict / pandas / lpips / rembg + onnxruntime / ninja
 
 文档描述的能力必须和代码实际能力对齐。如果某项检查在当前数据格式下只走 fallback 分支，就写清楚是 fallback，不要写成"完整校验"。
 
-## Workflow Enforcement (Superpowers)
+## Workflow Enforcement
 
-For non-trivial work, default to the superpowers flow:
-
-1. **Skim `.gsd/STATE.md` once for context** (frozen, read-only) — it summarizes what was already decided/built up to M001/S02.
-2. **For new work**, invoke the relevant superpowers skill via the `Skill` tool — `brainstorming` to scope, `writing-plans` to design, `executing-plans` to drive it. Do **not** create new files under `.gsd/milestones/...`.
-3. **Tiny ad-hoc edits** (1 file, no design needed) → just do it, no plan needed.
-4. **Multi-step or risky changes** → produce a plan via `writing-plans`, then execute via `executing-plans`. Use `verification-before-completion` before declaring done.
+1. `.gsd/` is frozen historical context. Read it only when relevant; do not write new files under `.gsd/milestones/...`.
+2. Execute normal code changes directly. Do not require brainstorming or planning workflow steps.
+3. Update the relevant spec and code update log when the implementation changes their subject matter.
+4. Create a plan document only when the user explicitly asks for one.
+5. Verify the result before declaring completion.
 
 Legacy GSD plugin commands — `/gsd:quick`, `/gsd:debug`, `/gsd:plan-phase`, `/gsd:execute-phase`, `/gsd:profile-user`, etc. — are **deprecated for this project**. Don't invoke them; their `.gsd/`-writing side effects would re-activate the abandoned hierarchy.
-
-<!-- Removed: GSD:profile block — superseded by superpowers workflow (see Workflow section above). -->

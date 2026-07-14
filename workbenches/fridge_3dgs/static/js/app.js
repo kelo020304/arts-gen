@@ -1,3 +1,5 @@
+import { VoxelViewer } from "./voxel-viewer.js?v=20260713-kin-agent-v8";
+
 const VIEW_NAMES = ["front", "front_left", "front_right", "side"];
 const SUPPORTED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const SUPPORTED_IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp"]);
@@ -58,8 +60,22 @@ const state = {
   samPreview: null,
   jobId: null,
   pollTimer: null,
-  jobIds: { ssflow: null, partseg: null },
-  pollTimers: { ssflow: null, partseg: null },
+  jobIds: {},
+  pollTimers: {},
+  pipeline: {},
+  runCatalog: [],
+  activeRun: null,
+  partSegRuns: [],
+  selectedPartSegRun: null,
+  ssVoxelViewer: null,
+  ssVoxelLoadedUrl: null,
+  ssVoxelLoading: false,
+  partVoxelViewer: null,
+  partVoxelLoadedUrl: null,
+  partVoxelLoading: false,
+  kinAgentConfig: null,
+  kinAgentJobId: null,
+  kinAgentPollTimer: null,
   orientation: { x: 0, y: 225, z: 180 },
   inputMode: "upload",
   datasetObjects: [],
@@ -111,7 +127,9 @@ function outputRelUrl(path) {
 
 async function loadConfig() {
   state.config = await api("/api/config");
+  await loadRunCatalog();
   state.session = await api("/api/session");
+  await loadPartSegCheckpoints();
   const storedSource = state.session && state.session.input_source ? state.session.input_source.type : "none";
   const pointCloudOk = !!(state.config && state.config.point_cloud && state.config.point_cloud.exists);
   state.inputMode = storedSource === "dataset" || storedSource === "dataset_import"
@@ -132,8 +150,79 @@ async function loadConfig() {
     state.activeLabel = state.labels[0] ? state.labels[0].id : 1;
   }
   renderAll();
+  await loadPipeline();
   if (state.inputMode === "3dgs") ensureViewerLoaded();
   if (state.inputMode === "dataset") loadDatasetCatalog().catch((error) => setStatus(error.message, "error"));
+}
+
+async function loadRunCatalog() {
+  const payload = await api("/api/runs");
+  state.runCatalog = payload.runs || [];
+  state.activeRun = payload.active_run || null;
+  renderRunCatalog();
+}
+
+function renderRunCatalog() {
+  const select = el("runWorkspaceSelect");
+  if (!select) return;
+  select.innerHTML = state.runCatalog.map((run) => {
+    const object = run.object_id ? ` · ${run.object_id}` : " · empty";
+    return `<option value="${escapeHtml(run.id)}"${run.id === state.activeRun ? " selected" : ""}>${escapeHtml(run.id + object)}</option>`;
+  }).join("");
+  const active = state.runCatalog.find((run) => run.id === state.activeRun);
+  el("runWorkspaceSummary").textContent = active
+    ? `${active.path}${active.object_id ? ` · object ${active.object_id}` : " · no object loaded"}`
+    : "No active run folder";
+}
+
+async function selectRunWorkspace(runId, create = false) {
+  const clean = String(runId || "").trim();
+  if (!clean) throw new Error("Enter or select an EE-Eval run folder");
+  await api("/api/runs/select", {
+    method: "POST",
+    body: JSON.stringify({ run_id: clean, create }),
+  });
+  Object.values(state.pollTimers).forEach((timer) => window.clearTimeout(timer));
+  state.jobIds = {};
+  state.pollTimers = {};
+  state.pipeline = {};
+  state.ssVoxelLoadedUrl = null;
+  state.partVoxelLoadedUrl = null;
+  state.kinAgentConfig = null;
+  state.kinAgentJobId = null;
+  window.clearTimeout(state.kinAgentPollTimer);
+  state.session = null;
+  unloadViewer();
+  await loadConfig();
+  setStage("views");
+  setStatus(`${create ? "Created" : "Opened"} EE-Eval run ${clean}`);
+}
+
+async function loadPartSegCheckpoints() {
+  const payload = await api("/api/checkpoints/part-prompt-seg");
+  state.partSegRuns = payload.runs || [];
+  const storageKey = `eeEvalPartSegRun:${state.activeRun || "default"}`;
+  const stored = window.localStorage.getItem(storageKey);
+  const available = new Set(state.partSegRuns.map((item) => item.id));
+  state.selectedPartSegRun = available.has(stored)
+    ? stored
+    : available.has(payload.selected_id)
+      ? payload.selected_id
+      : payload.default_id;
+  renderPartSegCheckpointSelect();
+}
+
+function renderPartSegCheckpointSelect() {
+  const select = el("partSegCkptSelect");
+  if (!select) return;
+  select.innerHTML = "";
+  for (const item of state.partSegRuns) {
+    const option = document.createElement("option");
+    option.value = item.id;
+    option.textContent = item.run_name;
+    option.selected = item.id === state.selectedPartSegRun;
+    select.appendChild(option);
+  }
 }
 
 async function refreshSession() {
@@ -149,6 +238,8 @@ async function refreshSession() {
     }
   }
   renderAll();
+  await loadPipeline();
+  await loadKinAgentConfig();
 }
 
 function contractText(contract) {
@@ -279,7 +370,10 @@ function renderDatasetAngles() {
   const objectSelect = el("datasetObjectSelect");
   const angleSelect = el("datasetAngleSelect");
   if (!objectSelect || !angleSelect) return;
-  const selected = state.datasetObjects.find((item) => String(item.object_id || item.obj_id) === objectSelect.value);
+  const [datasetId, objectId] = objectSelect.value.split("::", 2);
+  const selected = state.datasetObjects.find((item) =>
+    String(item.dataset_id || "default") === datasetId && String(item.object_id || item.obj_id) === objectId
+  );
   const angles = selected?.angles?.length ? selected.angles : [0];
   angleSelect.innerHTML = angles.map((angle) => `<option value="${escapeHtml(angle)}">${escapeHtml(angle)}</option>`).join("");
 }
@@ -294,10 +388,20 @@ async function loadDatasetCatalog() {
     const select = el("datasetObjectSelect");
     select.innerHTML = state.datasetObjects.map((item) => {
       const id = item.object_id || item.obj_id;
+      const datasetId = item.dataset_id || "default";
       const name = item.name || item.category || "";
-      return `<option value="${escapeHtml(id)}">${escapeHtml(id)}${name ? ` · ${escapeHtml(name)}` : ""}</option>`;
+      return `<option value="${escapeHtml(datasetId)}::${escapeHtml(id)}">${escapeHtml(datasetId)} · ${escapeHtml(id)}${name ? ` · ${escapeHtml(name)}` : ""}</option>`;
     }).join("");
+    const currentDataset = state.session?.dataset;
+    if (currentDataset) {
+      const currentValue = `${currentDataset.dataset_id || "default"}::${currentDataset.object_id}`;
+      if (Array.from(select.options).some((option) => option.value === currentValue)) select.value = currentValue;
+    }
     renderDatasetAngles();
+    if (currentDataset) {
+      el("datasetAngleSelect").value = String(currentDataset.angle_idx || 0);
+      el("datasetViewCount").value = String(currentDataset.physical_view_count || 4);
+    }
   } finally {
     state.datasetBusy = false;
     renderInputMode();
@@ -305,8 +409,26 @@ async function loadDatasetCatalog() {
 }
 
 async function loadDatasetSample() {
-  const objectId = el("datasetObjectSelect").value;
-  if (!objectId) throw new Error("Select a dataset object first");
+  const selectedValue = el("datasetObjectSelect").value;
+  if (!selectedValue) throw new Error("Select a dataset object first");
+  const [datasetId, objectId] = selectedValue.split("::", 2);
+  const angleIdx = Number(el("datasetAngleSelect").value || 0);
+  const viewCount = Number(el("datasetViewCount").value || 4);
+  const currentDataset = state.session?.dataset;
+  if (
+    currentDataset &&
+    String(currentDataset.dataset_id) === String(datasetId) &&
+    String(currentDataset.object_id) === String(objectId) &&
+    Number(currentDataset.angle_idx) === angleIdx &&
+    Number(currentDataset.physical_view_count) === viewCount
+  ) {
+    await loadPipeline();
+    state.activeView = 0;
+    setStage("masks");
+    await loadMaskForActiveView();
+    setStatus(`Restored cached ${objectId} from ${state.activeRun}`);
+    return;
+  }
   const existing = state.session && Array.isArray(state.session.views) && state.session.views.some((view) => view.image_url);
   if (existing && !window.confirm("Replace the current RGB views and masks with this dataset sample?")) return;
   state.datasetBusy = true;
@@ -316,9 +438,10 @@ async function loadDatasetSample() {
     await api("/api/dataset/load", {
       method: "POST",
       body: JSON.stringify({
+        dataset_id: datasetId,
         object_id: objectId,
-        angle_idx: Number(el("datasetAngleSelect").value || 0),
-        view_count: Number(el("datasetViewCount").value || 4),
+        angle_idx: angleIdx,
+        view_count: viewCount,
         replace_existing: Boolean(existing),
       }),
     });
@@ -353,10 +476,10 @@ function renderUploadSlots() {
   document.querySelectorAll(".stageTab").forEach((btn) => {
     btn.disabled = state.uploadBusy;
   });
-  for (const id of ["finalizeBtn", "checkDinoBtn", "startSsFlowBtn"]) {
+  for (const id of ["finalizeBtn", "checkDinoBtn", "startSsFlowBtn", "startSsDecodeBtn", "startPartSegBtn", "startSlatDecodeBtn"]) {
     el(id).disabled = state.uploadBusy;
   }
-  el("startPartSegBtn").disabled = true;
+  if (Object.keys(STAGE_RUNNERS).length) renderPipeline();
   for (let i = 0; i < 4; i++) {
     const file = state.uploadFiles[i];
     const card = document.createElement("div");
@@ -431,6 +554,7 @@ function renderMaskViewList() {
   list.innerHTML = "";
   for (let i = 0; i < 4; i++) {
     const view = state.session && state.session.views ? state.session.views[i] : null;
+    if (!view || !view.image_url) continue;
     const btn = document.createElement("button");
     btn.className = state.activeView === i ? "active" : "";
     btn.dataset.index = String(i);
@@ -508,19 +632,16 @@ function renderCkptList(id, keys) {
 }
 
 function renderCkpts() {
-  renderCkptList("ssCkptList", [
-    "ss_flow_ckpt",
-    "ss_decoder_ckpt",
-    "slat_flow_ckpt",
-    "slat_mesh_decoder_ckpt",
-    "slat_gaussian_decoder_ckpt",
-  ]);
-  renderCkptList("partCkptList", [
-    "part_seg_ckpt",
-    "ss_decoder_ckpt",
-    "slat_mesh_decoder_ckpt",
-    "slat_gaussian_decoder_ckpt",
-  ]);
+  renderCkptList("ssCkptList", ["ss_flow_ckpt"]);
+  renderCkptList("ssDecodeCkptList", ["ss_decoder_ckpt"]);
+  const selected = state.partSegRuns.find((item) => item.id === state.selectedPartSegRun);
+  const partList = el("partCkptList");
+  if (partList) {
+    partList.innerHTML = selected
+      ? `<div class="ckptItem ok"><strong>${escapeHtml(selected.run_name)}</strong><span>latest</span><div class="pathText">${escapeHtml(selected.checkpoint_path)}</div></div>`
+      : "";
+  }
+  renderCkptList("slatCkptList", ["slat_flow_ckpt", "slat_mesh_decoder_ckpt", "slat_gaussian_decoder_ckpt"]);
 }
 
 function renderSsWorkspace() {
@@ -546,28 +667,6 @@ function renderSsWorkspace() {
     <div class="pathText">${dino.preprocess || ""}</div>
     <hr>
     <div class="pathText">${(state.session && state.session.session_dir) || ""}</div>`;
-  renderDinoPreviewGrid(dino);
-}
-
-function renderDinoPreviewGrid(dino) {
-  const grid = el("dinoPreviewGrid");
-  if (!grid) return;
-  grid.innerHTML = "";
-  for (let i = 0; i < 4; i++) {
-    const view = dino && Array.isArray(dino.views) ? dino.views[i] : null;
-    const fig = document.createElement("figure");
-    fig.className = "renderItem";
-    const img = view && view.preview_url
-      ? `<img class="renderThumb" alt="" src="${versionedResourceUrl(view.preview_url, view.preview_mtime)}">`
-      : `<div class="renderThumb emptyPreview"></div>`;
-    const detail = view && view.ok
-      ? `fg ${(Number(view.foreground_fraction || 0) * 100).toFixed(1)}% / bbox ${view.alpha_bbox_xyxy.join(",")}`
-      : (view && view.error) || "pending";
-    fig.innerHTML = `
-      ${img}
-      <figcaption>DINO ${i + 1}. ${escapeHtml(persistedViewName(i))}<br><span class="muted">${detail}</span></figcaption>`;
-    grid.appendChild(fig);
-  }
 }
 
 function renderPartSegWorkspace() {
@@ -1162,6 +1261,12 @@ async function checkDinoTokens() {
   try {
     const payload = await api("/api/ssflow/dino/check", { method: "POST", body: "{}" });
     el("dinoCheckStatus").textContent = JSON.stringify(payload, null, 2);
+    renderDinoTokenVisualizations({
+      artifact_urls: {
+        pca_views: payload.visualization?.pca_view_urls || [],
+        rgb_views: payload.visualization?.input_view_urls || [],
+      },
+    });
     setStatus(`DINO ok ${payload.shape.join(" x ")}`);
   } catch (error) {
     el("dinoCheckStatus").textContent = error.message;
@@ -1175,21 +1280,157 @@ async function finalizeExport() {
 }
 
 const STAGE_RUNNERS = {
-  ssflow: {
-    apiStage: "all",
+  dino_ss_flow: {
+    dependency: null,
     statusId: "ssStatus",
     outputId: "ssOutputs",
+    progressBarId: "ssProgressBar",
+    progressTextId: "ssProgressText",
     quickId: "ssQuickSteps",
-    blockedText: "SS Flow blocked",
+    buttonId: "startSsFlowBtn",
+    label: "DINO + SS Flow",
   },
-  partseg: {
-    apiStage: "partseg",
+  ss_decode: {
+    dependency: "dino_ss_flow",
+    statusId: "ssDecodeStatus",
+    outputId: "ssDecodeOutputs",
+    progressBarId: "ssDecodeProgressBar",
+    progressTextId: "ssDecodeProgressText",
+    buttonId: "startSsDecodeBtn",
+    label: "SS Decoder",
+  },
+  part_prompt_seg: {
+    dependency: "ss_decode",
     statusId: "partStatus",
     outputId: "partOutputs",
-    quickId: "partQuickSteps",
-    blockedText: "Part Seg blocked",
+    progressBarId: "partProgressBar",
+    progressTextId: "partProgressText",
+    buttonId: "startPartSegBtn",
+    label: "Part Prompt Seg",
+  },
+  slat_decode: {
+    dependency: "part_prompt_seg",
+    statusId: "slatStatus",
+    outputId: "slatOutputs",
+    progressBarId: "slatProgressBar",
+    progressTextId: "slatProgressText",
+    quickId: "slatQuickSteps",
+    buttonId: "startSlatDecodeBtn",
+    label: "Mesh + GS Decode",
   },
 };
+
+function stageComplete(status) {
+  return ["complete", "cached"].includes(String(status?.state || ""));
+}
+
+function updateStageProgress(stage, status = {}) {
+  const runner = STAGE_RUNNERS[stage];
+  if (!runner) return;
+  const progress = Math.max(0, Math.min(100, Number(status.progress || 0)));
+  el(runner.progressBarId).style.width = `${progress}%`;
+  const stateText = String(status.state || "not_started").replaceAll("_", " ");
+  el(runner.progressTextId).textContent = `${stateText} · ${progress}%${status.message ? ` · ${status.message}` : ""}`;
+  const dependencyReady = !runner.dependency || stageComplete(state.pipeline[runner.dependency]);
+  const contractReady = !!state.session?.contract?.ok;
+  el(runner.buttonId).disabled = state.uploadBusy || !contractReady || !dependencyReady || Object.values(state.jobIds).some(Boolean);
+}
+
+function renderPipeline() {
+  Object.entries(STAGE_RUNNERS).forEach(([stage, runner]) => {
+    const status = state.pipeline[stage] || { state: "not_started", progress: 0 };
+    updateStageProgress(stage, status);
+    renderReconOutputs(status.files || [], runner.outputId);
+  });
+  renderDinoTokenVisualizations(state.pipeline.dino_ss_flow || {});
+  renderSsVoxelVisualization(state.pipeline.ss_decode || {});
+  renderPartVoxelVisualization(state.pipeline.part_prompt_seg || {});
+  if (stageComplete(state.pipeline.slat_decode)) {
+    const manifest = appUrl("api/reconstruct/viewer-manifest");
+    const viewer = el("componentViewerFrame");
+    const next = `${appUrl("static/component-viewer.html")}?manifest=${encodeURIComponent(manifest)}&mode=mesh`;
+    if (viewer.src !== next) viewer.src = next;
+  } else {
+    el("componentViewerFrame").removeAttribute("src");
+  }
+}
+
+function renderPartVoxelLegend(layers) {
+  const legend = el("partVoxelLegend");
+  if (!legend) return;
+  legend.innerHTML = "";
+  for (const layer of layers || []) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `partVoxelLegendItem${layer.visible === false ? " off" : ""}`;
+    button.dataset.layerId = String(layer.id);
+    button.innerHTML = `<span class="partVoxelLegendSwatch" style="--swatch:${escapeHtml(layer.color)}"></span><span>${escapeHtml(layer.label)}</span><span class="partVoxelLegendCount">${Number(layer.voxel_count || 0).toLocaleString()}</span>`;
+    button.addEventListener("click", () => {
+      const visible = button.classList.contains("off");
+      button.classList.toggle("off", !visible);
+      state.partVoxelViewer?.setLayerVisible(String(layer.id), visible);
+    });
+    legend.appendChild(button);
+  }
+}
+
+async function renderPartVoxelVisualization(status) {
+  const panel = el("partVoxelPanel");
+  const source = (status.files || []).find((file) => file.rel === "part_coords.npz");
+  if (!panel) return;
+  panel.hidden = !source;
+  const sourceKey = source ? `${source.url}:${source.mtime_ns || source.size || ""}` : null;
+  if (!source || state.partVoxelLoadedUrl === sourceKey || state.partVoxelLoading) return;
+  state.partVoxelLoading = true;
+  try {
+    const payload = await api("/api/reconstruct/voxel/part_prompt_seg");
+    state.partVoxelViewer ||= new VoxelViewer(el("partVoxelCanvas"), el("partVoxelStats"), el("partVoxelOverlay"));
+    state.partVoxelViewer.setData(payload);
+    renderPartVoxelLegend(payload.layers);
+    state.partVoxelLoadedUrl = sourceKey;
+  } catch (error) {
+    el("partVoxelStats").textContent = error.message || String(error);
+  } finally {
+    state.partVoxelLoading = false;
+  }
+}
+
+async function renderSsVoxelVisualization(status) {
+  const panel = el("ssVoxelPanel");
+  const source = (status.files || []).find((file) => file.rel === "whole_coords.npy");
+  if (!panel) return;
+  panel.hidden = !source;
+  const sourceKey = source ? `${source.url}:${source.mtime_ns || source.size || ""}` : null;
+  if (!source || state.ssVoxelLoadedUrl === sourceKey || state.ssVoxelLoading) return;
+  state.ssVoxelLoading = true;
+  try {
+    const payload = await api("/api/reconstruct/voxel/ss_decode");
+    state.ssVoxelViewer ||= new VoxelViewer(el("ssVoxelCanvas"), el("ssVoxelStats"), el("ssVoxelOverlay"));
+    state.ssVoxelViewer.setData(payload);
+    state.ssVoxelLoadedUrl = sourceKey;
+  } catch (error) {
+    el("ssVoxelStats").textContent = error.message || String(error);
+  } finally {
+    state.ssVoxelLoading = false;
+  }
+}
+
+async function loadPipeline() {
+  try {
+    const payload = await api("/api/reconstruct/pipeline");
+    state.pipeline = payload.stages || {};
+    for (const job of payload.active_jobs || []) {
+      const stage = String(job.stage || "");
+      if (STAGE_RUNNERS[stage] && !state.jobIds[stage]) {
+        state.jobIds[stage] = job.job_id;
+        pollReconstruct(stage);
+      }
+    }
+    renderPipeline();
+  } catch (error) {
+    setStatus(`Pipeline status unavailable: ${error.message}`, "warn");
+  }
+}
 
 async function startReconstruct(stage) {
   const runner = STAGE_RUNNERS[stage];
@@ -1197,106 +1438,284 @@ async function startReconstruct(stage) {
   el(runner.statusId).textContent = "finalizing inputs";
   try {
     await writeExport();
-    el(runner.statusId).textContent = "starting";
     const payload = await api("/api/reconstruct/start", {
       method: "POST",
-      body: JSON.stringify({ stage: runner.apiStage, quick_steps: el(runner.quickId).checked }),
+      body: JSON.stringify({
+        stage,
+        quick_steps: runner.quickId ? el(runner.quickId).checked : false,
+        part_seg_run_id: stage === "part_prompt_seg" ? state.selectedPartSegRun : null,
+      }),
     });
     state.jobIds[stage] = payload.job_id;
-    state.jobId = payload.job_id;
     el(runner.statusId).textContent = JSON.stringify(payload, null, 2);
+    renderPipeline();
     pollReconstruct(stage);
   } catch (error) {
     el(runner.statusId).textContent = error.message;
-    setStatus(runner.blockedText, "warn");
+    setStatus(`${runner.label} blocked`, "warn");
   }
 }
 
 async function pollReconstruct(stage) {
   const runner = STAGE_RUNNERS[stage];
-  const jobId = runner ? state.jobIds[stage] : state.jobId;
+  const jobId = state.jobIds[stage];
   if (!runner || !jobId) return;
   window.clearTimeout(state.pollTimers[stage]);
-  const payload = await api(`/api/reconstruct/status/${jobId}`);
-  el(runner.statusId).textContent = payload.log_tail || JSON.stringify(payload, null, 2);
-  renderReconOutputs(payload.files || [], runner.outputId, stage, payload.summary);
-  if (stage === "ssflow") {
-    renderReconOutputs(payload.files || [], "partOutputs", "partseg", payload.summary);
-    el("partStatus").textContent = payload.running
-      ? "End-to-end job is running"
-      : payload.return_code === 0
-        ? "Part segmentation, GS and mesh outputs are ready"
-        : "End-to-end job failed; inspect the run log";
-  }
-  if (payload.running) {
-    state.pollTimers[stage] = window.setTimeout(() => pollReconstruct(stage), 3000);
+  try {
+    const payload = await api(`/api/reconstruct/status/${jobId}`);
+    state.pipeline = payload.pipeline || state.pipeline;
+    el(runner.statusId).textContent = payload.log_tail || JSON.stringify(payload.progress || payload, null, 2);
+    renderPipeline();
+    if (payload.running) {
+      state.pollTimers[stage] = window.setTimeout(() => pollReconstruct(stage), 1500);
+    } else {
+      state.jobIds[stage] = null;
+      renderPipeline();
+      if (stage === "slat_decode" && payload.return_code === 0) loadKinAgentConfig();
+      setStatus(payload.return_code === 0 ? `${runner.label} complete` : `${runner.label} failed`, payload.return_code === 0 ? "info" : "error");
+    }
+  } catch (error) {
+    state.jobIds[stage] = null;
+    window.clearTimeout(state.pollTimers[stage]);
+    el(runner.statusId).textContent = error.message || String(error);
+    renderPipeline();
+    setStatus(`${runner.label} status polling failed`, "error");
   }
 }
 
-function outputMatchesStage(file, stage) {
-  const rel = String(file.rel || file.path || "").toLowerCase();
-  if (stage === "ssflow") {
-    return (
-      rel.includes("whole_voxel") ||
-      rel.includes("/overall/") ||
-      rel.endsWith("summary.json") ||
-      rel.endsWith("ckpt_config.json") ||
-      rel.endsWith("run.log")
-    );
+async function loadKinAgentConfig() {
+  try {
+    state.kinAgentConfig = await api("/api/kin-agent/config");
+    renderKinAgent(state.kinAgentConfig);
+  } catch (error) {
+    el("kinAgentStatus").textContent = error.message || String(error);
   }
-  if (stage === "partseg") {
-    return (
-      rel.includes("/part_") ||
-      rel.includes("part_body") ||
-      rel.includes("labeled_voxel") ||
-      rel.endsWith("summary.json") ||
-      rel.endsWith("run.log")
-    );
-  }
-  return true;
 }
 
-function renderReconOutputs(files, outputId, stage, summary = null) {
+function renderKinAgentTrace(trace = []) {
+  if (!trace.length) return "";
+  const rows = trace.map((row, index) => {
+    const selected = row.selected || {};
+    const axis = (selected.axis_world || []).map((value) => Number(value).toFixed(3)).join(", ");
+    const critic = row.critic_feedback || {};
+    const issueCodes = (critic.issues || []).map((issue) => issue.code).filter(Boolean);
+    const feedback = [critic.verdict, ...issueCodes, ...(critic.recommended_actions || []), row.stop_reason]
+      .filter(Boolean);
+    const stage = String(row.stage || "proposal_validation").replaceAll("_", " ");
+    return `<li><span>${String(index + 1).padStart(2, "0")}</span><div><strong>${escapeHtml(stage)}</strong><small>${escapeHtml(selected.joint_type || "unknown")} · [${escapeHtml(axis)}] · ${Number(selected.lower || 0).toFixed(3)} → ${Number(selected.upper || 0).toFixed(3)} · score ${Number(selected.score || 0).toFixed(3)}</small>${feedback.length ? `<small class="kinAgentTraceFeedback">${escapeHtml(feedback.join(" · "))}</small>` : ""}</div></li>`;
+  }).join("");
+  return `<details class="kinAgentTrace"><summary>Refinement trace · ${trace.length} rounds</summary><ol>${rows}</ol></details>`;
+}
+
+function renderKinAgent(payload = {}) {
+  const ready = !!payload.ready;
+  const parts = (payload.parts || []).filter((item) => item.kind !== "body");
+  const body = (payload.parts || []).find((item) => item.kind === "body");
+  const motionToggle = el("kinAgentMotionStates");
+  if (motionToggle) {
+    motionToggle.disabled = !payload.dataset_motion_states_available;
+    const activeRunKey = state.activeRun || "default";
+    if (motionToggle.dataset.runId !== activeRunKey) {
+      motionToggle.checked = !!payload.dataset_motion_states_available;
+      motionToggle.dataset.runId = activeRunKey;
+    }
+    if (!payload.dataset_motion_states_available) motionToggle.checked = false;
+  }
+  const requestedEvidence = motionToggle?.checked ? "dataset motion states" : "static decoded geometry";
+  const resultMode = payload.result?.evidence_mode?.replaceAll("_", " ");
+  el("kinAgentInputSummary").innerHTML = ready
+    ? `<strong>${escapeHtml(body?.label || "body")}</strong><div>${parts.length} moving components · ${escapeHtml(requestedEvidence)}${resultMode ? ` · result ${escapeHtml(resultMode)}` : ""}</div>`
+    : "Waiting for decoded body and parts";
+  const progress = payload.status || { state: "not_started", progress: 0 };
+  el("startKinAgentBtn").disabled = !ready || progress.state === "running" || !!state.kinAgentJobId || Object.values(state.jobIds).some(Boolean);
+  el("kinAgentProgressBar").style.width = `${Math.max(0, Math.min(100, Number(progress.progress || 0)))}%`;
+  el("kinAgentProgressText").textContent = `${String(progress.state || "not_started").replaceAll("_", " ")} · ${Number(progress.progress || 0)}%${progress.message ? ` · ${progress.message}` : ""}`;
+  const result = payload.result;
+  const downloads = el("kinAgentDownloads");
+  downloads.innerHTML = result
+    ? [
+        result.xml_url ? `<a href="${resourceUrl(result.xml_url)}" target="_blank" rel="noreferrer">MJCF XML</a>` : "",
+        result.usd_url ? `<a href="${resourceUrl(result.usd_url)}" target="_blank" rel="noreferrer">USD</a>` : "",
+        result.validation?.report_url ? `<a href="${resourceUrl(result.validation.report_url)}" target="_blank" rel="noreferrer">Validation JSON</a>` : "",
+        result.collision_audit_url ? `<a href="${resourceUrl(result.collision_audit_url)}" target="_blank" rel="noreferrer">Collision Audit JSON</a>` : "",
+        `<span>${escapeHtml(result.input_contract || "decoded meshes")}</span>`,
+      ].filter(Boolean).join("")
+    : "No XML or USD yet";
+  const results = el("kinAgentResults");
+  const validation = el("kinAgentValidation");
+  validation.innerHTML = result?.validation?.image_url
+    ? `<figure><img src="${resourceUrl(result.validation.image_url)}" alt="MuJoCo qpos validation" /><figcaption>MuJoCo qpos validation · ${result.validation.ok ? "passed" : "needs review"} · decoded collision ${result.collision_audit?.requires_review ? "needs review" : "clear"}</figcaption></figure>`
+    : "";
+  results.innerHTML = result ? (result.parts || []).map((item) => {
+    const candidate = item.candidate || {};
+    const delivered = item.delivery_candidate || candidate;
+    const signals = candidate.signals || {};
+    const axis = (delivered.axis_world || []).map((value) => Number(value).toFixed(4)).join(", ");
+    const origin = (delivered.origin_world || []).map((value) => Number(value).toFixed(4)).join(", ");
+    const canonicalAxis = (candidate.axis_world || []).map((value) => Number(value).toFixed(4)).join(", ");
+    const confidence = (key) => Number(signals[key] || 0).toFixed(2);
+    const rangeStatus = item.range_estimate?.status || (Number(signals.range_censored || 0) >= 0.5 ? "censored" : "observed_stop");
+    const rangeState = ` · ${rangeStatus}`;
+    const predictionOuter = item.range_estimate?.prediction_interval?.outer_q90;
+    const predictionText = Array.isArray(predictionOuter)
+      ? `${Number(predictionOuter[0]).toFixed(4)} → ${Number(predictionOuter[1]).toFixed(4)}`
+      : null;
+    const motionStates = Number(signals.motion_observation_states || 0);
+    const evidenceParts = [];
+    const collision = item.collision_audit || {};
+    if (motionStates > 0) {
+      const qualifier = Number(signals.motion_observation_confidence || 0) < 0.8 ? "noisy " : "";
+      evidenceParts.push(`${motionStates} ${qualifier}calibrated motion states`);
+    }
+    if (Number(signals.axis_family_model_used || 0) >= 0.5) evidenceParts.push("train-only axis-family model");
+    if (Number(signals.phyx_thin_axis_used || 0) >= 0.5) evidenceParts.push("decoded thin-axis critic");
+    if (Number(signals.motion_type_classifier_used || 0) >= 0.5) evidenceParts.push("dual-trajectory type critic");
+    if (Number(signals.motion_axis_family_used || 0) >= 0.5) evidenceParts.push("motion-family axis critic");
+    if (Number(signals.range_prior_used || 0) >= 0.5) evidenceParts.push("train-only range prior");
+    if (collision.method) evidenceParts.push("decoded mesh collision audit");
+    if (!evidenceParts.length) evidenceParts.push("static decoded geometry");
+    const evidence = evidenceParts.join(" + ");
+    const reviewState = item.requires_review ? " · review" : "";
+    return `<article class="kinAgentResult">
+      <div class="kinAgentResultHead"><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(delivered.joint_type || "unknown")}${reviewState}</span></div>
+      <dl><dt>Axis</dt><dd>[${axis}]</dd><dt>Origin</dt><dd>[${origin}]</dd>
+      ${delivered.source !== "canonical prediction" ? `<dt>Canonical axis</dt><dd>[${canonicalAxis}]</dd>` : ""}
+      <dt>Range</dt><dd>${Number(delivered.lower || 0).toFixed(4)} → ${Number(delivered.upper || 0).toFixed(4)}${rangeState}</dd>
+      ${predictionText ? `<dt>Range q90</dt><dd>${predictionText}</dd>` : ""}
+      <dt>Stop</dt><dd>${item.range_estimate?.mechanical_stop_confirmed ? "confirmed" : "not confirmed"}</dd>
+      ${collision.status ? `<dt>Collision</dt><dd>${escapeHtml(collision.status)}${collision.first_invalid_q == null ? "" : ` · first q ${Number(collision.first_invalid_q).toFixed(4)}`}${(collision.recommended_actions || []).length ? ` · ${escapeHtml(collision.recommended_actions.join(" · "))}` : ""}</dd>` : ""}
+      <dt>Evidence</dt><dd>${escapeHtml(evidence)}</dd>
+      <dt>Confidence</dt><dd>type ${confidence("type_confidence")} · axis ${confidence("axis_confidence")} · range ${confidence("range_confidence")}</dd>
+      ${item.requires_review ? `<dt>Review</dt><dd>${escapeHtml((item.review_reasons || []).join(" · "))}</dd>` : ""}
+      <dt>Score</dt><dd>${Number(candidate.score || 0).toFixed(3)}</dd><dt>Rounds</dt><dd>${Number(item.iterations || 0)} / ${Number(result.max_iterations || 0)}</dd></dl>
+      ${renderKinAgentTrace(item.trace || [])}
+    </article>`;
+  }).join("") : "";
+  const viewer = el("kinAgentViewerFrame");
+  if (result) {
+    const resultUrl = appUrl("api/kin-agent/result");
+    const next = `${appUrl("static/kin-agent-viewer.html")}?result=${encodeURIComponent(resultUrl)}&v=${encodeURIComponent(progress.updated_unix || Date.now())}`;
+    if (viewer.src !== next) viewer.src = next;
+  } else {
+    viewer.removeAttribute("src");
+  }
+}
+
+async function startKinAgent() {
+  const maxIterations = Math.max(1, Math.min(9, Number(el("kinAgentIterations").value || 7)));
+  el("kinAgentIterations").value = String(maxIterations);
+  try {
+    const payload = await api("/api/kin-agent/start", {
+      method: "POST",
+      body: JSON.stringify({
+        max_iterations: maxIterations,
+        use_dataset_motion_states: !!el("kinAgentMotionStates")?.checked,
+      }),
+    });
+    if (payload.cached) {
+      state.kinAgentConfig = { ...(state.kinAgentConfig || {}), status: { state: "cached", progress: 100, message: "Inputs unchanged" }, result: payload.result };
+      renderKinAgent(state.kinAgentConfig);
+      el("kinAgentStatus").textContent = "Cached result reused";
+      setStatus("Kin Agent cached result reused");
+      return;
+    }
+    state.kinAgentJobId = payload.job_id;
+    el("kinAgentStatus").textContent = JSON.stringify(payload, null, 2);
+    renderKinAgent({ ...(state.kinAgentConfig || {}), status: { state: "starting", progress: 1 } });
+    pollKinAgent();
+  } catch (error) {
+    el("kinAgentStatus").textContent = error.message || String(error);
+    setStatus("Kin Agent blocked", "warn");
+  }
+}
+
+async function pollKinAgent() {
+  if (!state.kinAgentJobId) return;
+  window.clearTimeout(state.kinAgentPollTimer);
+  try {
+    const payload = await api(`/api/kin-agent/status/${state.kinAgentJobId}`);
+    el("kinAgentStatus").textContent = payload.log_tail || JSON.stringify(payload.progress, null, 2);
+    state.kinAgentConfig = { ...(state.kinAgentConfig || {}), status: payload.progress, result: payload.result };
+    renderKinAgent(state.kinAgentConfig);
+    if (payload.running) {
+      state.kinAgentPollTimer = window.setTimeout(pollKinAgent, 1200);
+    } else {
+      state.kinAgentJobId = null;
+      await loadKinAgentConfig();
+      const validationOk = payload.result?.validation?.ok !== false;
+      const message = payload.return_code !== 0 ? "Kin Agent failed" : validationOk ? "Kin Agent complete" : "Kin Agent needs review";
+      setStatus(message, payload.return_code !== 0 ? "error" : validationOk ? "info" : "warn");
+    }
+  } catch (error) {
+    state.kinAgentJobId = null;
+    el("kinAgentStatus").textContent = error.message || String(error);
+  }
+}
+
+function renderDinoTokenVisualizations(status) {
+  const grid = el("dinoTokenGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  const pca = status.artifact_urls?.pca_views || [];
+  const sessionRgb = (state.session?.ssflow_inputs?.views || []).map((view) => view.preview_url).filter(Boolean);
+  const rgb = status.artifact_urls?.rgb_views || sessionRgb;
+  if (!pca.length) {
+    grid.innerHTML = '<div class="emptyDataset">Run DINO + SS Flow to visualize 37×37 spatial patch tokens.</div>';
+    return;
+  }
+  for (const [label, items] of [["DINO RGB input", rgb], ["Token PCA", pca]]) {
+    const row = document.createElement("section");
+    row.className = "tokenVizRow";
+    const cells = items.map((url, index) => `
+      <figure class="tokenVizCell">
+        <img src="${resourceUrl(url)}" alt="">
+        <figcaption>Slot ${index + 1}</figcaption>
+      </figure>`).join("");
+    row.innerHTML = `<strong>${label}</strong><div class="tokenVizItems">${cells}</div>`;
+    grid.appendChild(row);
+  }
+}
+
+function renderReconOutputs(files, outputId) {
   const grid = el(outputId);
   if (!grid) return;
   grid.innerHTML = "";
-  if (stage === "partseg" && summary) {
-    const cc = summary.metadata?.part_cc_filter || {};
-    const parts = summary.parts || [];
-    const summaryItem = document.createElement("div");
-    summaryItem.className = "outputItem runSummary";
-    summaryItem.innerHTML = `
-      <strong>Joint part result</strong>
-      <div>${parts.length} decoded components</div>
-      <div>${escapeHtml(summary.whole_voxel_coords?.shape?.[0] ?? "-")} whole voxels</div>
-      <div>${escapeHtml(cc.reassigned_to_body_voxels ?? 0)} voxels reassigned to body</div>
-      <div class="muted">CC ${cc.enabled ? "on" : "off"} · max remote distance ${escapeHtml(cc.max_large_component_distance ?? "disabled")}</div>`;
-    grid.appendChild(summaryItem);
-  }
-  for (const file of files.filter((item) => outputMatchesStage(item, stage))) {
+  for (const file of files) {
+    if (!file.url) continue;
     const item = document.createElement("div");
     item.className = "outputItem";
-    const isImage = /\.(png|jpg|jpeg|webp)$/i.test(file.path);
-    const isGaussian = /\.ply$/i.test(file.path) && /gaussian/i.test(file.path);
-    const viewerUrl = isGaussian
-      ? `${appUrl("viewer")}?content=${encodeURIComponent(resourceUrl(file.url))}`
-      : "";
+    const isImage = /\.(png|jpg|jpeg|webp)$/i.test(file.rel || "");
     item.innerHTML = `
       ${isImage ? `<img alt="" src="${resourceUrl(file.url)}">` : ""}
-      <a href="${resourceUrl(file.url)}" target="_blank" rel="noreferrer">${file.rel}</a>
-      ${isGaussian ? `<a class="outputAction" href="${viewerUrl}" target="_blank" rel="noreferrer">View GS</a>` : ""}
+      <a href="${resourceUrl(file.url)}" target="_blank" rel="noreferrer">${escapeHtml(file.rel)}</a>
       <div class="muted">${file.size} bytes</div>`;
     grid.appendChild(item);
   }
 }
 
 function bindEvents() {
+  el("openRunWorkspaceBtn").addEventListener("click", () => {
+    selectRunWorkspace(el("runWorkspaceSelect").value, false).catch((error) => setStatus(error.message, "error"));
+  });
+  el("createRunWorkspaceBtn").addEventListener("click", () => {
+    selectRunWorkspace(el("newRunWorkspaceName").value, true).catch((error) => setStatus(error.message, "error"));
+  });
+  el("partSegCkptSelect").addEventListener("change", (event) => {
+    state.selectedPartSegRun = event.target.value;
+    window.localStorage.setItem(`eeEvalPartSegRun:${state.activeRun || "default"}`, state.selectedPartSegRun);
+    renderCkpts();
+    setStatus("Part Prompt Seg training folder selected; latest checkpoint will be used");
+  });
   document.querySelectorAll(".stageTab").forEach((btn) => {
     btn.addEventListener("click", () => {
       setStage(btn.dataset.stage);
       if (btn.dataset.stage === "masks") {
         loadMaskForActiveView().catch((error) => setStatus(error.message, "error"));
       }
+      if (["ssflow", "ssdecode", "partseg", "slatdecode"].includes(btn.dataset.stage)) {
+        loadPipeline();
+      }
+      if (btn.dataset.stage === "kinagent") loadKinAgentConfig();
     });
   });
   document.querySelectorAll("[data-input-mode]").forEach((btn) => {
@@ -1507,7 +1926,18 @@ function bindEvents() {
   setPointMode(1);
   el("finalizeBtn").addEventListener("click", finalizeExport);
   el("checkDinoBtn").addEventListener("click", checkDinoTokens);
-  el("startSsFlowBtn").addEventListener("click", () => startReconstruct("ssflow"));
+  el("startSsFlowBtn").addEventListener("click", () => startReconstruct("dino_ss_flow"));
+  el("startSsDecodeBtn").addEventListener("click", () => startReconstruct("ss_decode"));
+  el("startPartSegBtn").addEventListener("click", () => startReconstruct("part_prompt_seg"));
+  el("startSlatDecodeBtn").addEventListener("click", () => startReconstruct("slat_decode"));
+  el("openKinAgentBtn").addEventListener("click", () => {
+    setStage("kinagent");
+    loadKinAgentConfig();
+  });
+  el("startKinAgentBtn").addEventListener("click", startKinAgent);
+  el("kinAgentMotionStates").addEventListener("change", () => {
+    renderKinAgent(state.kinAgentConfig || {});
+  });
   window.addEventListener("message", (event) => {
     if (state.inputMode === "3dgs" && event.data && event.data.type === "fridge3dgs.viewerReady") {
       applyOrientation(state.orientation);

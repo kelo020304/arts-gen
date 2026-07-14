@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
 import torch
 
 
@@ -12,10 +13,46 @@ if str(ROOT) not in sys.path:
 
 from scripts.train.part_promptable_seg.train_part_promptable_seg import (
     _build_joint_target,
+    joint_boundary_ce_loss,
+    joint_boundary_metrics_from_labels,
     joint_partial_label_unary_loss,
     joint_pairwise_smooth_loss,
     summarize_joint_eval_rows,
 )
+
+
+def test_joint_boundary_ce_and_fragmentation_metrics_use_supervised_edges() -> None:
+    coords = torch.tensor(
+        [[0, 0, 0], [0, 0, 1], [0, 0, 2], [0, 0, 3]],
+        dtype=torch.long,
+    )
+    target = torch.tensor([0, 0, 1, 1], dtype=torch.long)
+    pred_label = torch.tensor([0, 1, 1, 1], dtype=torch.long)
+    logits = torch.tensor(
+        [[4.0, -4.0], [-1.0, 1.0], [-2.0, 2.0], [-3.0, 3.0]],
+        requires_grad=True,
+    )
+    pred = {
+        "class_logits": logits,
+        "coords": coords,
+        "target": target,
+        "class_weight": torch.ones(2),
+    }
+
+    boundary_loss, boundary_items = joint_boundary_ce_loss(pred, neighborhood=6)
+    metrics = joint_boundary_metrics_from_labels(pred_label, coords, target, neighborhood=6)
+
+    assert boundary_loss is not None
+    assert boundary_items["joint_boundary_ce_voxels"] == 2.0
+    boundary_loss.backward()
+    assert logits.grad is not None
+    assert torch.equal(logits.grad[[0, 3]], torch.zeros_like(logits.grad[[0, 3]]))
+    assert metrics["joint_same_label_pairs"] == 2.0
+    assert metrics["joint_same_label_diff_pred"] == 1.0
+    assert metrics["joint_same_label_diff_pred_rate"] == 0.5
+    assert metrics["joint_cross_label_pairs"] == 1.0
+    assert metrics["joint_cross_label_same_pred_rate"] == 1.0
+    assert 0.0 <= metrics["joint_boundary_iou_at1"] <= 1.0
 
 
 def test_build_joint_target_ignores_multi_claim_voxels() -> None:
@@ -193,3 +230,56 @@ def test_raw_joint_summary_reads_evaluate_row_keys() -> None:
     summary = summarize_joint_eval_rows(rows)
 
     assert summary["drawer"] == {"n": 1.0, "iou": 0.75, "recall": 0.5, "voxel_share": 0.25}
+    assert summary["part"] == {"n": 1.0, "iou": 0.75, "recall": 0.5, "voxel_share": 0.25}
+
+
+def test_joint_summary_aggregates_arbitrary_parts_and_size_small() -> None:
+    rows = [
+        {
+            "joint_class_kind": "body",
+            "raw_count": 5000,
+            "cell_iou": 0.9,
+            "e2e_recall": 0.8,
+            "joint_voxel_share": 0.7,
+        },
+        {
+            "joint_class_kind": "shelf",
+            "raw_count": 499,
+            "cell_iou": 0.5,
+            "e2e_recall": 0.4,
+            "joint_voxel_share": 0.2,
+        },
+        {
+            "joint_class_kind": "panel",
+            "raw_count": 500,
+            "cell_iou": 0.7,
+            "e2e_recall": 0.6,
+            "joint_voxel_share": 0.1,
+        },
+    ]
+
+    summary = summarize_joint_eval_rows(rows)
+
+    assert summary["part"]["n"] == 2.0
+    assert summary["part"]["recall"] == pytest.approx(0.5)
+    assert summary["small"]["n"] == 1.0
+    assert summary["small"]["recall"] == pytest.approx(0.4)
+
+
+def test_joint_summary_treats_prismatic_parts_as_drawers() -> None:
+    rows = [
+        {
+            "joint_class_kind": "part",
+            "part_name": "moving_group_1",
+            "part_joint": "prismatic",
+            "raw_count": 900,
+            "cell_iou": 0.6,
+            "e2e_recall": 0.55,
+            "joint_voxel_share": 0.15,
+        }
+    ]
+
+    summary = summarize_joint_eval_rows(rows)
+
+    assert summary["drawer"]["n"] == 1.0
+    assert summary["drawer"]["recall"] == pytest.approx(0.55)

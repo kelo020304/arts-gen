@@ -1,0 +1,23 @@
+{
+  "decoded_roots": {
+    "realappliance": "/robot/data-lab/jzh/art-gen/ee-eval/0707-ra",
+    "phyx-verse": "/robot/data-lab/jzh/art-gen/ee-eval/post_smooth_corrected_0702/before"
+  },
+  "samples": [
+    {"dataset": "realappliance", "object_id": "063", "angle": 0, "label": "pull-out_drawer_pan_0", "category": "drawer"},
+    {"dataset": "realappliance", "object_id": "063", "angle": 0, "label": "temperature_knob_0", "category": "knob"},
+    {"dataset": "realappliance", "object_id": "063", "angle": 0, "label": "timer_knob_0", "category": "knob"},
+    {"dataset": "realappliance", "object_id": "029", "angle": 3, "label": "door_0", "category": "door"},
+    {"dataset": "realappliance", "object_id": "029", "angle": 3, "label": "timer_knob_0", "category": "knob"},
+    {"dataset": "realappliance", "object_id": "029", "angle": 3, "label": "power_function_knob_0", "category": "knob"},
+    {"dataset": "realappliance", "object_id": "023", "angle": 2, "label": "glass_lid_0", "category": "lid"},
+    {"dataset": "realappliance", "object_id": "087", "angle": 0, "label": "lid_0", "category": "lid"},
+    {"dataset": "realappliance", "object_id": "087", "angle": 0, "label": "knob_0", "category": "knob"},
+    {"dataset": "phyx-verse", "object_id": "0a46621504c24197b5653608f474f73b", "angle": 0, "label": "middle_drawer_0", "category": "drawer"},
+    {"dataset": "phyx-verse", "object_id": "0a46621504c24197b5653608f474f73b", "angle": 0, "label": "bottom_drawer_0", "category": "drawer"},
+    {"dataset": "phyx-verse", "object_id": "0a46621504c24197b5653608f474f73b", "angle": 0, "label": "top_drawer_0", "category": "drawer"},
+    {"dataset": "phyx-verse", "object_id": "0786542d0f7549208f889113fc384a7f", "angle": 0, "label": "left_door_0", "category": "door"},
+    {"dataset": "phyx-verse", "object_id": "0786542d0f7549208f889113fc384a7f", "angle": 0, "label": "right_door_0", "category": "door"},
+    {"dataset": "phyx-verse", "object_id": "0d8b0c9d303e4a19a3c2995144f2c8af", "angle": 0, "label": "doorknob_0", "category": "knob"}
+  ]
+}

@@ -18,6 +18,10 @@ def test_workbench_defaults_enable_strict_cc_filter_and_joint_refine() -> None:
 
     assert cfg.part_joint_refine is True
     assert cfg.part_cc_filter is True
+    assert cfg.ss_steps == 20
+    assert cfg.ss_cfg_strength == 7.5
+    assert cfg.ss_fusion_mode == "concat"
+    assert cfg.ss_seed == 20260713
     assert cfg.part_cc_max_large_component_distance == 4
     assert str(cfg.part_seg_ckpt).endswith(
         "part-prompt-seg-L-0709-1-joint/ckpts/step_100000.pt"
@@ -49,4 +53,3 @@ def test_cc_filter_reassigns_remote_part_component_to_recomputed_body() -> None:
     assert _coord_set(part_coords[-1]) == _coord_set(np.concatenate([remote, fixed_body]))
     assert records[0]["part_id"] == 7
     assert records[0]["reassigned_to_body_voxels"] == 10
-

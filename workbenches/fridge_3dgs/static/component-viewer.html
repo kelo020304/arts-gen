@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Component Viewer</title>
+    <link rel="stylesheet" href="css/component-viewer.css?v=20260713-kin-agent-v7" />
+  </head>
+  <body>
+    <main class="componentViewer">
+      <div id="layers" class="componentLayers" aria-label="3D component view"></div>
+      <header class="componentToolbar">
+        <div>
+          <strong id="viewerTitle">Decoded components</strong>
+          <span id="viewerState">Loading manifest</span>
+        </div>
+        <div class="modeSwitch" role="group" aria-label="Decode representation">
+          <button type="button" data-mode="mesh" class="active">Mesh</button>
+          <button type="button" data-mode="gs">GS</button>
+        </div>
+      </header>
+      <aside class="componentLegend">
+        <div class="legendHeading">
+          <span>Components</span>
+          <button id="showAll" type="button">Show all</button>
+        </div>
+        <div id="legendItems"></div>
+      </aside>
+      <div class="componentHint">Drag to orbit · wheel to zoom · click legend to show or hide</div>
+    </main>
+    <script type="module" src="js/component-viewer.js?v=20260713-kin-agent-v7"></script>
+  </body>
+</html>

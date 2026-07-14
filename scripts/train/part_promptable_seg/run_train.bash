@@ -188,6 +188,8 @@ ARGS=(
 [ -n "$PROXY_JSON" ] && ARGS+=(--proxy-json "$PROXY_JSON")
 [ "$USE_PACKED_WHOLE_OCC" = "1" ] && ARGS+=(--use-packed-whole-occ)
 [ "$SEG_DISCRIMINATIVE" = "1" ] && ARGS+=(--joint-seg)
+[ -n "${JOINT_LOCAL_MODE:-}" ] && ARGS+=(--joint-local-mode "$JOINT_LOCAL_MODE")
+[ -n "${JOINT_LOCAL_DEPTH:-}" ] && ARGS+=(--joint-local-depth "$JOINT_LOCAL_DEPTH")
 [ -n "${BODY_CLASS_WEIGHT:-}" ] && ARGS+=(--body-class-weight "$BODY_CLASS_WEIGHT")
 [ -n "${JOINT_KMAX:-}" ] && ARGS+=(--joint-kmax "$JOINT_KMAX")
 [ -n "${JOINT_SMALL_PART_THRESHOLD:-}" ] && ARGS+=(--joint-small-part-threshold "$JOINT_SMALL_PART_THRESHOLD")
@@ -201,6 +203,12 @@ ARGS=(
 [ -n "${JOINT_CRF_ITERS:-}" ] && ARGS+=(--joint-crf-iters "$JOINT_CRF_ITERS")
 [ -n "${JOINT_CRF_PAIRWISE:-}" ] && ARGS+=(--joint-crf-pairwise "$JOINT_CRF_PAIRWISE")
 [ -n "${JOINT_CRF_NEIGHBORHOOD:-}" ] && ARGS+=(--joint-crf-neighborhood "$JOINT_CRF_NEIGHBORHOOD")
+[ -n "${JOINT_BOUNDARY_CE_WEIGHT:-}" ] && ARGS+=(--joint-boundary-ce-weight "$JOINT_BOUNDARY_CE_WEIGHT")
+[ -n "${JOINT_BOUNDARY_CE_NEIGHBORHOOD:-}" ] && ARGS+=(--joint-boundary-ce-neighborhood "$JOINT_BOUNDARY_CE_NEIGHBORHOOD")
+[ -n "${JOINT_AFFINITY_WEIGHT:-}" ] && ARGS+=(--joint-affinity-weight "$JOINT_AFFINITY_WEIGHT")
+[ -n "${JOINT_AFFINITY_SAME_LABEL_WEIGHT:-}" ] && ARGS+=(--joint-affinity-same-label-weight "$JOINT_AFFINITY_SAME_LABEL_WEIGHT")
+[ -n "${JOINT_AFFINITY_CROSS_LABEL_WEIGHT:-}" ] && ARGS+=(--joint-affinity-cross-label-weight "$JOINT_AFFINITY_CROSS_LABEL_WEIGHT")
+[ -n "${JOINT_AFFINITY_NEIGHBORHOOD:-}" ] && ARGS+=(--joint-affinity-neighborhood "$JOINT_AFFINITY_NEIGHBORHOOD")
 [ "${PERSISTENT_WORKERS:-1}" = "1" ] && ARGS+=(--persistent-workers) || ARGS+=(--no-persistent-workers)
 [ "${PIN_MEMORY:-1}" = "1" ] && ARGS+=(--pin-memory) || ARGS+=(--no-pin-memory)
 [ -n "${GROUP_COST_BUDGET:-}" ] && ARGS+=(--group-cost-budget "$GROUP_COST_BUDGET")
@@ -262,6 +270,7 @@ echo "[run_train] dataloader num_workers=${NUM_WORKERS:-8} prefetch_factor=${PRE
 echo "[run_train] seg_discriminative=$SEG_DISCRIMINATIVE group_cost_budget=${GROUP_COST_BUDGET:-0} joint_kmax=${JOINT_KMAX:-default} joint_small_part_threshold=${JOINT_SMALL_PART_THRESHOLD:-32} joint_small_part_weight=${JOINT_SMALL_PART_WEIGHT:-1.5}"
 echo "[run_train] joint_smooth weight=${JOINT_SMOOTH_WEIGHT:-0} same=${JOINT_SMOOTH_SAME_LABEL_WEIGHT:-default} all=${JOINT_SMOOTH_ALL_LABEL_WEIGHT:-default} cross=${JOINT_SMOOTH_CROSS_LABEL_WEIGHT:-0} n=${JOINT_SMOOTH_NEIGHBORHOOD:-default}"
 echo "[run_train] joint_crf_eval=${JOINT_CRF_EVAL:-0} iters=${JOINT_CRF_ITERS:-default} pairwise=${JOINT_CRF_PAIRWISE:-default} n=${JOINT_CRF_NEIGHBORHOOD:-default}"
+echo "[run_train] joint_local mode=${JOINT_LOCAL_MODE:-none} depth=${JOINT_LOCAL_DEPTH:-2} boundary_ce=${JOINT_BOUNDARY_CE_WEIGHT:-0} affinity=${JOINT_AFFINITY_WEIGHT:-0} affinity_same=${JOINT_AFFINITY_SAME_LABEL_WEIGHT:-1} affinity_cross=${JOINT_AFFINITY_CROSS_LABEL_WEIGHT:-1}"
 echo "[run_train] selection_json=${SELECTION_JSON:-<none>} split_json=${SPLIT_JSON:-<none>} proxy_json=${PROXY_JSON:-<none>}"
 echo "[run_train] resume=${RESUME:-<none>} auto_resume=$AUTO_RESUME warm_start=${WARM_START:-<none>}"
 echo "[run_train] t1_flags boundary_band_radius=${BOUNDARY_BAND_RADIUS:-<default>} boundary_hard_mining=${BOUNDARY_HARD_MINING:-0} negative_prompt_channel=${NEGATIVE_PROMPT_CHANNEL:-0} voxel_corrupt=${VOXEL_CORRUPT:-0}"

@@ -14,6 +14,9 @@ let firstFrameReady = false;
 let pendingOrientation = { x: 0, y: 225, z: 180 };
 let orientationAnchor = null;
 let orientationCenter = null;
+let embedded = false;
+let applyingRemoteCamera = false;
+let meshEntity = null;
 
 function setStatus(text) {
   statusEl.textContent = text;
@@ -49,6 +52,55 @@ function cameraPayload() {
     object_orientation: pendingOrientation,
     captured_unix: Date.now() / 1000,
   };
+}
+
+function applyCameraPayload(payload) {
+  if (!payload || !viewer || !cameraEl.entity) return;
+  applyingRemoteCamera = true;
+  const managerCamera = viewer.cameraManager && viewer.cameraManager.camera;
+  if (managerCamera && payload.manager) {
+    const source = payload.manager;
+    if (Array.isArray(source.position)) managerCamera.position.set(...source.position);
+    if (Array.isArray(source.angles)) managerCamera.angles.set(...source.angles);
+    if (Number.isFinite(source.distance)) managerCamera.distance = source.distance;
+    if (Number.isFinite(source.fov)) managerCamera.fov = source.fov;
+  } else {
+    if (Array.isArray(payload.position)) cameraEl.entity.setPosition(...payload.position);
+    if (Array.isArray(payload.euler)) cameraEl.entity.setEulerAngles(...payload.euler);
+    if (Number.isFinite(payload.fov) && cameraEl.entity.camera) cameraEl.entity.camera.fov = payload.fov;
+  }
+  appEl.app.renderNextFrame = true;
+  window.setTimeout(() => { applyingRemoteCamera = false; }, 0);
+}
+
+function makeEmbeddedCanvasTransparent() {
+  if (!embedded || !cameraEl.entity.camera || !appEl.app) return;
+  const clear = cameraEl.entity.camera.clearColor;
+  if (clear) clear.a = 0;
+  cameraEl.entity.camera.clearColorBuffer = true;
+  appEl.app.scene.skybox = null;
+}
+
+function hideGsplat() {
+  const entity = findGsplatEntity();
+  if (entity) entity.enabled = false;
+}
+
+async function loadMesh(meshUrl) {
+  const asset = await new Promise((resolve, reject) => {
+    appEl.app.assets.loadFromUrl(meshUrl, "container", (error, loaded) => {
+      if (error || !loaded) reject(new Error(error || `Failed to load ${meshUrl}`));
+      else resolve(loaded);
+    });
+  });
+  meshEntity = asset.resource.instantiateRenderEntity?.() || asset.resource.instantiateModelEntity?.();
+  if (!meshEntity) throw new Error("GLB container cannot be instantiated");
+  meshEntity.name = "component-mesh";
+  meshEntity.setLocalEulerAngles(pendingOrientation.x, pendingOrientation.y, pendingOrientation.z);
+  appEl.app.root.addChild(meshEntity);
+  hideGsplat();
+  appEl.app.renderNextFrame = true;
+  if (viewer && viewer.global && viewer.global.events) viewer.global.events.fire("inputEvent", "frame");
 }
 
 function findGsplatEntity() {
@@ -127,15 +179,21 @@ async function capture() {
 
 async function init() {
   try {
-    const requestedContent = new URLSearchParams(window.location.search).get("content");
+    const params = new URLSearchParams(window.location.search);
+    const requestedContent = params.get("content");
+    const requestedMesh = params.get("mesh");
+    embedded = params.get("embedded") === "1";
+    if (embedded) pendingOrientation = { x: 0, y: 0, z: 0 };
     const contentUrl = requestedContent
       ? new URL(requestedContent, window.location.href).toString()
       : appUrl("assets/point_cloud.ply");
     window.firstFrame = () => {
       firstFrameReady = true;
       applyObjectOrientation(pendingOrientation);
-      setStatus("Ready");
-      window.parent.postMessage({ type: "fridge3dgs.viewerReady" }, window.location.origin);
+      if (requestedMesh && meshEntity) hideGsplat();
+      makeEmbeddedCanvasTransparent();
+      if (!requestedMesh) setStatus("Ready");
+      window.parent.postMessage({ type: "fridge3dgs.viewerReady" }, "*");
     };
     await customElements.whenDefined("pc-app");
     await appEl.ready();
@@ -148,8 +206,23 @@ async function init() {
       ministats: false,
     });
     window.fridge3dgsViewer = { viewer, app: appEl.app, camera: cameraEl.entity };
+    if (embedded) {
+      document.body.classList.add("viewerEmbedded");
+      appEl.app.on("frameend", () => {
+        if (!applyingRemoteCamera) {
+          window.parent.postMessage({ type: "fridge3dgs.cameraChanged", camera: cameraPayload() }, "*");
+        }
+      });
+      makeEmbeddedCanvasTransparent();
+    }
     applyObjectOrientationWhenReady();
-    setStatus("Loading splats");
+    if (requestedMesh) {
+      setStatus("Loading mesh");
+      await loadMesh(new URL(requestedMesh, window.location.href).toString());
+      setStatus("Ready");
+    } else {
+      setStatus("Loading splats");
+    }
   } catch (error) {
     console.error(error);
     setStatus(`Error: ${error.message || error}`);
@@ -178,6 +251,12 @@ window.addEventListener("message", async (event) => {
       zoomCamera(msg.delta);
     } else if (msg.type === "fridge3dgs.orientation") {
       applyObjectOrientation(msg.orientation || pendingOrientation);
+    } else if (msg.type === "fridge3dgs.cameraState") {
+      applyCameraPayload(msg.camera);
+    } else if (msg.type === "fridge3dgs.visibility") {
+      const target = meshEntity || findGsplatEntity();
+      if (target) target.enabled = msg.visible !== false;
+      if (appEl.app) appEl.app.renderNextFrame = true;
     }
   } catch (error) {
     if (event.source) event.source.postMessage(

@@ -1,7 +1,6 @@
 // Generic articulated-device annotation tool — v2 schema (parts[] + joints[]
 // + external_meshes[]). Replaces the earbud-specific v1 editor. See
-// docs/superpowers/specs/2026-05-08-generic-articulator-design.md for the
-// full design.
+// scripts/tools/articulator/schema.py for the authoritative schema.
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';

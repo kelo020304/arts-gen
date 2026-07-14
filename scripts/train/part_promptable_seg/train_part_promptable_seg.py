@@ -768,6 +768,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--spconv-depth", type=int, default=4)
     parser.add_argument("--xpart-ce-weight", type=float, default=0.0)
     parser.add_argument("--joint-seg", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument(
+        "--joint-local-mode",
+        choices=("none", "post_spconv", "edge_graph"),
+        default="none",
+    )
+    parser.add_argument("--joint-local-depth", type=int, default=2)
     parser.add_argument("--body-class-weight", type=float, default=0.25)
     parser.add_argument("--joint-kmax", type=int, default=0)
     parser.add_argument("--joint-small-part-threshold", type=int, default=32)
@@ -781,6 +787,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--joint-crf-iters", type=int, default=5)
     parser.add_argument("--joint-crf-pairwise", type=float, default=0.3)
     parser.add_argument("--joint-crf-neighborhood", type=int, choices=(6, 18, 26), default=6)
+    parser.add_argument("--joint-boundary-ce-weight", type=float, default=0.0)
+    parser.add_argument("--joint-boundary-ce-neighborhood", type=int, choices=(6, 18, 26), default=6)
+    parser.add_argument("--joint-affinity-weight", type=float, default=0.0)
+    parser.add_argument("--joint-affinity-same-label-weight", type=float, default=1.0)
+    parser.add_argument("--joint-affinity-cross-label-weight", type=float, default=1.0)
+    parser.add_argument("--joint-affinity-neighborhood", type=int, choices=(6, 18, 26), default=6)
     parser.add_argument("--use-checkpoint", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--infer-resolve", choices=("independent", "argmax"), default="independent")
     parser.add_argument("--motion-loss-weight", type=float, default=0.0)
@@ -1758,15 +1770,17 @@ def _joint_body_prompt_from_raw_assets(
 def _joint_class_bucket(meta: dict[str, Any]) -> str:
     if meta.get("kind") == "body":
         return "body"
-    text = f"{meta.get('name', '')} {meta.get('semantic_type', '')}".lower()
+    text = " ".join(
+        str(meta.get(key, "") or "")
+        for key in ("name", "semantic_type", "part_item_name", "part_joint", "motion_joint_type")
+    ).lower()
     if "door" in text:
         return "door"
-    if "drawer" in text:
+    if any(term in text for term in ("drawer", "prismatic", "slide")):
         return "drawer"
     if any(term in text for term in ("knob", "button", "handle", "switch")):
-        return "small"
-    semantic = str(meta.get("semantic_type") or "").strip()
-    return semantic if semantic else "part"
+        return "semantic_small"
+    return "part"
 
 
 def _build_joint_group_prediction(
@@ -1857,6 +1871,9 @@ def _build_joint_group_prediction(
                 "kind": "part",
                 "name": str(batch["part_name"][idx]),
                 "semantic_type": str(batch["semantic_type"][idx]),
+                "part_item_name": str(batch.get("part_item_name", [""] * len(batch["part_name"]))[idx]),
+                "part_joint": str(batch.get("part_joint", [""] * len(batch["part_name"]))[idx]),
+                "motion_joint_type": str(batch.get("motion_joint_type", [""] * len(batch["part_name"]))[idx]),
                 "batch_idx": int(idx),
                 "original_label": int(batch["original_label"][idx]),
                 "group_col": int(local_col),
@@ -1967,6 +1984,45 @@ def _joint_neighbor_offsets(neighborhood: int) -> list[tuple[int, int, int, floa
     return out
 
 
+def _joint_neighbor_pair_indices(
+    coords: torch.Tensor,
+    *,
+    neighborhood: int,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    coords = coords.to(dtype=torch.long)
+    if coords.shape[0] <= 1:
+        empty = torch.empty((0,), dtype=torch.long, device=coords.device)
+        return empty, empty
+    coord_keys = coords[:, 0] * 4096 + coords[:, 1] * 64 + coords[:, 2]
+    source_ids = torch.arange(coords.shape[0], device=coords.device)
+    all_a: list[torch.Tensor] = []
+    all_b: list[torch.Tensor] = []
+    for dx, dy, dz, _pair_w in _joint_neighbor_offsets(int(neighborhood)):
+        delta = torch.tensor((dx, dy, dz), dtype=torch.long, device=coords.device)
+        query = coords + delta.view(1, 3)
+        in_bounds = ((query >= 0) & (query < 64)).all(dim=1)
+        if not bool(in_bounds.any().item()):
+            continue
+        src = source_ids[in_bounds]
+        q = query[in_bounds]
+        q_keys = q[:, 0] * 4096 + q[:, 1] * 64 + q[:, 2]
+        pos = torch.searchsorted(coord_keys, q_keys)
+        pos_in = pos < coord_keys.shape[0]
+        if not bool(pos_in.any().item()):
+            continue
+        src = src[pos_in]
+        q_keys = q_keys[pos_in]
+        pos = pos[pos_in]
+        matched = coord_keys[pos] == q_keys
+        if bool(matched.any().item()):
+            all_a.append(src[matched])
+            all_b.append(pos[matched])
+    if not all_a:
+        empty = torch.empty((0,), dtype=torch.long, device=coords.device)
+        return empty, empty
+    return torch.cat(all_a, dim=0), torch.cat(all_b, dim=0)
+
+
 @torch.no_grad()
 def joint_boundary_metrics(pred: dict[str, Any], *, neighborhood: int = 6) -> dict[str, float]:
     logits = pred["class_logits"].float()
@@ -2002,6 +2058,12 @@ def joint_boundary_metrics_from_labels(
         "joint_cross_label_pair_acc": 0.0,
         "joint_cross_label_same_pred": 0.0,
         "joint_cross_label_same_pred_rate": 0.0,
+        "joint_same_label_pairs": 0.0,
+        "joint_same_label_diff_pred": 0.0,
+        "joint_same_label_diff_pred_rate": 0.0,
+        "joint_boundary_iou_at1_intersection": 0.0,
+        "joint_boundary_iou_at1_union": 0.0,
+        "joint_boundary_iou_at1": 0.0,
     }
     if pred_label.numel() == 0 or coords.shape[0] <= 1:
         return out
@@ -2010,49 +2072,52 @@ def joint_boundary_metrics_from_labels(
     if int(valid.sum().item()) <= 1:
         return out
 
-    coord_keys = coords[:, 0] * 4096 + coords[:, 1] * 64 + coords[:, 2]
-    source_ids = torch.arange(coords.shape[0], device=coords.device)
+    pair_a, pair_b = _joint_neighbor_pair_indices(coords, neighborhood=int(neighborhood))
+    if pair_a.numel() == 0:
+        return out
+    valid_pair = valid[pair_a] & valid[pair_b]
+    pair_a = pair_a[valid_pair]
+    pair_b = pair_b[valid_pair]
+    if pair_a.numel() == 0:
+        return out
     boundary_mask = torch.zeros((coords.shape[0],), dtype=torch.bool, device=coords.device)
-    cross_pair_count = 0
-    cross_pair_correct = 0
-    cross_pair_same_pred = 0
-    for dx, dy, dz, _pair_w in _joint_neighbor_offsets(int(neighborhood)):
-        delta = torch.tensor((dx, dy, dz), dtype=torch.long, device=coords.device)
-        query = coords + delta.view(1, 3)
-        in_bounds = ((query >= 0) & (query < 64)).all(dim=1)
-        if not bool(in_bounds.any().item()):
-            continue
-        src = source_ids[in_bounds]
-        q = query[in_bounds]
-        q_keys = q[:, 0] * 4096 + q[:, 1] * 64 + q[:, 2]
-        pos = torch.searchsorted(coord_keys, q_keys)
-        pos_in = pos < coord_keys.shape[0]
-        if not bool(pos_in.any().item()):
-            continue
-        src = src[pos_in]
-        q_keys = q_keys[pos_in]
-        pos = pos[pos_in]
-        matched = coord_keys[pos] == q_keys
-        if not bool(matched.any().item()):
-            continue
-        a = src[matched]
-        b = pos[matched]
-        valid_pair = valid[a] & valid[b]
-        if not bool(valid_pair.any().item()):
-            continue
-        a = a[valid_pair]
-        b = b[valid_pair]
-        cross = target[a] != target[b]
-        if not bool(cross.any().item()):
-            continue
-        a = a[cross]
-        b = b[cross]
-        boundary_mask[a] = True
-        boundary_mask[b] = True
-        pair_correct = (pred_label[a] == target[a]) & (pred_label[b] == target[b])
-        cross_pair_count += int(a.shape[0])
-        cross_pair_correct += int(pair_correct.sum().item())
-        cross_pair_same_pred += int((pred_label[a] == pred_label[b]).sum().item())
+    pred_boundary_mask = torch.zeros_like(boundary_mask)
+    gt_cross = target[pair_a] != target[pair_b]
+    pred_cross = pred_label[pair_a] != pred_label[pair_b]
+    if bool(gt_cross.any().item()):
+        boundary_mask[pair_a[gt_cross]] = True
+        boundary_mask[pair_b[gt_cross]] = True
+    if bool(pred_cross.any().item()):
+        pred_boundary_mask[pair_a[pred_cross]] = True
+        pred_boundary_mask[pair_b[pred_cross]] = True
+
+    cross_a = pair_a[gt_cross]
+    cross_b = pair_b[gt_cross]
+    cross_pair_count = int(cross_a.shape[0])
+    pair_correct = (pred_label[cross_a] == target[cross_a]) & (pred_label[cross_b] == target[cross_b])
+    cross_pair_correct = int(pair_correct.sum().item())
+    cross_pair_same_pred = int((pred_label[cross_a] == pred_label[cross_b]).sum().item())
+    same = ~gt_cross
+    same_a = pair_a[same]
+    same_b = pair_b[same]
+    same_pair_count = int(same_a.shape[0])
+    same_pair_diff_pred = int((pred_label[same_a] != pred_label[same_b]).sum().item())
+
+    gt_band = boundary_mask.clone()
+    pred_band = pred_boundary_mask.clone()
+    gt_neighbor_hits = torch.zeros((coords.shape[0],), dtype=torch.long, device=coords.device)
+    pred_neighbor_hits = torch.zeros_like(gt_neighbor_hits)
+    gt_neighbor_hits.index_add_(0, pair_a, boundary_mask[pair_b].long())
+    gt_neighbor_hits.index_add_(0, pair_b, boundary_mask[pair_a].long())
+    pred_neighbor_hits.index_add_(0, pair_a, pred_boundary_mask[pair_b].long())
+    pred_neighbor_hits.index_add_(0, pair_b, pred_boundary_mask[pair_a].long())
+    gt_band |= gt_neighbor_hits > 0
+    pred_band |= pred_neighbor_hits > 0
+    gt_band &= valid
+    pred_band &= valid
+    boundary_intersection = int((gt_band & pred_band).sum().item())
+    boundary_union = int((gt_band | pred_band).sum().item())
+    boundary_iou_at1 = float(boundary_intersection / max(1, boundary_union))
 
     boundary = boundary_mask & valid
     boundary_count = int(boundary.sum().item())
@@ -2060,6 +2125,7 @@ def joint_boundary_metrics_from_labels(
     boundary_acc = float(boundary_correct / max(1, boundary_count))
     cross_pair_acc = float(cross_pair_correct / max(1, cross_pair_count))
     cross_same_rate = float(cross_pair_same_pred / max(1, cross_pair_count))
+    same_diff_rate = float(same_pair_diff_pred / max(1, same_pair_count))
     out.update(
         {
             "joint_boundary_voxels": float(boundary_count),
@@ -2071,6 +2137,12 @@ def joint_boundary_metrics_from_labels(
             "joint_cross_label_pair_acc": cross_pair_acc,
             "joint_cross_label_same_pred": float(cross_pair_same_pred),
             "joint_cross_label_same_pred_rate": cross_same_rate,
+            "joint_same_label_pairs": float(same_pair_count),
+            "joint_same_label_diff_pred": float(same_pair_diff_pred),
+            "joint_same_label_diff_pred_rate": same_diff_rate,
+            "joint_boundary_iou_at1_intersection": float(boundary_intersection),
+            "joint_boundary_iou_at1_union": float(boundary_union),
+            "joint_boundary_iou_at1": boundary_iou_at1,
         }
     )
     return out
@@ -2185,6 +2257,45 @@ def joint_partial_label_unary_loss(
     }
 
 
+def joint_boundary_ce_loss(
+    pred: dict[str, Any],
+    *,
+    neighborhood: int,
+) -> tuple[torch.Tensor | None, dict[str, float]]:
+    logits = pred["class_logits"].float()
+    coords = pred["coords"].to(device=logits.device, dtype=torch.long)
+    target = pred["target"].to(device=logits.device, dtype=torch.long)
+    class_weight = pred["class_weight"].to(device=logits.device, dtype=torch.float32)
+    pair_a, pair_b = _joint_neighbor_pair_indices(coords, neighborhood=int(neighborhood))
+    if pair_a.numel() == 0:
+        return None, {"joint_boundary_ce": 0.0, "joint_boundary_ce_voxels": 0.0}
+    valid_pair = (target[pair_a] >= 0) & (target[pair_b] >= 0)
+    pair_a = pair_a[valid_pair]
+    pair_b = pair_b[valid_pair]
+    if pair_a.numel() == 0:
+        return None, {"joint_boundary_ce": 0.0, "joint_boundary_ce_voxels": 0.0}
+    cross = target[pair_a] != target[pair_b]
+    if not bool(cross.any().detach().item()):
+        return None, {"joint_boundary_ce": 0.0, "joint_boundary_ce_voxels": 0.0}
+    boundary = torch.zeros((target.shape[0],), dtype=torch.bool, device=target.device)
+    boundary[pair_a[cross]] = True
+    boundary[pair_b[cross]] = True
+    boundary &= target >= 0
+    boundary_count = int(boundary.sum().detach().item())
+    if boundary_count <= 0:
+        return None, {"joint_boundary_ce": 0.0, "joint_boundary_ce_voxels": 0.0}
+    ce = F.cross_entropy(
+        logits[boundary],
+        target[boundary],
+        weight=class_weight,
+        reduction="sum",
+    ) / float(boundary_count)
+    return ce, {
+        "joint_boundary_ce": float(ce.detach().item()),
+        "joint_boundary_ce_voxels": float(boundary_count),
+    }
+
+
 def joint_pairwise_smooth_loss(
     pred: dict[str, Any],
     *,
@@ -2192,6 +2303,7 @@ def joint_pairwise_smooth_loss(
     all_label_weight: float,
     neighborhood: int,
     cross_label_weight: float = 0.0,
+    include_overlap: bool = True,
 ) -> tuple[torch.Tensor | None, dict[str, float]]:
     logits = pred["class_logits"].float()
     coords = pred["coords"].to(device=logits.device, dtype=torch.long)
@@ -2291,7 +2403,7 @@ def joint_pairwise_smooth_loss(
                 cross_pair_count += int(cross_dot.shape[0])
             pair_count += int(potts.shape[0])
 
-        if float(same_label_weight) <= 0.0 or not has_overlap:
+        if not bool(include_overlap) or float(same_label_weight) <= 0.0 or not has_overlap:
             continue
 
         a_overlap_b_hard = overlap_voxel[a] & (target[b] >= 0)
@@ -2378,16 +2490,26 @@ def joint_seg_loss(
     joint_kmax: int,
     small_part_threshold: int,
     small_part_weight: float,
-    joint_smooth_weight: float,
-    joint_smooth_same_label_weight: float,
-    joint_smooth_all_label_weight: float,
-    joint_smooth_cross_label_weight: float,
-    joint_smooth_neighborhood: int,
+    joint_smooth_weight: float = 0.0,
+    joint_smooth_same_label_weight: float = 1.0,
+    joint_smooth_all_label_weight: float = 0.0,
+    joint_smooth_cross_label_weight: float = 0.0,
+    joint_smooth_neighborhood: int = 6,
+    joint_boundary_ce_weight: float = 0.0,
+    joint_boundary_ce_neighborhood: int = 6,
+    joint_affinity_weight: float = 0.0,
+    joint_affinity_same_label_weight: float = 1.0,
+    joint_affinity_cross_label_weight: float = 1.0,
+    joint_affinity_neighborhood: int = 6,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     ce_total: torch.Tensor | None = None
     partial_unary_total: torch.Tensor | None = None
     smooth_items: list[dict[str, float]] = []
     smooth_losses: list[torch.Tensor] = []
+    boundary_items: list[dict[str, float]] = []
+    boundary_losses: list[torch.Tensor] = []
+    affinity_items: list[dict[str, float]] = []
+    affinity_losses: list[torch.Tensor] = []
     valid_total = 0
     supervised_total = 0
     overlap_supervised_total = 0
@@ -2437,6 +2559,26 @@ def joint_seg_loss(
             overlap_partial_unary_sum += float(partial_unary.detach().item()) * float(partial_count)
             overlap_claim_mass_sum += float(partial_item["joint_overlap_claim_mass"]) * float(partial_count)
         ce_total = ce_sum if ce_total is None else ce_total + ce_sum
+        if float(joint_boundary_ce_weight) > 0.0:
+            l_boundary, boundary_item = joint_boundary_ce_loss(
+                pred,
+                neighborhood=int(joint_boundary_ce_neighborhood),
+            )
+            boundary_items.append(boundary_item)
+            if l_boundary is not None:
+                boundary_losses.append(l_boundary)
+        if float(joint_affinity_weight) > 0.0:
+            l_affinity, affinity_item = joint_pairwise_smooth_loss(
+                pred,
+                same_label_weight=float(joint_affinity_same_label_weight),
+                all_label_weight=0.0,
+                cross_label_weight=float(joint_affinity_cross_label_weight),
+                neighborhood=int(joint_affinity_neighborhood),
+                include_overlap=False,
+            )
+            affinity_items.append(affinity_item)
+            if l_affinity is not None:
+                affinity_losses.append(l_affinity)
         if float(joint_smooth_weight) > 0.0:
             l_smooth, smooth_item = joint_pairwise_smooth_loss(
                 pred,
@@ -2488,6 +2630,12 @@ def joint_seg_loss(
             "joint_cross_label_pair_acc": 0.0,
             "joint_cross_label_same_pred": 0.0,
             "joint_cross_label_same_pred_rate": 0.0,
+            "joint_same_label_pairs": 0.0,
+            "joint_same_label_diff_pred": 0.0,
+            "joint_same_label_diff_pred_rate": 0.0,
+            "joint_boundary_iou_at1_intersection": 0.0,
+            "joint_boundary_iou_at1_union": 0.0,
+            "joint_boundary_iou_at1": 0.0,
             "joint_smooth": 0.0,
             "joint_pairwise_smooth": 0.0,
             "joint_smooth_weight": float(joint_smooth_weight),
@@ -2496,6 +2644,13 @@ def joint_seg_loss(
             "joint_smooth_same_pairs": 0.0,
             "joint_smooth_cross_pairs": 0.0,
             "joint_smooth_overlap_pairs": 0.0,
+            "joint_boundary_ce": 0.0,
+            "joint_boundary_ce_weight": float(joint_boundary_ce_weight),
+            "joint_boundary_ce_voxels": 0.0,
+            "joint_affinity": 0.0,
+            "joint_affinity_weight": float(joint_affinity_weight),
+            "joint_affinity_same_pairs": 0.0,
+            "joint_affinity_cross_pairs": 0.0,
             "fwd_count": 0.0,
         }
     ce_loss = ce_total / float(max(1, valid_total))
@@ -2506,7 +2661,14 @@ def joint_seg_loss(
         else ce_loss.detach() * 0.0
     )
     smooth_loss = pairwise_smooth_loss + partial_unary_loss
-    loss = ce_loss + float(joint_smooth_weight) * smooth_loss
+    boundary_loss = torch.stack(boundary_losses).mean() if boundary_losses else ce_loss.detach() * 0.0
+    affinity_loss = torch.stack(affinity_losses).mean() if affinity_losses else ce_loss.detach() * 0.0
+    loss = (
+        ce_loss
+        + float(joint_smooth_weight) * smooth_loss
+        + float(joint_boundary_ce_weight) * boundary_loss
+        + float(joint_affinity_weight) * affinity_loss
+    )
     s_raw = [item["joint_s_raw"] for item in stats_items]
     s_eval = [item["joint_s_eval"] for item in stats_items]
     body = sum(item["joint_body_voxels"] for item in stats_items)
@@ -2518,9 +2680,15 @@ def joint_seg_loss(
     cross_pairs = float(sum(item["joint_cross_label_pairs"] for item in stats_items))
     cross_pair_correct = float(sum(item["joint_cross_label_pair_correct"] for item in stats_items))
     cross_same_pred = float(sum(item["joint_cross_label_same_pred"] for item in stats_items))
+    same_pairs = float(sum(item["joint_same_label_pairs"] for item in stats_items))
+    same_diff_pred = float(sum(item["joint_same_label_diff_pred"] for item in stats_items))
+    boundary_iou_intersection = float(sum(item["joint_boundary_iou_at1_intersection"] for item in stats_items))
+    boundary_iou_union = float(sum(item["joint_boundary_iou_at1_union"] for item in stats_items))
     boundary_acc = float(boundary_correct / max(1.0, boundary_voxels))
     cross_pair_acc = float(cross_pair_correct / max(1.0, cross_pairs))
     cross_same_rate = float(cross_same_pred / max(1.0, cross_pairs))
+    same_diff_rate = float(same_diff_pred / max(1.0, same_pairs))
+    boundary_iou_at1 = float(boundary_iou_intersection / max(1.0, boundary_iou_union))
     return loss, {
         "joint_ce": float(ce_loss.detach().item()),
         "joint_groups": float(group_count),
@@ -2557,6 +2725,12 @@ def joint_seg_loss(
         "joint_cross_label_pair_acc": cross_pair_acc,
         "joint_cross_label_same_pred": cross_same_pred,
         "joint_cross_label_same_pred_rate": cross_same_rate,
+        "joint_same_label_pairs": same_pairs,
+        "joint_same_label_diff_pred": same_diff_pred,
+        "joint_same_label_diff_pred_rate": same_diff_rate,
+        "joint_boundary_iou_at1_intersection": boundary_iou_intersection,
+        "joint_boundary_iou_at1_union": boundary_iou_union,
+        "joint_boundary_iou_at1": boundary_iou_at1,
         "joint_smooth": float(smooth_loss.detach().item()),
         "joint_pairwise_smooth": float(pairwise_smooth_loss.detach().item()),
         "joint_smooth_weight": float(joint_smooth_weight),
@@ -2565,6 +2739,13 @@ def joint_seg_loss(
         "joint_smooth_same_pairs": float(np.mean([item["joint_smooth_same_pairs"] for item in smooth_items])) if smooth_items else 0.0,
         "joint_smooth_cross_pairs": float(np.mean([item["joint_smooth_cross_pairs"] for item in smooth_items])) if smooth_items else 0.0,
         "joint_smooth_overlap_pairs": float(np.mean([item["joint_smooth_overlap_pairs"] for item in smooth_items])) if smooth_items else 0.0,
+        "joint_boundary_ce": float(boundary_loss.detach().item()),
+        "joint_boundary_ce_weight": float(joint_boundary_ce_weight),
+        "joint_boundary_ce_voxels": float(np.mean([item["joint_boundary_ce_voxels"] for item in boundary_items])) if boundary_items else 0.0,
+        "joint_affinity": float(affinity_loss.detach().item()),
+        "joint_affinity_weight": float(joint_affinity_weight),
+        "joint_affinity_same_pairs": float(np.mean([item["joint_smooth_same_pairs"] for item in affinity_items])) if affinity_items else 0.0,
+        "joint_affinity_cross_pairs": float(np.mean([item["joint_smooth_cross_pairs"] for item in affinity_items])) if affinity_items else 0.0,
         "fwd_count": float(np.mean([item["fwd_count"] for item in stats_items])),
     }
 
@@ -2664,6 +2845,9 @@ def joint_seg_eval_rows(
                     "angle_idx": int(batch["angle_idx"][indices[0]]),
                     "class_name": str(meta["name"]),
                     "class_kind": _joint_class_bucket(meta),
+                    "raw_count": int(meta.get("raw_count", gt_count)),
+                    "part_joint": str(meta.get("part_joint", "")),
+                    "motion_joint_type": str(meta.get("motion_joint_type", "")),
                     "group_col": int(class_idx),
                     "render_label": int(meta.get("render_label", class_idx + 1)),
                     "batch_idx": batch_idx,
@@ -2685,6 +2869,12 @@ def joint_seg_eval_rows(
                     "joint_cross_label_pair_acc": float(stats.get("joint_cross_label_pair_acc", 0.0)),
                     "joint_cross_label_same_pred": float(stats.get("joint_cross_label_same_pred", 0.0)),
                     "joint_cross_label_same_pred_rate": float(stats.get("joint_cross_label_same_pred_rate", 0.0)),
+                    "joint_same_label_pairs": float(stats.get("joint_same_label_pairs", 0.0)),
+                    "joint_same_label_diff_pred": float(stats.get("joint_same_label_diff_pred", 0.0)),
+                    "joint_same_label_diff_pred_rate": float(stats.get("joint_same_label_diff_pred_rate", 0.0)),
+                    "joint_boundary_iou_at1_intersection": float(stats.get("joint_boundary_iou_at1_intersection", 0.0)),
+                    "joint_boundary_iou_at1_union": float(stats.get("joint_boundary_iou_at1_union", 0.0)),
+                    "joint_boundary_iou_at1": float(stats.get("joint_boundary_iou_at1", 0.0)),
                     "joint_crf_iou": crf_iou,
                     "joint_crf_recall": crf_recall,
                     "joint_crf_precision": crf_precision,
@@ -2714,11 +2904,33 @@ def summarize_joint_eval_rows(rows: list[dict[str, Any]], *, metric_prefix: str 
     out: dict[str, dict[str, float]] = {}
     iou_key = f"{metric_prefix}_iou" if metric_prefix else "iou"
     recall_key = f"{metric_prefix}_recall" if metric_prefix else "recall"
-    for kind in ("body", "door", "drawer", "small", "part"):
+    def selected_for_kind(row: dict[str, Any], kind: str) -> bool:
+        class_kind = str(row.get("class_kind", row.get("joint_class_kind", "")) or "")
+        is_body = class_kind == "body"
+        if kind == "body":
+            return is_body
+        if kind == "part":
+            return not is_body
+        if is_body:
+            return False
+        if kind == "small":
+            raw_count = int(row.get("raw_count", row.get("cell_gt_count", row.get("gt_count", 0))) or 0)
+            return raw_count < 500
+        if kind == "drawer":
+            text = " ".join(
+                str(row.get(key, "") or "")
+                for key in ("part_name", "class_name", "semantic_type", "part_joint", "motion_joint_type")
+            ).lower()
+            return class_kind == "drawer" or any(term in text for term in ("drawer", "prismatic", "slide"))
+        if kind == "door":
+            return class_kind == "door"
+        return class_kind == kind
+
+    for kind in ("body", "part", "small", "drawer", "door"):
         selected = [
             row
             for row in rows
-            if row.get("class_kind", row.get("joint_class_kind")) == kind
+            if selected_for_kind(row, kind)
             and (iou_key in row or (not metric_prefix and "cell_iou" in row))
         ]
         if not selected:
@@ -2740,6 +2952,10 @@ def summarize_joint_boundary_rows(rows: list[dict[str, Any]], *, metric_prefix: 
     cross_pairs_key = f"{key_prefix}_cross_label_pairs"
     cross_correct_key = f"{key_prefix}_cross_label_pair_correct"
     cross_same_key = f"{key_prefix}_cross_label_same_pred"
+    same_pairs_key = f"{key_prefix}_same_label_pairs"
+    same_diff_key = f"{key_prefix}_same_label_diff_pred"
+    boundary_iou_intersection_key = f"{key_prefix}_boundary_iou_at1_intersection"
+    boundary_iou_union_key = f"{key_prefix}_boundary_iou_at1_union"
     for row in rows:
         if boundary_voxels_key not in row and cross_pairs_key not in row:
             continue
@@ -2758,6 +2974,9 @@ def summarize_joint_boundary_rows(rows: list[dict[str, Any]], *, metric_prefix: 
             "cross_label_pairs": 0.0,
             "cross_label_pair_acc": float("nan"),
             "cross_label_same_pred_rate": float("nan"),
+            "same_label_pairs": 0.0,
+            "same_label_diff_pred_rate": float("nan"),
+            "boundary_iou_at1": float("nan"),
         }
     unique_rows = list(seen.values())
     boundary_voxels = float(sum(float(row.get(boundary_voxels_key, 0.0)) for row in unique_rows))
@@ -2765,9 +2984,19 @@ def summarize_joint_boundary_rows(rows: list[dict[str, Any]], *, metric_prefix: 
     cross_pairs = float(sum(float(row.get(cross_pairs_key, 0.0)) for row in unique_rows))
     cross_correct = float(sum(float(row.get(cross_correct_key, 0.0)) for row in unique_rows))
     cross_same = float(sum(float(row.get(cross_same_key, 0.0)) for row in unique_rows))
+    same_pairs = float(sum(float(row.get(same_pairs_key, 0.0)) for row in unique_rows))
+    same_diff = float(sum(float(row.get(same_diff_key, 0.0)) for row in unique_rows))
+    boundary_iou_intersection = float(sum(float(row.get(boundary_iou_intersection_key, 0.0)) for row in unique_rows))
+    boundary_iou_union = float(sum(float(row.get(boundary_iou_union_key, 0.0)) for row in unique_rows))
     boundary_acc = float(boundary_correct / boundary_voxels) if boundary_voxels > 0.0 else float("nan")
     cross_pair_acc = float(cross_correct / cross_pairs) if cross_pairs > 0.0 else float("nan")
     cross_same_rate = float(cross_same / cross_pairs) if cross_pairs > 0.0 else float("nan")
+    same_diff_rate = float(same_diff / same_pairs) if same_pairs > 0.0 else float("nan")
+    boundary_iou_at1 = (
+        float(boundary_iou_intersection / boundary_iou_union)
+        if boundary_iou_union > 0.0
+        else float("nan")
+    )
     return {
         "groups": float(len(unique_rows)),
         "boundary_voxels": boundary_voxels,
@@ -2776,6 +3005,9 @@ def summarize_joint_boundary_rows(rows: list[dict[str, Any]], *, metric_prefix: 
         "cross_label_pairs": cross_pairs,
         "cross_label_pair_acc": cross_pair_acc,
         "cross_label_same_pred_rate": cross_same_rate,
+        "same_label_pairs": same_pairs,
+        "same_label_diff_pred_rate": same_diff_rate,
+        "boundary_iou_at1": boundary_iou_at1,
     }
 
 
@@ -2795,7 +3027,7 @@ def joint_eval_table(
     train_boundary = summarize_joint_boundary_rows(train_rows, metric_prefix=metric_prefix)
     held_boundary = summarize_joint_boundary_rows(heldout_rows, metric_prefix=metric_prefix)
     rows = []
-    for kind in ("body", "door", "drawer", "small", "part"):
+    for kind in ("body", "part", "small", "drawer", "door"):
         tr = train_summary.get(kind, {})
         ho = held_summary.get(kind, {})
         if not tr and not ho:
@@ -2810,12 +3042,7 @@ def joint_eval_table(
             }
         )
     body_iou = float(held_summary.get("body", {}).get("iou", float("nan")))
-    part_values = [
-        float(item["iou"])
-        for kind, item in held_summary.items()
-        if kind != "body" and math.isfinite(float(item.get("iou", float("nan"))))
-    ]
-    held_mean_part = float(np.mean(part_values)) if part_values else float("nan")
+    held_mean_part = float(held_summary.get("part", {}).get("iou", float("nan")))
     header_prefix = "crf_" if metric_prefix else ""
     header = (
         f"step={int(step)} lr={float(lr):.6g} loss_total={float(loss_total):.6f} "
@@ -2823,7 +3050,9 @@ def joint_eval_table(
         f"{header_prefix}held_body_IoU={body_iou:.4f} {header_prefix}held_mean_part_IoU={held_mean_part:.4f} "
         f"{header_prefix}train_boundary_err={float(train_boundary.get('boundary_error', float('nan'))):.4f} "
         f"{header_prefix}held_boundary_err={float(held_boundary.get('boundary_error', float('nan'))):.4f} "
-        f"{header_prefix}held_cross_same={float(held_boundary.get('cross_label_same_pred_rate', float('nan'))):.4f}"
+        f"{header_prefix}held_cross_same={float(held_boundary.get('cross_label_same_pred_rate', float('nan'))):.4f} "
+        f"{header_prefix}held_same_diff={float(held_boundary.get('same_label_diff_pred_rate', float('nan'))):.4f} "
+        f"{header_prefix}held_boundary_iou_at1={float(held_boundary.get('boundary_iou_at1', float('nan'))):.4f}"
     )
     return header + "\n" + format_table(rows, ["class", "train_IoU", "held_IoU", "voxel_share", "recall"])
 
@@ -3183,6 +3412,12 @@ def train_step(
     joint_smooth_all_label_weight: float = 0.0,
     joint_smooth_cross_label_weight: float = 0.0,
     joint_smooth_neighborhood: int = 6,
+    joint_boundary_ce_weight: float = 0.0,
+    joint_boundary_ce_neighborhood: int = 6,
+    joint_affinity_weight: float = 0.0,
+    joint_affinity_same_label_weight: float = 1.0,
+    joint_affinity_cross_label_weight: float = 1.0,
+    joint_affinity_neighborhood: int = 6,
     step: int | None = None,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     z_global = batch["z_global"].to(device=device, dtype=torch.float32)
@@ -3262,6 +3497,12 @@ def train_step(
                 joint_smooth_all_label_weight=float(joint_smooth_all_label_weight),
                 joint_smooth_cross_label_weight=float(joint_smooth_cross_label_weight),
                 joint_smooth_neighborhood=int(joint_smooth_neighborhood),
+                joint_boundary_ce_weight=float(joint_boundary_ce_weight),
+                joint_boundary_ce_neighborhood=int(joint_boundary_ce_neighborhood),
+                joint_affinity_weight=float(joint_affinity_weight),
+                joint_affinity_same_label_weight=float(joint_affinity_same_label_weight),
+                joint_affinity_cross_label_weight=float(joint_affinity_cross_label_weight),
+                joint_affinity_neighborhood=int(joint_affinity_neighborhood),
             )
             if not torch.isfinite(l_joint.detach()):
                 raise RuntimeError(f"joint segmentation loss is not finite: {float(l_joint.detach().item())}")
@@ -3309,6 +3550,8 @@ def train_step(
                 "joint_seg": 1.0,
                 "loss_jointCE": float(joint_items.get("joint_ce", 0.0)),
                 "loss_jointSmooth": float(joint_items.get("joint_smooth", 0.0)),
+                "loss_jointBoundaryCE": float(joint_items.get("joint_boundary_ce", 0.0)),
+                "loss_jointAffinity": float(joint_items.get("joint_affinity", 0.0)),
                 "morph": "joint_shared_whole_occ",
                 "support_noise": float(support_noise.detach().mean().item()),
                 "support_threshold": float(support_threshold.detach().mean().item()),
@@ -3614,7 +3857,8 @@ def evaluate(
                     joint_crf_neighborhood=int(joint_crf_neighborhood),
                 )
                 for class_row in class_rows:
-                    raw_count = int(class_row["gt_count"])
+                    raw_count = int(class_row.get("raw_count", class_row["gt_count"]))
+                    cell_gt_count = int(class_row["gt_count"])
                     class_batch_idx = class_row.get("batch_idx")
                     mask_visible_pixels = (
                         0
@@ -3629,11 +3873,13 @@ def evaluate(
                         "part_name": class_row["class_name"],
                         "semantic_type": class_row["class_kind"],
                         "raw_count": raw_count,
+                        "part_joint": str(class_row.get("part_joint", "")),
+                        "motion_joint_type": str(class_row.get("motion_joint_type", "")),
                         "mask_visible_pixels": mask_visible_pixels,
                         "bucket": bucket_name(raw_count),
                         "cell_iou": float(class_row["iou"]),
                         "cell_pred_count": int(class_row["pred_count"]),
-                        "cell_gt_count": raw_count,
+                        "cell_gt_count": cell_gt_count,
                         "support_l1": float("nan"),
                         "latent_l1": float("nan"),
                         "latent_l1_signal_norm": float("nan"),
@@ -3673,6 +3919,12 @@ def evaluate(
                         "joint_cross_label_pair_acc": float(class_row.get("joint_cross_label_pair_acc", 0.0)),
                         "joint_cross_label_same_pred": float(class_row.get("joint_cross_label_same_pred", 0.0)),
                         "joint_cross_label_same_pred_rate": float(class_row.get("joint_cross_label_same_pred_rate", 0.0)),
+                        "joint_same_label_pairs": float(class_row.get("joint_same_label_pairs", 0.0)),
+                        "joint_same_label_diff_pred": float(class_row.get("joint_same_label_diff_pred", 0.0)),
+                        "joint_same_label_diff_pred_rate": float(class_row.get("joint_same_label_diff_pred_rate", 0.0)),
+                        "joint_boundary_iou_at1_intersection": float(class_row.get("joint_boundary_iou_at1_intersection", 0.0)),
+                        "joint_boundary_iou_at1_union": float(class_row.get("joint_boundary_iou_at1_union", 0.0)),
+                        "joint_boundary_iou_at1": float(class_row.get("joint_boundary_iou_at1", 0.0)),
                         "joint_crf_iou": float(class_row.get("joint_crf_iou", float("nan"))),
                         "joint_crf_recall": float(class_row.get("joint_crf_recall", float("nan"))),
                         "joint_crf_precision": float(class_row.get("joint_crf_precision", float("nan"))),
@@ -5451,10 +5703,16 @@ def main() -> int:
         "joint_smooth_same_label_weight",
         "joint_smooth_all_label_weight",
         "joint_smooth_cross_label_weight",
+        "joint_boundary_ce_weight",
+        "joint_affinity_weight",
+        "joint_affinity_same_label_weight",
+        "joint_affinity_cross_label_weight",
     ):
         value = float(getattr(args, name))
         if value < 0.0:
             raise ValueError(f"--{name.replace('_', '-')} must be >= 0, got {value}")
+    if bool(args.joint_seg) and str(args.joint_local_mode) != "none" and int(args.joint_local_depth) <= 0:
+        raise ValueError("--joint-local-depth must be > 0 when --joint-local-mode is enabled")
     if int(args.joint_crf_iters) < 0:
         raise ValueError(f"--joint-crf-iters must be >= 0, got {args.joint_crf_iters}")
     if float(args.joint_crf_pairwise) < 0.0:
@@ -5763,6 +6021,8 @@ def main() -> int:
         use_body_prompt=bool(args.joint_seg),
         negative_prompt_channel=bool(args.negative_prompt_channel),
         use_checkpoint=bool(args.use_checkpoint),
+        joint_local_mode=str(args.joint_local_mode),
+        joint_local_depth=int(args.joint_local_depth),
     ).to(device)
     route_freeze_meta = freeze_unused_route_parameters(
         model,
@@ -5837,6 +6097,8 @@ def main() -> int:
         "spconv_depth": int(args.spconv_depth),
         "xpart_ce_weight": float(args.xpart_ce_weight),
         "joint_seg": bool(args.joint_seg),
+        "joint_local_mode": str(args.joint_local_mode),
+        "joint_local_depth": int(args.joint_local_depth),
         "body_mode": "auto-prompted-part-else-learned-token" if bool(args.joint_seg) else "none",
         "body_class_weight": float(args.body_class_weight),
         "joint_kmax": int(args.joint_kmax),
@@ -5851,6 +6113,12 @@ def main() -> int:
         "joint_crf_iters": int(args.joint_crf_iters),
         "joint_crf_pairwise": float(args.joint_crf_pairwise),
         "joint_crf_neighborhood": int(args.joint_crf_neighborhood),
+        "joint_boundary_ce_weight": float(args.joint_boundary_ce_weight),
+        "joint_boundary_ce_neighborhood": int(args.joint_boundary_ce_neighborhood),
+        "joint_affinity_weight": float(args.joint_affinity_weight),
+        "joint_affinity_same_label_weight": float(args.joint_affinity_same_label_weight),
+        "joint_affinity_cross_label_weight": float(args.joint_affinity_cross_label_weight),
+        "joint_affinity_neighborhood": int(args.joint_affinity_neighborhood),
         "use_checkpoint": bool(args.use_checkpoint),
         "precision": precision,
         "autocast_dtype": "bfloat16" if precision == "bf16" else ("float16" if precision == "fp16" else "fp32"),
@@ -5941,6 +6209,7 @@ def main() -> int:
             f"packed_dir={args.packed_dir} use_packed_whole_occ={args.use_packed_whole_occ} "
             f"refine_mode={args.refine_mode} spconv_depth={args.spconv_depth} "
             f"xpart_ce_weight={args.xpart_ce_weight} joint_seg={args.joint_seg} "
+            f"joint_local_mode={args.joint_local_mode} joint_local_depth={args.joint_local_depth} "
             f"body_mode={'auto-prompted-part-else-learned-token' if bool(args.joint_seg) else 'none'} "
             f"body_class_weight={args.body_class_weight} joint_kmax={args.joint_kmax} "
             f"joint_small_part_threshold={args.joint_small_part_threshold} "
@@ -5954,6 +6223,12 @@ def main() -> int:
             f"joint_crf_iters={args.joint_crf_iters} "
             f"joint_crf_pairwise={args.joint_crf_pairwise} "
             f"joint_crf_n={args.joint_crf_neighborhood} "
+            f"joint_boundary_ce_weight={args.joint_boundary_ce_weight} "
+            f"joint_boundary_ce_n={args.joint_boundary_ce_neighborhood} "
+            f"joint_affinity_weight={args.joint_affinity_weight} "
+            f"joint_affinity_same={args.joint_affinity_same_label_weight} "
+            f"joint_affinity_cross={args.joint_affinity_cross_label_weight} "
+            f"joint_affinity_n={args.joint_affinity_neighborhood} "
             f"voxel_max_tokens={args.voxel_max_tokens} use_checkpoint={args.use_checkpoint} "
             f"precision={precision} autocast_dtype={metadata['autocast_dtype']} "
             f"GradScaler enabled={metadata['grad_scaler_enabled']} init_scale={metadata['grad_scaler_init_scale']} "
@@ -6145,6 +6420,12 @@ def main() -> int:
                     joint_smooth_all_label_weight=float(args.joint_smooth_all_label_weight),
                     joint_smooth_cross_label_weight=float(args.joint_smooth_cross_label_weight),
                     joint_smooth_neighborhood=int(args.joint_smooth_neighborhood),
+                    joint_boundary_ce_weight=float(args.joint_boundary_ce_weight),
+                    joint_boundary_ce_neighborhood=int(args.joint_boundary_ce_neighborhood),
+                    joint_affinity_weight=float(args.joint_affinity_weight),
+                    joint_affinity_same_label_weight=float(args.joint_affinity_same_label_weight),
+                    joint_affinity_cross_label_weight=float(args.joint_affinity_cross_label_weight),
+                    joint_affinity_neighborhood=int(args.joint_affinity_neighborhood),
                     step=step,
                 )
             if not torch.isfinite(loss.detach()).all():
@@ -6234,6 +6515,12 @@ def main() -> int:
                     joint_smooth_all_label_weight=float(args.joint_smooth_all_label_weight),
                     joint_smooth_cross_label_weight=float(args.joint_smooth_cross_label_weight),
                     joint_smooth_neighborhood=int(args.joint_smooth_neighborhood),
+                    joint_boundary_ce_weight=float(args.joint_boundary_ce_weight),
+                    joint_boundary_ce_neighborhood=int(args.joint_boundary_ce_neighborhood),
+                    joint_affinity_weight=float(args.joint_affinity_weight),
+                    joint_affinity_same_label_weight=float(args.joint_affinity_same_label_weight),
+                    joint_affinity_cross_label_weight=float(args.joint_affinity_cross_label_weight),
+                    joint_affinity_neighborhood=int(args.joint_affinity_neighborhood),
                     step=step,
                 )
             if not torch.isfinite(loss.detach()).all():
@@ -6324,6 +6611,10 @@ def main() -> int:
                 f"joint_body {float(items.get('joint_body_ratio', 0.0)):.4f} "
                 f"joint_berr {float(items.get('joint_boundary_error', 0.0)):.4f} "
                 f"joint_cross_same {float(items.get('joint_cross_label_same_pred_rate', 0.0)):.4f} "
+                f"joint_same_diff {float(items.get('joint_same_label_diff_pred_rate', 0.0)):.4f} "
+                f"joint_biou1 {float(items.get('joint_boundary_iou_at1', 0.0)):.4f} "
+                f"joint_bce {float(items.get('joint_boundary_ce', 0.0)):.4f} "
+                f"joint_aff {float(items.get('joint_affinity', 0.0)):.4f} "
                 f"grad_norm {float(items.get('grad_norm', 0.0)):.4f} "
                 f"drop_single_view_after {int(items.get('view_dropout_single_after', 0.0))} "
                 f"drop_active {int(items.get('view_dropout_active', 0.0))} "

@@ -1,5 +1,10 @@
 # KinematicSolver Agent Harness
 
+For the decoded-mesh, GT-free type/axis/origin/range optimizer and combined
+MJCF/USD export, see `kin_agent_v2.md` and run
+`python -m post_process.kinematic_solver.run_kin_agent`.  The legacy harness
+below remains available for compatibility and limit-focused experiments.
+
 This folder follows the Articraft-style split:
 
 - `docs/` describes the task and rules.

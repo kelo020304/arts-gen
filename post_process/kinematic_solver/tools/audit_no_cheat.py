@@ -211,8 +211,8 @@ def main() -> None:
         if path.name in {"usd_limit_reader.py", "usd_limit_writer.py", "audit_no_cheat.py"}:
             continue
         violations.extend(audit_non_helper_file(path))
-    reader = root / "usd_limit_reader.py"
-    writer = root / "usd_limit_writer.py"
+    reader = root / "utils" / "usd_limit_reader.py"
+    writer = root / "utils" / "usd_limit_writer.py"
     if reader.is_file():
         violations.extend(audit_helper_file(reader, kind="reader"))
     if writer.is_file():

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import os
 from typing import Any
 
 import torch
@@ -23,6 +24,17 @@ def _nvtx_range(name: str):
         return torch.cuda.nvtx.range(name)
     return torch.autograd.profiler.record_function(name)
 
+
+def _spconv_algo():
+    if spconv is None:
+        return None
+    name = os.environ.get("SPCONV_ALGO", "auto").strip().lower()
+    if name == "native":
+        return spconv.ConvAlgo.Native
+    if name == "implicit_gemm":
+        return spconv.ConvAlgo.MaskImplicitGemm
+    return None
+
 __all__ = [
     "MaskEncoder2D",
     "PointMaskEncoder",
@@ -31,6 +43,8 @@ __all__ = [
     "semantic_classes_from_state",
     "voxel_embedding_dim_from_ckpt",
     "voxel_embedding_dim_from_state",
+    "joint_local_mode_from_ckpt",
+    "joint_local_depth_from_ckpt",
 ]
 
 
@@ -63,6 +77,37 @@ def voxel_embedding_dim_from_ckpt(ckpt: dict[str, Any]) -> int:
     args = dict(ckpt.get("args") or {}) if isinstance(ckpt, dict) else {}
     metadata = dict(ckpt.get("metadata") or {}) if isinstance(ckpt, dict) else {}
     return max(0, int(args.get("voxel_embedding_dim", metadata.get("voxel_embedding_dim", 0)) or 0))
+
+
+def joint_local_mode_from_ckpt(ckpt: dict[str, Any]) -> str:
+    args = dict(ckpt.get("args") or {}) if isinstance(ckpt, dict) else {}
+    raw_state = ckpt.get("model") if isinstance(ckpt, dict) else None
+    keys = [str(key).removeprefix("module.") for key in raw_state] if isinstance(raw_state, dict) else []
+    if any(key.startswith("joint_local_graph.") for key in keys):
+        return "edge_graph"
+    if any(key.startswith("joint_local_post.") for key in keys):
+        return "post_spconv"
+    mode = str(args.get("joint_local_mode", "none"))
+    return mode if mode in {"none", "post_spconv", "edge_graph"} else "none"
+
+
+def joint_local_depth_from_ckpt(ckpt: dict[str, Any]) -> int:
+    args = dict(ckpt.get("args") or {}) if isinstance(ckpt, dict) else {}
+    raw_state = ckpt.get("model") if isinstance(ckpt, dict) else None
+    keys = [str(key).removeprefix("module.") for key in raw_state] if isinstance(raw_state, dict) else []
+    mode = joint_local_mode_from_ckpt(ckpt)
+    prefix = "joint_local_graph." if mode == "edge_graph" else "joint_local_post."
+    indices = set()
+    for key in keys:
+        if not key.startswith(prefix):
+            continue
+        rest = key[len(prefix):]
+        head = rest.split(".", 1)[0]
+        if head.isdigit():
+            indices.add(int(head))
+    if indices:
+        return max(indices) + 1
+    return max(0, int(args.get("joint_local_depth", 2) or 0))
 
 
 def _trunc_normal(module: nn.Module) -> None:
@@ -230,7 +275,15 @@ class SpconvRefineBlock(nn.Module):
         super().__init__()
         if spconv is None:
             raise RuntimeError("refine_mode='spconv' requires spconv.pytorch")
-        self.conv = spconv.SubMConv3d(dim, dim, kernel_size=3, padding=1, bias=False, indice_key=indice_key)
+        self.conv = spconv.SubMConv3d(
+            dim,
+            dim,
+            kernel_size=3,
+            padding=1,
+            bias=False,
+            indice_key=indice_key,
+            algo=_spconv_algo(),
+        )
         self.norm = nn.LayerNorm(dim)
         self.act = nn.GELU()
         if hasattr(self.conv, "weight"):
@@ -240,6 +293,72 @@ class SpconvRefineBlock(nn.Module):
         y = self.conv(x)
         feat = x.features + self.act(self.norm(y.features))
         return y.replace_feature(feat)
+
+
+class GatedSpconvRefineBlock(nn.Module):
+    """Identity-initialized local sparse refinement for joint segmentation."""
+
+    def __init__(self, *, dim: int = 256, indice_key: str) -> None:
+        super().__init__()
+        if spconv is None:
+            raise RuntimeError("joint local refinement requires spconv.pytorch")
+        self.conv = spconv.SubMConv3d(
+            dim,
+            dim,
+            kernel_size=3,
+            padding=1,
+            bias=False,
+            indice_key=indice_key,
+            algo=_spconv_algo(),
+        )
+        self.norm = nn.LayerNorm(dim)
+        self.act = nn.GELU()
+        self.gate = nn.Parameter(torch.zeros((), dtype=torch.float32))
+        if hasattr(self.conv, "weight"):
+            nn.init.trunc_normal_(self.conv.weight, std=0.02)
+
+    def forward(self, x):
+        y = self.conv(x)
+        delta = self.act(self.norm(y.features))
+        feat = x.features + self.gate.to(dtype=delta.dtype) * delta
+        return x.replace_feature(feat)
+
+
+class GatedEdgeGraphRefineBlock(nn.Module):
+    """Identity-initialized six-neighbor feature-gated graph refinement."""
+
+    def __init__(self, *, dim: int = 256) -> None:
+        super().__init__()
+        self.norm = nn.LayerNorm(dim)
+        self.value = nn.Linear(dim, dim, bias=False)
+        self.out = nn.Linear(dim, dim, bias=False)
+        self.logit_scale = nn.Parameter(torch.tensor(math.log(4.0), dtype=torch.float32))
+        self.edge_bias = nn.Parameter(torch.zeros((), dtype=torch.float32))
+        self.gate = nn.Parameter(torch.zeros((), dtype=torch.float32))
+        _trunc_normal(self.value)
+        _trunc_normal(self.out)
+
+    def forward(self, h: torch.Tensor, edge_a: torch.Tensor, edge_b: torch.Tensor) -> torch.Tensor:
+        if edge_a.numel() == 0:
+            return h
+        u = self.norm(h)
+        unit = F.normalize(u.float(), dim=-1, eps=1.0e-6)
+        scale = self.logit_scale.float().exp().clamp(0.25, 32.0)
+        edge_weight = torch.sigmoid(
+            scale * (unit[edge_a] * unit[edge_b]).sum(dim=-1) + self.edge_bias.float()
+        ).to(dtype=h.dtype)
+        value = self.value(u)
+        aggregate = torch.zeros_like(value)
+        degree = h.new_zeros((h.shape[0],))
+        aggregate.index_add_(0, edge_a, edge_weight.unsqueeze(-1) * value[edge_b])
+        aggregate.index_add_(0, edge_b, edge_weight.unsqueeze(-1) * value[edge_a])
+        degree.index_add_(0, edge_a, edge_weight)
+        degree.index_add_(0, edge_b, edge_weight)
+        has_neighbor = degree > 0
+        mean_neighbor = aggregate / degree.clamp_min(1.0e-6).unsqueeze(-1)
+        delta = self.out(mean_neighbor - value)
+        delta = torch.where(has_neighbor.unsqueeze(-1), delta, torch.zeros_like(delta))
+        return h + self.gate.to(dtype=delta.dtype) * delta
 
 
 def _fourier_3d(coords: torch.Tensor, num_bands: int = 32) -> torch.Tensor:
@@ -280,6 +399,8 @@ class PromptablePartLatentSegNet(nn.Module):
         use_body_prompt: bool = False,
         negative_prompt_channel: bool = False,
         use_checkpoint: bool = False,
+        joint_local_mode: str = "none",
+        joint_local_depth: int = 2,
     ) -> None:
         super().__init__()
         self.latent_channels = int(latent_channels)
@@ -297,6 +418,12 @@ class PromptablePartLatentSegNet(nn.Module):
         self.use_body_prompt = bool(use_body_prompt)
         self.negative_prompt_channel = bool(negative_prompt_channel)
         self.use_checkpoint = bool(use_checkpoint)
+        self.joint_local_mode = str(joint_local_mode)
+        if self.joint_local_mode not in {"none", "post_spconv", "edge_graph"}:
+            raise ValueError(
+                f"unknown joint_local_mode={joint_local_mode!r}; expected none, post_spconv, or edge_graph"
+            )
+        self.joint_local_depth = max(0, int(joint_local_depth))
         self.mask_encoder_name = str(mask_encoder)
         if self.mask_encoder_name == "cnn_grid":
             self.mask_encoder = MaskEncoder2D(dim=self.dim, num_views=num_views, mask_size=mask_size)
@@ -409,6 +536,23 @@ class PromptablePartLatentSegNet(nn.Module):
                 _trunc_normal(self.joint_voxel_mlp)
                 _trunc_normal(self.joint_score_voxel)
                 _trunc_normal(self.joint_score_query)
+                if self.joint_local_mode == "post_spconv":
+                    if spconv is None:
+                        raise RuntimeError("joint local refinement requires spconv.pytorch")
+                    if self.joint_local_depth <= 0:
+                        raise ValueError("joint_local_depth must be > 0 when joint_local_mode is enabled")
+                    self.joint_local_post = nn.ModuleList(
+                        [
+                            GatedSpconvRefineBlock(dim=self.dim, indice_key=f"partseg_joint_post_{idx}")
+                            for idx in range(self.joint_local_depth)
+                        ]
+                    )
+                elif self.joint_local_mode == "edge_graph":
+                    if self.joint_local_depth <= 0:
+                        raise ValueError("joint_local_depth must be > 0 when joint_local_mode is enabled")
+                    self.joint_local_graph = nn.ModuleList(
+                        [GatedEdgeGraphRefineBlock(dim=self.dim) for _ in range(self.joint_local_depth)]
+                    )
         if self.semantic_classes > 0:
             self.semantic_norm = nn.LayerNorm(self.dim)
             self.semantic_head = nn.Linear(self.dim, self.semantic_classes)
@@ -599,6 +743,66 @@ class PromptablePartLatentSegNet(nn.Module):
             voxel_feat = voxel_feat + self.voxel_patch(patch.to(dtype=cell_feat.dtype))
         return voxel_feat
 
+    def _run_joint_local_refine(
+        self,
+        h: torch.Tensor,
+        coords: torch.Tensor,
+        blocks: nn.ModuleList | None,
+    ) -> torch.Tensor:
+        if blocks is None or len(blocks) == 0:
+            return h
+        if spconv is None:
+            raise RuntimeError("joint local refinement requires spconv.pytorch")
+        if h.dim() != 2 or h.shape[0] != coords.shape[0]:
+            raise ValueError(f"joint local refine expected h [S,D] aligned with coords, got {tuple(h.shape)}")
+        batch_col = torch.zeros((coords.shape[0], 1), dtype=torch.int32, device=coords.device)
+        indices = torch.cat([batch_col, coords.to(dtype=torch.int32)], dim=1).contiguous()
+        sparse = spconv.SparseConvTensor(
+            h.contiguous(),
+            indices,
+            spatial_shape=[64, 64, 64],
+            batch_size=1,
+        )
+        for block in blocks:
+            sparse = block(sparse)
+        return sparse.features
+
+    def _joint_six_neighbor_edges(self, coords: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        coord_keys = coords[:, 0] * 4096 + coords[:, 1] * 64 + coords[:, 2]
+        source = torch.arange(coords.shape[0], device=coords.device)
+        all_a: list[torch.Tensor] = []
+        all_b: list[torch.Tensor] = []
+        for delta_values in ((1, 0, 0), (0, 1, 0), (0, 0, 1)):
+            delta = torch.tensor(delta_values, dtype=torch.long, device=coords.device)
+            query = coords + delta.view(1, 3)
+            in_bounds = (query < 64).all(dim=1)
+            if not bool(in_bounds.any().item()):
+                continue
+            a = source[in_bounds]
+            q_keys = query[in_bounds, 0] * 4096 + query[in_bounds, 1] * 64 + query[in_bounds, 2]
+            b = torch.searchsorted(coord_keys, q_keys)
+            in_range = b < coord_keys.shape[0]
+            a = a[in_range]
+            q_keys = q_keys[in_range]
+            b = b[in_range]
+            matched = coord_keys[b] == q_keys
+            if bool(matched.any().item()):
+                all_a.append(a[matched])
+                all_b.append(b[matched])
+        if not all_a:
+            empty = torch.empty((0,), dtype=torch.long, device=coords.device)
+            return empty, empty
+        return torch.cat(all_a), torch.cat(all_b)
+
+    def _run_joint_edge_graph_refine(self, h: torch.Tensor, coords: torch.Tensor) -> torch.Tensor:
+        blocks = getattr(self, "joint_local_graph", None)
+        if blocks is None or len(blocks) == 0:
+            return h
+        edge_a, edge_b = self._joint_six_neighbor_edges(coords)
+        for block in blocks:
+            h = block(h, edge_a, edge_b)
+        return h
+
     def forward_joint_voxels(
         self,
         z_global: torch.Tensor,
@@ -632,7 +836,8 @@ class PromptablePartLatentSegNet(nn.Module):
                 ids = torch.linspace(0, coords.shape[0] - 1, keep, device=coords.device).round().long()
                 coords = coords.index_select(0, ids)
         with _nvtx_range("partseg/joint_voxel_cross"):
-            h = self._joint_voxel_features(feat, full_occ, coords).unsqueeze(0)
+            h0 = self._joint_voxel_features(feat, full_occ, coords)
+            h = h0.unsqueeze(0)
             cell_summary = self.joint_summary(feat.mean(dim=1, keepdim=True))
             kv = torch.cat([queries, cell_summary], dim=1)
             y, _ = self.joint_voxel_cross(
@@ -643,6 +848,8 @@ class PromptablePartLatentSegNet(nn.Module):
             )
             h = h + y
             h = h + self.joint_voxel_mlp(self.joint_voxel_mlp_norm(h))
+            h = self._run_joint_local_refine(h[0], coords, getattr(self, "joint_local_post", None)).unsqueeze(0)
+            h = self._run_joint_edge_graph_refine(h[0], coords).unsqueeze(0)
         with _nvtx_range("partseg/joint_voxel_output"):
             voxel_score = self.joint_score_voxel(self.joint_score_voxel_norm(h[0]))
             query_score = self.joint_score_query(self.joint_score_query_norm(queries[0]))

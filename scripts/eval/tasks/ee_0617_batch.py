@@ -614,6 +614,8 @@ def _checkpoint_model_meta(path: Path) -> dict[str, Any]:
         "depth": args.get("depth"),
         "route": args.get("route"),
         "joint_seg": bool(args.get("joint_seg", False)),
+        "joint_local_mode": args.get("joint_local_mode", "none"),
+        "joint_local_depth": args.get("joint_local_depth", 2),
         "mask_encoder": args.get("mask_encoder"),
         "voxel_depth": args.get("voxel_depth"),
         "spconv_depth": args.get("spconv_depth"),
