@@ -1,0 +1,705 @@
+{
+  "format": "arts_gen_kin_range_prior_v3",
+  "training_contract": "object-balanced signed endpoint quantiles from canonical split train_ids; optional Ridge calibration uses only frozen decoded geometry and bbox/camera trajectory features at runtime; artifact contains no per-object rows",
+  "split_sha256": "a13cdd412be4fc1b873f85b130a97ab7f505b07626a3da1634200a17e2342a18",
+  "train_object_count": 4047,
+  "objects_missing_part_info": 0,
+  "accepted_training_parts": 2099,
+  "minimum_objects_per_usable_cell": 8,
+  "cells": {
+    "physx-0511-drawer-door|door|prismatic": {
+      "dataset": "physx-0511-drawer-door",
+      "category": "door",
+      "joint_type": "prismatic",
+      "unit": "asset_unit",
+      "scale_mode": "normalized_asset_units",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 19,
+      "q10": 0.392,
+      "q25": 0.485,
+      "q50": 0.5640000000000001,
+      "q75": 0.7420000000000001,
+      "q90": 0.8903999999999999,
+      "mad": 0.1479999999999999,
+      "lower": {
+        "q10": -0.8903999999999999,
+        "q25": -0.6845000000000001,
+        "q50": -0.43999999999999995,
+        "q75": -0.15799999999999997,
+        "q90": 0.0
+      },
+      "upper": {
+        "q10": 0.0,
+        "q25": 0.0,
+        "q50": 0.18000000000000005,
+        "q75": 0.375,
+        "q90": 0.4559999999999999
+      },
+      "runtime_strategy": "span_envelope",
+      "usable": true
+    },
+    "physx-0511-drawer-door|door|revolute": {
+      "dataset": "physx-0511-drawer-door",
+      "category": "door",
+      "joint_type": "revolute",
+      "unit": "rad",
+      "scale_mode": "radians",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 308,
+      "q10": 0.5,
+      "q25": 0.5,
+      "q50": 0.504,
+      "q75": 0.6666666666666666,
+      "q90": 1.0,
+      "mad": 0.0040000000000000036,
+      "lower": {
+        "q10": -0.6227999999999999,
+        "q25": -0.5,
+        "q50": -0.25,
+        "q75": 0.0,
+        "q90": 0.0
+      },
+      "upper": {
+        "q10": 0.0,
+        "q25": 0.0,
+        "q50": 0.2777777777777778,
+        "q75": 0.5,
+        "q90": 0.6666666666666666
+      },
+      "runtime_strategy": "span_envelope",
+      "usable": true
+    },
+    "physx-0511-drawer-door|drawer|prismatic": {
+      "dataset": "physx-0511-drawer-door",
+      "category": "drawer",
+      "joint_type": "prismatic",
+      "unit": "asset_unit",
+      "scale_mode": "normalized_asset_units",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 162,
+      "q10": 0.33599999999999985,
+      "q25": 0.46199999999999997,
+      "q50": 0.569,
+      "q75": 0.7230000000000002,
+      "q90": 0.8143999999999999,
+      "mad": 0.131,
+      "lower": {
+        "q10": -0.8143999999999998,
+        "q25": -0.7180000000000002,
+        "q50": -0.558,
+        "q75": -0.43399999999999994,
+        "q90": -0.2611999999999997
+      },
+      "upper": {
+        "q10": 0.0,
+        "q25": 0.0,
+        "q50": 0.0,
+        "q75": 0.0,
+        "q90": 0.0812000000000001
+      },
+      "runtime_strategy": "ridge_observed_span",
+      "usable": true
+    },
+    "physx-0511-drawer-door|drawer|revolute": {
+      "dataset": "physx-0511-drawer-door",
+      "category": "drawer",
+      "joint_type": "revolute",
+      "unit": "rad",
+      "scale_mode": "radians",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 1,
+      "q10": 0.5,
+      "q25": 0.5,
+      "q50": 0.5,
+      "q75": 0.5,
+      "q90": 0.5,
+      "mad": 0.0,
+      "lower": {
+        "q10": 0.0,
+        "q25": 0.0,
+        "q50": 0.0,
+        "q75": 0.0,
+        "q90": 0.0
+      },
+      "upper": {
+        "q10": 0.5,
+        "q25": 0.5,
+        "q50": 0.5,
+        "q75": 0.5,
+        "q90": 0.5
+      },
+      "runtime_strategy": "none",
+      "usable": false
+    },
+    "physx-0511-drawer-door|knob|revolute": {
+      "dataset": "physx-0511-drawer-door",
+      "category": "knob",
+      "joint_type": "revolute",
+      "unit": "rad",
+      "scale_mode": "radians",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 18,
+      "q10": 0.3183098861837907,
+      "q25": 0.3183098861837907,
+      "q50": 0.3183098861837907,
+      "q75": 0.3183098861837907,
+      "q90": 1.2416666666666671,
+      "mad": 0.0,
+      "lower": {
+        "q10": -0.8638888888888889,
+        "q25": -0.3183098861837907,
+        "q50": -0.3183098861837907,
+        "q75": 0.0,
+        "q90": 0.0
+      },
+      "upper": {
+        "q10": 0.0,
+        "q25": 0.0,
+        "q50": 0.07957747154594767,
+        "q75": 0.3183098861837907,
+        "q90": 0.3183098861837907
+      },
+      "runtime_strategy": "none",
+      "usable": true
+    },
+    "physx-0511-drawer-door|lid|revolute": {
+      "dataset": "physx-0511-drawer-door",
+      "category": "lid",
+      "joint_type": "revolute",
+      "unit": "rad",
+      "scale_mode": "radians",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 1,
+      "q10": 0.9944444444444445,
+      "q25": 0.9944444444444445,
+      "q50": 0.9944444444444445,
+      "q75": 0.9944444444444445,
+      "q90": 0.9944444444444445,
+      "mad": 0.0,
+      "lower": {
+        "q10": -0.41111111111111115,
+        "q25": -0.41111111111111115,
+        "q50": -0.41111111111111115,
+        "q75": -0.41111111111111115,
+        "q90": -0.41111111111111115
+      },
+      "upper": {
+        "q10": 0.5833333333333333,
+        "q25": 0.5833333333333333,
+        "q50": 0.5833333333333333,
+        "q75": 0.5833333333333333,
+        "q90": 0.5833333333333333
+      },
+      "runtime_strategy": "none",
+      "usable": false
+    },
+    "phyx-verse|door|prismatic": {
+      "dataset": "phyx-verse",
+      "category": "door",
+      "joint_type": "prismatic",
+      "unit": "asset_unit",
+      "scale_mode": "normalized_asset_units",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 9,
+      "q10": 0.042,
+      "q25": 0.07,
+      "q50": 0.15,
+      "q75": 0.2,
+      "q90": 0.28,
+      "mad": 0.07999999999999999,
+      "lower": {
+        "q10": -0.22399999999999998,
+        "q25": -0.15,
+        "q50": -0.025,
+        "q75": 0.0,
+        "q90": 0.0
+      },
+      "upper": {
+        "q10": 0.0,
+        "q25": 0.0,
+        "q50": 0.0,
+        "q75": 0.1,
+        "q90": 0.21000000000000002
+      },
+      "runtime_strategy": "span_envelope",
+      "usable": true
+    },
+    "phyx-verse|door|revolute": {
+      "dataset": "phyx-verse",
+      "category": "door",
+      "joint_type": "revolute",
+      "unit": "rad",
+      "scale_mode": "radians",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 137,
+      "q10": 0.4,
+      "q25": 0.5,
+      "q50": 0.5,
+      "q75": 0.6,
+      "q90": 0.7200000000000003,
+      "mad": 0.09999999999999998,
+      "lower": {
+        "q10": -0.6,
+        "q25": -0.5,
+        "q50": -0.2,
+        "q75": 0.0,
+        "q90": 0.0
+      },
+      "upper": {
+        "q10": 0.0,
+        "q25": 0.0,
+        "q50": 0.25,
+        "q75": 0.5,
+        "q90": 0.6
+      },
+      "runtime_strategy": "span_envelope",
+      "usable": true
+    },
+    "phyx-verse|drawer|prismatic": {
+      "dataset": "phyx-verse",
+      "category": "drawer",
+      "joint_type": "prismatic",
+      "unit": "asset_unit",
+      "scale_mode": "normalized_asset_units",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 45,
+      "q10": 0.376,
+      "q25": 0.4,
+      "q50": 0.5,
+      "q75": 0.7,
+      "q90": 0.8600000000000002,
+      "mad": 0.09999999999999998,
+      "lower": {
+        "q10": -0.5599999999999999,
+        "q25": -0.2,
+        "q50": 0.0,
+        "q75": 0.0,
+        "q90": 0.0
+      },
+      "upper": {
+        "q10": 0.0,
+        "q25": 0.3,
+        "q50": 0.5,
+        "q75": 0.6,
+        "q90": 0.8
+      },
+      "runtime_strategy": "none",
+      "usable": true
+    },
+    "phyx-verse|drawer|revolute": {
+      "dataset": "phyx-verse",
+      "category": "drawer",
+      "joint_type": "revolute",
+      "unit": "rad",
+      "scale_mode": "radians",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 5,
+      "q10": 0.5,
+      "q25": 0.5,
+      "q50": 0.5,
+      "q75": 0.5,
+      "q90": 0.5,
+      "mad": 0.0,
+      "lower": {
+        "q10": -0.48,
+        "q25": -0.45,
+        "q50": 0.0,
+        "q75": 0.0,
+        "q90": 0.0
+      },
+      "upper": {
+        "q10": 0.020000000000000004,
+        "q25": 0.05,
+        "q50": 0.5,
+        "q75": 0.5,
+        "q90": 0.5
+      },
+      "runtime_strategy": "none",
+      "usable": false
+    },
+    "phyx-verse|knob|prismatic": {
+      "dataset": "phyx-verse",
+      "category": "knob",
+      "joint_type": "prismatic",
+      "unit": "asset_unit",
+      "scale_mode": "normalized_asset_units",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 31,
+      "q10": 0.06,
+      "q25": 0.2,
+      "q50": 0.2,
+      "q75": 0.2,
+      "q90": 0.2,
+      "mad": 0.0,
+      "lower": {
+        "q10": -0.04,
+        "q25": 0.0,
+        "q50": 0.0,
+        "q75": 0.0,
+        "q90": 0.0
+      },
+      "upper": {
+        "q10": 0.0,
+        "q25": 0.2,
+        "q50": 0.2,
+        "q75": 0.2,
+        "q90": 0.2
+      },
+      "runtime_strategy": "none",
+      "usable": true
+    },
+    "phyx-verse|knob|revolute": {
+      "dataset": "phyx-verse",
+      "category": "knob",
+      "joint_type": "revolute",
+      "unit": "rad",
+      "scale_mode": "radians",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 123,
+      "q10": 2.0,
+      "q25": 2.0,
+      "q50": 2.0,
+      "q75": 2.0,
+      "q90": 2.0,
+      "mad": 0.0,
+      "lower": {
+        "q10": -1.0,
+        "q25": -1.0,
+        "q50": -1.0,
+        "q75": -1.0,
+        "q90": -1.0
+      },
+      "upper": {
+        "q10": 1.0,
+        "q25": 1.0,
+        "q50": 1.0,
+        "q75": 1.0,
+        "q90": 1.0
+      },
+      "runtime_strategy": "signed_interval",
+      "usable": true
+    },
+    "phyx-verse|lid|prismatic": {
+      "dataset": "phyx-verse",
+      "category": "lid",
+      "joint_type": "prismatic",
+      "unit": "asset_unit",
+      "scale_mode": "normalized_asset_units",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 207,
+      "q10": 0.2,
+      "q25": 0.2,
+      "q50": 0.2,
+      "q75": 0.2,
+      "q90": 0.3200000000000003,
+      "mad": 0.0,
+      "lower": {
+        "q10": 0.0,
+        "q25": 0.0,
+        "q50": 0.0,
+        "q75": 0.0,
+        "q90": 0.0
+      },
+      "upper": {
+        "q10": 0.1,
+        "q25": 0.2,
+        "q50": 0.2,
+        "q75": 0.2,
+        "q90": 0.3
+      },
+      "runtime_strategy": "none",
+      "usable": true
+    },
+    "phyx-verse|lid|revolute": {
+      "dataset": "phyx-verse",
+      "category": "lid",
+      "joint_type": "revolute",
+      "unit": "rad",
+      "scale_mode": "radians",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 130,
+      "q10": 0.5,
+      "q25": 0.5,
+      "q50": 0.8,
+      "q75": 1.0,
+      "q90": 1.0,
+      "mad": 0.19999999999999996,
+      "lower": {
+        "q10": -1.0,
+        "q25": -0.8,
+        "q50": -0.275,
+        "q75": 0.0,
+        "q90": 0.0
+      },
+      "upper": {
+        "q10": 0.0,
+        "q25": 0.0,
+        "q50": 0.375,
+        "q75": 0.55,
+        "q90": 1.0
+      },
+      "runtime_strategy": "signed_interval",
+      "usable": true
+    },
+    "realappliance|door|revolute": {
+      "dataset": "realappliance",
+      "category": "door",
+      "joint_type": "revolute",
+      "unit": "rad",
+      "scale_mode": "radians",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 18,
+      "q10": 0.5,
+      "q25": 0.5,
+      "q50": 0.5,
+      "q75": 0.5,
+      "q90": 0.5,
+      "mad": 0.0,
+      "lower": {
+        "q10": -0.5,
+        "q25": -0.5,
+        "q50": -0.5,
+        "q75": 0.0,
+        "q90": 0.0
+      },
+      "upper": {
+        "q10": 0.0,
+        "q25": 0.0,
+        "q50": 0.0,
+        "q75": 0.5,
+        "q90": 0.5
+      },
+      "runtime_strategy": "span_envelope",
+      "usable": true
+    },
+    "realappliance|drawer|prismatic": {
+      "dataset": "realappliance",
+      "category": "drawer",
+      "joint_type": "prismatic",
+      "unit": "asset_unit",
+      "scale_mode": "normalized_asset_units",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 1,
+      "q10": 0.15000000596046448,
+      "q25": 0.15000000596046448,
+      "q50": 0.15000000596046448,
+      "q75": 0.15000000596046448,
+      "q90": 0.15000000596046448,
+      "mad": 0.0,
+      "lower": {
+        "q10": 0.0,
+        "q25": 0.0,
+        "q50": 0.0,
+        "q75": 0.0,
+        "q90": 0.0
+      },
+      "upper": {
+        "q10": 0.15000000596046448,
+        "q25": 0.15000000596046448,
+        "q50": 0.15000000596046448,
+        "q75": 0.15000000596046448,
+        "q90": 0.15000000596046448
+      },
+      "runtime_strategy": "none",
+      "usable": false
+    },
+    "realappliance|knob|prismatic": {
+      "dataset": "realappliance",
+      "category": "knob",
+      "joint_type": "prismatic",
+      "unit": "asset_unit",
+      "scale_mode": "normalized_asset_units",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 1,
+      "q10": 0.0010000000474974513,
+      "q25": 0.0010000000474974513,
+      "q50": 0.0010000000474974513,
+      "q75": 0.0010000000474974513,
+      "q90": 0.0010000000474974513,
+      "mad": 0.0,
+      "lower": {
+        "q10": 0.0,
+        "q25": 0.0,
+        "q50": 0.0,
+        "q75": 0.0,
+        "q90": 0.0
+      },
+      "upper": {
+        "q10": 0.0010000000474974513,
+        "q25": 0.0010000000474974513,
+        "q50": 0.0010000000474974513,
+        "q75": 0.0010000000474974513,
+        "q90": 0.0010000000474974513
+      },
+      "runtime_strategy": "none",
+      "usable": false
+    },
+    "realappliance|knob|revolute": {
+      "dataset": "realappliance",
+      "category": "knob",
+      "joint_type": "revolute",
+      "unit": "rad",
+      "scale_mode": "radians",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 37,
+      "q10": 0.9893269517686633,
+      "q25": 1.25,
+      "q50": 1.3888888888888888,
+      "q75": 1.5,
+      "q90": 1.5,
+      "mad": 0.11111111111111116,
+      "lower": {
+        "q10": -1.5,
+        "q25": -1.5,
+        "q50": -1.3333333333333335,
+        "q75": -1.0,
+        "q90": -0.6731543816460508
+      },
+      "upper": {
+        "q10": 0.0,
+        "q25": 0.0,
+        "q50": 0.0,
+        "q75": 0.006024865309397379,
+        "q90": 0.43674677530924466
+      },
+      "runtime_strategy": "signed_interval",
+      "usable": true
+    },
+    "realappliance|lid|prismatic": {
+      "dataset": "realappliance",
+      "category": "lid",
+      "joint_type": "prismatic",
+      "unit": "asset_unit",
+      "scale_mode": "normalized_asset_units",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 14,
+      "q10": 0.10000000149011612,
+      "q25": 0.10000000149011612,
+      "q50": 0.10000000149011612,
+      "q75": 0.20000000298023224,
+      "q90": 0.20000000298023224,
+      "mad": 0.02500000037252903,
+      "lower": {
+        "q10": 0.0,
+        "q25": 0.0,
+        "q50": 0.0,
+        "q75": 0.0,
+        "q90": 0.0
+      },
+      "upper": {
+        "q10": 0.10000000149011612,
+        "q25": 0.10000000149011612,
+        "q50": 0.10000000149011612,
+        "q75": 0.20000000298023224,
+        "q90": 0.20000000298023224
+      },
+      "runtime_strategy": "none",
+      "usable": true
+    },
+    "realappliance|lid|revolute": {
+      "dataset": "realappliance",
+      "category": "lid",
+      "joint_type": "revolute",
+      "unit": "rad",
+      "scale_mode": "radians",
+      "canonical_frame": "decoded_dominant_axis_positive",
+      "n_objects": 12,
+      "q10": 0.5,
+      "q25": 0.5,
+      "q50": 0.5555555555555556,
+      "q75": 0.7653531816270617,
+      "q90": 0.8978682878282335,
+      "mad": 0.05555555555555558,
+      "lower": {
+        "q10": -0.8978682878282335,
+        "q25": -0.7653531816270617,
+        "q50": -0.5555555555555556,
+        "q75": -0.5,
+        "q90": -0.5
+      },
+      "upper": {
+        "q10": 0.0,
+        "q25": 0.0,
+        "q50": 0.0,
+        "q75": 0.0,
+        "q90": 0.0
+      },
+      "runtime_strategy": "signed_interval",
+      "usable": true
+    }
+  },
+  "calibrators": {
+    "physx-0511-drawer-door|drawer|prismatic": {
+      "format": "ridge_standardized_v1",
+      "training_inputs": "decoded geometry scale plus bbox/camera trajectory diagnostics",
+      "feature_names": [
+        "motion_observed_span",
+        "object_diagonal",
+        "motion_observation_confidence",
+        "trajectory_linearity",
+        "visual_hull_support_mean",
+        "visual_hull_support_min",
+        "trajectory_secondary_ratio",
+        "trajectory_tertiary_ratio"
+      ],
+      "ridge_alpha": 10.0,
+      "scaler_mean": [
+        0.4382717713589088,
+        1.5862108950414922,
+        0.8275862068965513,
+        0.7668207946439962,
+        0.891483252002173,
+        0.8514164405196375,
+        0.2331792053560038,
+        0.6073667856526064
+      ],
+      "scaler_scale": [
+        0.10267041132587691,
+        0.08103882364886403,
+        0.12837593426887092,
+        0.14722296082413072,
+        0.05392300920411756,
+        0.07588293600385336,
+        0.1472229608241307,
+        0.19067746764661422
+      ],
+      "coefficients": [
+        0.053600667568456224,
+        0.06395678951764538,
+        0.037562055870925606,
+        0.007101886197820852,
+        0.010641639111466329,
+        -0.032496461671472444,
+        -0.007101886197820908,
+        -0.014717563993209134
+      ],
+      "intercept": 0.7504827586206892,
+      "prediction_clip": [
+        0.5,
+        1.0048
+      ],
+      "interval_anchor": "upper_zero",
+      "absolute_span_residual_quantiles": {
+        "q50": 0.10778325487160129,
+        "q80": 0.1596534799861459,
+        "q90": 0.18014769530616967,
+        "q95": 0.20519298211011058
+      },
+      "train_parts": 58,
+      "train_objects": 17,
+      "group_cv_folds": 5,
+      "group_cv_span_mae": 0.102940693404615,
+      "group_cv_endpoint_mae": 0.0514703467023075
+    }
+  },
+  "calibration_audit": {
+    "source_predictions_sha256": "bdfe6596f0f86235d6d35832eb21df09962610a679e4b4e675775eed3c925f35",
+    "decoded_scale_cache_sha256": "c280b522dd73bc1ee854aea01e73ece4789c16ed446e46e0d41670f5b5c974d5",
+    "accepted_parts": 58,
+    "train_objects": 17,
+    "group_cv_folds": 5,
+    "usable": true,
+    "group_cv_span_mae": 0.102940693404615,
+    "group_cv_endpoint_mae": 0.0514703467023075
+  }
+}

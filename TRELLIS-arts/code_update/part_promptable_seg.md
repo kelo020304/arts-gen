@@ -1569,3 +1569,247 @@ id                                                        | bucket | raw | cell 
 101971/a0/button_0                                        | tiny   | 17  | 0.0000 | 0.0000 | 0.0000  
 101971/a0/button_1                                        | tiny   | 12  | 0.0000 | 0.0000 | 0.0000  
 ```
+
+
+# Promptable Part Seg Gate2 Eval step 2
+
+out_dir: `/robot/data-lab/jzh/art-gen/ckpt/part-prompt-seg/smoke-L-joint-local-spconv-v6-20260713T145649Z/eval/step_000002`
+metric: `voxel_iou_proxy`
+full_eval: `False`
+peak_memory_gb_batch1: `3.412`
+
+```
+bucket | train_n | train_cell | train_GTcand | train_Predcand | train_part | train_ov | train_part_ov | held_n | held_cell | held_GTcand | held_Predcand | held_part | held_ov | held_part_ov
+------ | ------- | ---------- | ------------ | -------------- | ---------- | -------- | ------------- | ------ | --------- | ----------- | ------------- | --------- | ------- | ------------
+tiny   | 0       | nan        | nan          | nan            | nan        | nan      | nan           | 0      | nan       | nan         | nan           | nan       | nan     | nan         
+small  | 2       | 1.0000     | 1.0000       | 1.0000         | 1.0000     | 0.0      | 0.0           | 2      | 1.0000    | 1.0000      | 1.0000        | 1.0000    | 0.0     | 0.0         
+medium | 2       | 1.0000     | 1.0000       | 1.0000         | 1.0000     | 0.0      | 0.0           | 2      | 1.0000    | 1.0000      | 1.0000        | 1.0000    | 0.0     | 0.0         
+large  | 1       | 1.0000     | 1.0000       | 1.0000         | 1.0000     | 0.0      | 0.0           | 1      | 1.0000    | 1.0000      | 1.0000        | 1.0000    | 0.0     | 0.0         
+button | 0       | nan        | nan          | nan            | nan        | nan      | nan           | 0      | nan       | nan         | nan           | nan       | nan     | nan         
+all    | 5       | 1.0000     | 1.0000       | 1.0000         | 1.0000     | 0.0      | 0.0           | 5      | 1.0000    | 1.0000      | 1.0000        | 1.0000    | 0.0     | 0.0         
+```
+
+RealAppliance heldout:
+```
+bucket | n | cell_iou | support_l1 | gtm_decode | e2e_decode
+------ | - | -------- | ---------- | ---------- | ----------
+tiny   | 0 | nan      | nan        | nan        | nan       
+small  | 0 | nan      | nan        | nan        | nan       
+medium | 0 | nan      | nan        | nan        | nan       
+large  | 0 | nan      | nan        | nan        | nan       
+button | 0 | nan      | nan        | nan        | nan       
+all    | 0 | nan      | nan        | nan        | nan       
+```
+
+worst heldout:
+```
+id                                                     | bucket | raw  | cell   | GTcand | Predcand
+------------------------------------------------------ | ------ | ---- | ------ | ------ | --------
+004d1e9e13934e319094151a4fad823f/a0/body               | small  | 180  | 1.0000 | 1.0000 | 1.0000  
+004d1e9e13934e319094151a4fad823f/a0/rotational_shaft_0 | medium | 608  | 1.0000 | 1.0000 | 1.0000  
+004d1e9e13934e319094151a4fad823f/a0/gun_mount_frame_0  | medium | 2192 | 1.0000 | 1.0000 | 1.0000  
+004d1e9e13934e319094151a4fad823f/a0/top_hatch_panel_0  | small  | 339  | 1.0000 | 1.0000 | 1.0000  
+004d1e9e13934e319094151a4fad823f/a0/main_gun_housing_0 | large  | 5025 | 1.0000 | 1.0000 | 1.0000  
+```
+
+
+# Promptable Part Seg Train Complete
+
+mode: `train`
+out_dir: `/robot/data-lab/jzh/art-gen/ckpt/part-prompt-seg/smoke-L-joint-local-spconv-v6-20260713T145649Z`
+latest: `/robot/data-lab/jzh/art-gen/ckpt/part-prompt-seg/smoke-L-joint-local-spconv-v6-20260713T145649Z/ckpts/latest.pt`
+
+
+# Promptable Part Seg Gate2 Eval step 2
+
+out_dir: `/robot/data-lab/jzh/art-gen/ckpt/part-prompt-seg/smoke-L-joint-edge-graph-v6-20260713T145737Z/eval/step_000002`
+metric: `voxel_iou_proxy`
+full_eval: `False`
+peak_memory_gb_batch1: `3.528`
+
+```
+bucket | train_n | train_cell | train_GTcand | train_Predcand | train_part | train_ov | train_part_ov | held_n | held_cell | held_GTcand | held_Predcand | held_part | held_ov | held_part_ov
+------ | ------- | ---------- | ------------ | -------------- | ---------- | -------- | ------------- | ------ | --------- | ----------- | ------------- | --------- | ------- | ------------
+tiny   | 0       | nan        | nan          | nan            | nan        | nan      | nan           | 0      | nan       | nan         | nan           | nan       | nan     | nan         
+small  | 2       | 1.0000     | 1.0000       | 1.0000         | 1.0000     | 0.0      | 0.0           | 2      | 1.0000    | 1.0000      | 1.0000        | 1.0000    | 0.0     | 0.0         
+medium | 2       | 1.0000     | 1.0000       | 1.0000         | 1.0000     | 0.0      | 0.0           | 2      | 1.0000    | 1.0000      | 1.0000        | 1.0000    | 0.0     | 0.0         
+large  | 1       | 1.0000     | 1.0000       | 1.0000         | 1.0000     | 0.0      | 0.0           | 1      | 1.0000    | 1.0000      | 1.0000        | 1.0000    | 0.0     | 0.0         
+button | 0       | nan        | nan          | nan            | nan        | nan      | nan           | 0      | nan       | nan         | nan           | nan       | nan     | nan         
+all    | 5       | 1.0000     | 1.0000       | 1.0000         | 1.0000     | 0.0      | 0.0           | 5      | 1.0000    | 1.0000      | 1.0000        | 1.0000    | 0.0     | 0.0         
+```
+
+RealAppliance heldout:
+```
+bucket | n | cell_iou | support_l1 | gtm_decode | e2e_decode
+------ | - | -------- | ---------- | ---------- | ----------
+tiny   | 0 | nan      | nan        | nan        | nan       
+small  | 0 | nan      | nan        | nan        | nan       
+medium | 0 | nan      | nan        | nan        | nan       
+large  | 0 | nan      | nan        | nan        | nan       
+button | 0 | nan      | nan        | nan        | nan       
+all    | 0 | nan      | nan        | nan        | nan       
+```
+
+worst heldout:
+```
+id                                                     | bucket | raw  | cell   | GTcand | Predcand
+------------------------------------------------------ | ------ | ---- | ------ | ------ | --------
+004d1e9e13934e319094151a4fad823f/a0/body               | small  | 180  | 1.0000 | 1.0000 | 1.0000  
+004d1e9e13934e319094151a4fad823f/a0/rotational_shaft_0 | medium | 608  | 1.0000 | 1.0000 | 1.0000  
+004d1e9e13934e319094151a4fad823f/a0/gun_mount_frame_0  | medium | 2192 | 1.0000 | 1.0000 | 1.0000  
+004d1e9e13934e319094151a4fad823f/a0/top_hatch_panel_0  | small  | 339  | 1.0000 | 1.0000 | 1.0000  
+004d1e9e13934e319094151a4fad823f/a0/main_gun_housing_0 | large  | 5025 | 1.0000 | 1.0000 | 1.0000  
+```
+
+
+# Promptable Part Seg Train Complete
+
+mode: `train`
+out_dir: `/robot/data-lab/jzh/art-gen/ckpt/part-prompt-seg/smoke-L-joint-edge-graph-v6-20260713T145737Z`
+latest: `/robot/data-lab/jzh/art-gen/ckpt/part-prompt-seg/smoke-L-joint-edge-graph-v6-20260713T145737Z/ckpts/latest.pt`
+
+
+# Promptable Part Seg Gate2 Eval step 4
+
+out_dir: `/robot/data-lab/jzh/art-gen/ckpt/part-prompt-seg/smoke-L-joint-local-spconv-v6-20260713-final/eval/step_000004`
+metric: `voxel_iou_proxy`
+full_eval: `False`
+peak_memory_gb_batch1: `3.412`
+
+```
+bucket | train_n | train_cell | train_GTcand | train_Predcand | train_part | train_ov | train_part_ov | held_n | held_cell | held_GTcand | held_Predcand | held_part | held_ov | held_part_ov
+------ | ------- | ---------- | ------------ | -------------- | ---------- | -------- | ------------- | ------ | --------- | ----------- | ------------- | --------- | ------- | ------------
+tiny   | 0       | nan        | nan          | nan            | nan        | nan      | nan           | 0      | nan       | nan         | nan           | nan       | nan     | nan         
+small  | 4       | 1.0000     | 1.0000       | 1.0000         | 1.0000     | 0.0      | 0.0           | 4      | 1.0000    | 1.0000      | 1.0000        | 1.0000    | 0.0     | 0.0         
+medium | 4       | 0.9978     | 0.9978       | 0.9978         | 0.9978     | 0.0      | 0.0           | 4      | 0.9978    | 0.9978      | 0.9978        | 0.9978    | 0.0     | 0.0         
+large  | 2       | 0.9999     | 0.9999       | 0.9999         | 0.9999     | 0.0      | 0.0           | 2      | 0.9999    | 0.9999      | 0.9999        | 0.9999    | 0.0     | 0.0         
+button | 0       | nan        | nan          | nan            | nan        | nan      | nan           | 0      | nan       | nan         | nan           | nan       | nan     | nan         
+all    | 10      | 0.9991     | 0.9991       | 0.9991         | 0.9991     | 0.0      | 0.0           | 10     | 0.9991    | 0.9991      | 0.9991        | 0.9991    | 0.0     | 0.0         
+```
+
+RealAppliance heldout:
+```
+bucket | n | cell_iou | support_l1 | gtm_decode | e2e_decode
+------ | - | -------- | ---------- | ---------- | ----------
+tiny   | 0 | nan      | nan        | nan        | nan       
+small  | 0 | nan      | nan        | nan        | nan       
+medium | 0 | nan      | nan        | nan        | nan       
+large  | 0 | nan      | nan        | nan        | nan       
+button | 0 | nan      | nan        | nan        | nan       
+all    | 0 | nan      | nan        | nan        | nan       
+```
+
+worst heldout:
+```
+id                                                     | bucket | raw  | cell   | GTcand | Predcand
+------------------------------------------------------ | ------ | ---- | ------ | ------ | --------
+004d1e9e13934e319094151a4fad823f/a1/rotational_shaft_0 | medium | 529  | 0.9925 | 0.9925 | 0.9925  
+004d1e9e13934e319094151a4fad823f/a1/gun_mount_frame_0  | medium | 2518 | 0.9988 | 0.9988 | 0.9988  
+004d1e9e13934e319094151a4fad823f/a1/main_gun_housing_0 | large  | 5750 | 0.9998 | 0.9998 | 0.9998  
+004d1e9e13934e319094151a4fad823f/a0/body               | small  | 180  | 1.0000 | 1.0000 | 1.0000  
+004d1e9e13934e319094151a4fad823f/a0/rotational_shaft_0 | medium | 608  | 1.0000 | 1.0000 | 1.0000  
+```
+
+
+# Promptable Part Seg Train Complete
+
+mode: `train`
+out_dir: `/robot/data-lab/jzh/art-gen/ckpt/part-prompt-seg/smoke-L-joint-local-spconv-v6-20260713-final`
+latest: `/robot/data-lab/jzh/art-gen/ckpt/part-prompt-seg/smoke-L-joint-local-spconv-v6-20260713-final/ckpts/latest.pt`
+
+
+# Promptable Part Seg Gate2 Eval step 4
+
+out_dir: `/robot/data-lab/jzh/art-gen/ckpt/part-prompt-seg/smoke-L-joint-edge-graph-v6-20260713-final/eval/step_000004`
+metric: `voxel_iou_proxy`
+full_eval: `False`
+peak_memory_gb_batch1: `3.528`
+
+```
+bucket | train_n | train_cell | train_GTcand | train_Predcand | train_part | train_ov | train_part_ov | held_n | held_cell | held_GTcand | held_Predcand | held_part | held_ov | held_part_ov
+------ | ------- | ---------- | ------------ | -------------- | ---------- | -------- | ------------- | ------ | --------- | ----------- | ------------- | --------- | ------- | ------------
+tiny   | 0       | nan        | nan          | nan            | nan        | nan      | nan           | 0      | nan       | nan         | nan           | nan       | nan     | nan         
+small  | 4       | 1.0000     | 1.0000       | 1.0000         | 1.0000     | 0.0      | 0.0           | 4      | 1.0000    | 1.0000      | 1.0000        | 1.0000    | 0.0     | 0.0         
+medium | 4       | 0.9972     | 0.9972       | 0.9972         | 0.9972     | 0.0      | 0.0           | 4      | 0.9972    | 0.9972      | 0.9972        | 0.9972    | 0.0     | 0.0         
+large  | 2       | 0.9999     | 0.9999       | 0.9999         | 0.9999     | 0.0      | 0.0           | 2      | 0.9999    | 0.9999      | 0.9999        | 0.9999    | 0.0     | 0.0         
+button | 0       | nan        | nan          | nan            | nan        | nan      | nan           | 0      | nan       | nan         | nan           | nan       | nan     | nan         
+all    | 10      | 0.9989     | 0.9989       | 0.9989         | 0.9989     | 0.0      | 0.0           | 10     | 0.9989    | 0.9989      | 0.9989        | 0.9989    | 0.0     | 0.0         
+```
+
+RealAppliance heldout:
+```
+bucket | n | cell_iou | support_l1 | gtm_decode | e2e_decode
+------ | - | -------- | ---------- | ---------- | ----------
+tiny   | 0 | nan      | nan        | nan        | nan       
+small  | 0 | nan      | nan        | nan        | nan       
+medium | 0 | nan      | nan        | nan        | nan       
+large  | 0 | nan      | nan        | nan        | nan       
+button | 0 | nan      | nan        | nan        | nan       
+all    | 0 | nan      | nan        | nan        | nan       
+```
+
+worst heldout:
+```
+id                                                     | bucket | raw  | cell   | GTcand | Predcand
+------------------------------------------------------ | ------ | ---- | ------ | ------ | --------
+004d1e9e13934e319094151a4fad823f/a1/rotational_shaft_0 | medium | 529  | 0.9906 | 0.9906 | 0.9906  
+004d1e9e13934e319094151a4fad823f/a1/gun_mount_frame_0  | medium | 2518 | 0.9984 | 0.9984 | 0.9984  
+004d1e9e13934e319094151a4fad823f/a1/main_gun_housing_0 | large  | 5750 | 0.9998 | 0.9998 | 0.9998  
+004d1e9e13934e319094151a4fad823f/a0/body               | small  | 180  | 1.0000 | 1.0000 | 1.0000  
+004d1e9e13934e319094151a4fad823f/a0/rotational_shaft_0 | medium | 608  | 1.0000 | 1.0000 | 1.0000  
+```
+
+
+# Promptable Part Seg Train Complete
+
+mode: `train`
+out_dir: `/robot/data-lab/jzh/art-gen/ckpt/part-prompt-seg/smoke-L-joint-edge-graph-v6-20260713-final`
+latest: `/robot/data-lab/jzh/art-gen/ckpt/part-prompt-seg/smoke-L-joint-edge-graph-v6-20260713-final/ckpts/latest.pt`
+
+
+# 2026-07-13 Joint Local Refinement Final
+
+Implemented two backward-compatible L-model joint prompt segmentation variants:
+
+- `post_spconv`: two zero-gated residual `3x3x3` SubMConv3d blocks.
+- `edge_graph`: two zero-gated residual 6-neighbor edge-graph blocks.
+- Both refine joint voxel features after cross-attention and before cosine
+  voxel/query scoring.
+- Added boundary-weighted CE and supervised same/cross neighbor affinity.
+- New launchers disable legacy adjacency smoothing and CRF while retaining the
+  existing overlap partial-label unary.
+
+Compatibility:
+
+- 0709 step-100000 is used with warm-start, not strict resume.
+- Legacy checkpoints without local state reconstruct `joint_local_mode=none`.
+- The real 0709 checkpoint strict-loaded through the production inference
+  reconstruction path: `none`, depth 2, 474 state entries.
+- New spconv and edge checkpoints strict-loaded as `post_spconv`/`edge_graph`,
+  depth 2, with 482/488 state entries.
+
+Metrics:
+
+- Added same-GT/different-pred rate, cross-GT/same-pred rate, and Boundary IoU@1.
+- `part` now includes every non-body class.
+- `small` is source `raw_count < 500`; `drawer` also recognizes
+  `prismatic`/`slide` metadata. These reporting buckets may overlap.
+
+Final verification:
+
+- `pytest -q tests/part_promptable_seg`: 41 passed.
+- Spconv 8-GPU bf16 smoke:
+  `/robot/data-lab/jzh/art-gen/ckpt/part-prompt-seg/smoke-L-joint-local-spconv-v6-20260713-final`
+  completed 4 steps, eval, and checkpoint; peak 3.412 GB/GPU.
+- Edge-graph 8-GPU bf16 smoke:
+  `/robot/data-lab/jzh/art-gen/ckpt/part-prompt-seg/smoke-L-joint-edge-graph-v6-20260713-final`
+  completed 4 steps, eval, and checkpoint; peak 3.528 GB/GPU.
+- Internal local-block optimizer moments were non-zero after gate opening in both
+  smokes, confirming the new block weights received updates.
+
+Queue entries:
+
+```bash
+bash scripts/train/part_promptable_seg/run_joint_local_spconv_L.bash
+bash scripts/train/part_promptable_seg/run_joint_edge_graph_L.bash
+```

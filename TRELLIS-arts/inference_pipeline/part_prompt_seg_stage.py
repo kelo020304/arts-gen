@@ -40,7 +40,11 @@ def _bool_arg(value: Any, default: bool = False) -> bool:
 
 
 def _model_args_from_ckpt(ckpt: dict[str, Any]) -> dict[str, Any]:
-    from trellis.models.part_seg.promptable_latent_seg import voxel_embedding_dim_from_ckpt
+    from trellis.models.part_seg.promptable_latent_seg import (
+        joint_local_depth_from_ckpt,
+        joint_local_mode_from_ckpt,
+        voxel_embedding_dim_from_ckpt,
+    )
 
     args = dict(ckpt.get("args") or {})
     raw_state = ckpt.get("model") if isinstance(ckpt.get("model"), dict) else {}
@@ -66,6 +70,8 @@ def _model_args_from_ckpt(ckpt: dict[str, Any]) -> dict[str, Any]:
         "use_body_prompt": bool(args.get("joint_seg", False)) or "body_prompt" in state,
         "negative_prompt_channel": negative_prompt_channel,
         "use_checkpoint": False,
+        "joint_local_mode": joint_local_mode_from_ckpt(ckpt),
+        "joint_local_depth": joint_local_depth_from_ckpt(ckpt),
     }
 
 

@@ -76,6 +76,7 @@ class CkptConfig:
     ss_steps: int = 20
     ss_cfg_strength: float = 7.5
     ss_fusion_mode: str = "concat"
+    ss_seed: int = 20260713
     slat_steps: int = 25
     slat_seed: int = 42
     part_voxel_threshold: float = 0.5
@@ -666,6 +667,7 @@ def reconstruct(
         num_steps=int(cfg.ss_steps),
         cfg_strength=float(cfg.ss_cfg_strength),
         fusion_mode=str(cfg.ss_fusion_mode),
+        seed=int(cfg.ss_seed),
     )
     whole_coords = inference.decode_ss(z_global, str(ss_decoder_ckpt), threshold=0.0).numpy().astype(np.int32)
     part_coords, part_meta = _predict_part_voxels(

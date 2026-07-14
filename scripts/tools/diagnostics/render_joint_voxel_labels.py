@@ -37,6 +37,8 @@ from scripts.train.part_promptable_seg.train_part_promptable_seg import (  # noq
 )
 from trellis.models.part_seg.promptable_latent_seg import (  # noqa: E402
     PromptablePartLatentSegNet,
+    joint_local_depth_from_ckpt,
+    joint_local_mode_from_ckpt,
     semantic_classes_from_ckpt,
     voxel_embedding_dim_from_ckpt,
 )
@@ -113,6 +115,8 @@ def load_model(ckpt_path: Path, device: torch.device) -> PromptablePartLatentSeg
         voxel_embedding_dim=voxel_embedding_dim_from_ckpt(ckpt),
         use_body_prompt=bool(args.get("joint_seg", False)) or "body_prompt" in state,
         use_checkpoint=False,
+        joint_local_mode=joint_local_mode_from_ckpt(ckpt),
+        joint_local_depth=joint_local_depth_from_ckpt(ckpt),
     ).to(device)
     model.load_state_dict(state, strict=True)
     model.eval()

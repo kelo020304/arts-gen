@@ -71,6 +71,17 @@ def _static_xml_checks(xml_path: Path) -> dict[str, Any]:
     glass_mesh_count = len(root.findall("./asset/mesh[@name='drawer_glass_mesh']"))
     joints = root.findall(".//joint")
     axes = [joint.get("axis", "") for joint in joints]
+    slide_joints = [joint for joint in joints if joint.get("type") == "slide"]
+    compiler = root.find("compiler")
+    visual_geoms = root.findall(".//geom[@group='0']")
+    collision_geoms = [geom for geom in root.findall(".//geom") if geom.get("group") in {"3", "4", "5"}]
+    moving_bodies = [body for body in root.findall(".//body") if body.find("joint") is not None]
+    inertia_ready_bodies = []
+    for body in moving_bodies:
+        has_inertial = body.find("inertial") is not None
+        has_inertia_geom = any(geom.get("group") in {"3", "4", "5"} for geom in body.findall("geom"))
+        if has_inertial or has_inertia_geom:
+            inertia_ready_bodies.append(body.get("name"))
     return {
         "floor_count": int(floor_count),
         "shell_count": int(shell_count),
@@ -78,6 +89,15 @@ def _static_xml_checks(xml_path: Path) -> dict[str, Any]:
         "object_quat": None if object_body is None else object_body.get("quat"),
         "xml_joint_count": int(len(joints)),
         "xml_joint_axes": axes,
+        "slide_joint_count": len(slide_joints),
+        "slide_joint_axes": [joint.get("axis", "") for joint in slide_joints],
+        "slide_joint_ranges": [joint.get("range", "") for joint in slide_joints],
+        "compiler_balanceinertia": None if compiler is None else compiler.get("balanceinertia"),
+        "compiler_inertiagrouprange": None if compiler is None else compiler.get("inertiagrouprange"),
+        "visual_group0_count": len(visual_geoms),
+        "collision_group3_5_count": len(collision_geoms),
+        "moving_body_count": len(moving_bodies),
+        "inertia_ready_body_names": inertia_ready_bodies,
         "glass_mesh_count": int(glass_mesh_count),
         "glass_geom_count": int(glass_geom_count),
         "glass_parent_name": glass_parent_name,
@@ -127,40 +147,54 @@ def _render_compare(
     mujoco: Any,
     model: Any,
     out_png: Path,
-    qpos_max: float,
+    joint_poses: list[dict[str, Any]],
     width: int,
     height: int,
 ) -> dict[str, Any]:
     renderer = mujoco.Renderer(model, height=height, width=width)
     camera = mujoco.MjvCamera()
     mujoco.mjv_defaultFreeCamera(model, camera)
-    camera.lookat[:] = np.asarray([0.0, -0.15, 0.0], dtype=np.float64)
-    camera.distance = 2.0
+    camera.lookat[:] = np.asarray(model.stat.center, dtype=np.float64)
+    camera.distance = max(0.25, float(model.stat.extent) * 2.2)
     camera.azimuth = 180.0
     camera.elevation = -8.0
 
     frames = []
-    for qpos in (0.0, qpos_max):
+    poses = [{"joint_name": "rest", "qpos_index": None, "qpos": 0.0}] + joint_poses
+    for pose in poses:
         data = mujoco.MjData(model)
-        if model.nq:
-            data.qpos[0] = qpos
+        if pose["qpos_index"] is not None:
+            data.qpos[int(pose["qpos_index"])] = float(pose["qpos"])
         mujoco.mj_forward(model, data)
         renderer.update_scene(data, camera=camera)
-        frames.append((qpos, renderer.render().copy()))
+        frames.append((pose, renderer.render().copy()))
     renderer.close()
 
-    left = Image.fromarray(frames[0][1])
-    right = Image.fromarray(frames[1][1])
-    canvas = Image.new("RGB", (width * 2, height + 34), (255, 255, 255))
-    canvas.paste(left, (0, 34))
-    canvas.paste(right, (width, 34))
+    canvas = Image.new("RGB", (width * len(frames), height + 34), (255, 255, 255))
     draw = ImageDraw.Draw(canvas)
-    draw.text((8, 8), f"qpos={frames[0][0]:.6g}", fill=(0, 0, 0))
-    draw.text((width + 8, 8), f"qpos={frames[1][0]:.6g}", fill=(0, 0, 0))
+    for index, (pose, pixels) in enumerate(frames):
+        canvas.paste(Image.fromarray(pixels), (width * index, 34))
+        label = "rest" if pose["qpos_index"] is None else f"{pose['joint_name']} q={pose['qpos']:.5g}"
+        draw.text((width * index + 8, 8), label, fill=(0, 0, 0))
     out_png.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(out_png)
-    diff = np.mean(np.abs(frames[0][1].astype(np.float32) - frames[1][1].astype(np.float32)))
-    return {"ok": True, "path": str(out_png), "mean_abs_pixel_diff": float(diff)}
+    per_joint = []
+    for pose, pixels in frames[1:]:
+        diff = np.mean(np.abs(frames[0][1].astype(np.float32) - pixels.astype(np.float32)))
+        per_joint.append({
+            "joint_name": pose["joint_name"],
+            "qpos_index": int(pose["qpos_index"]),
+            "qpos": float(pose["qpos"]),
+            "mean_abs_pixel_diff": float(diff),
+        })
+    pixel_std = float(np.std(frames[0][1]))
+    return {
+        "ok": pixel_std > 1.0,
+        "path": str(out_png),
+        "mean_abs_pixel_diff": max((row["mean_abs_pixel_diff"] for row in per_joint), default=0.0),
+        "per_joint": per_joint,
+        "rest_pixel_std": pixel_std,
+    }
 
 
 def _mujoco_checks(
@@ -175,19 +209,67 @@ def _mujoco_checks(
     model = mujoco.MjModel.from_xml_path(str(xml_path))
     data0 = mujoco.MjData(model)
     mujoco.mj_forward(model, data0)
-    data1 = mujoco.MjData(model)
-    if model.nq:
-        data1.qpos[0] = qpos_max
-    mujoco.mj_forward(model, data1)
-
     jnt_axis = np.asarray(model.jnt_axis, dtype=np.float64).reshape(model.njnt, 3)
-    joint_body = int(model.jnt_bodyid[0]) if model.njnt else -1
-    drawer_delta = None
-    drawer_forward_ok = None
-    if joint_body >= 0:
-        delta = np.asarray(data1.xpos[joint_body] - data0.xpos[joint_body], dtype=np.float64)
-        drawer_delta = [float(v) for v in delta]
-        drawer_forward_ok = bool(delta[1] < -0.5 * qpos_max)
+    slide_type = int(mujoco.mjtJoint.mjJNT_SLIDE)
+    slide_ids = [index for index in range(model.njnt) if int(model.jnt_type[index]) == slide_type]
+    slide_checks = []
+    joint_motion_checks = []
+    joint_poses = []
+    hinge_type = int(mujoco.mjtJoint.mjJNT_HINGE)
+    for joint_id in range(model.njnt):
+        qpos_index = int(model.jnt_qposadr[joint_id])
+        lower, upper = [float(value) for value in model.jnt_range[joint_id]]
+        target = upper if abs(upper) >= abs(lower) else lower
+        if int(model.jnt_type[joint_id]) == slide_type:
+            target = min(float(qpos_max), target) if target > 0.0 else max(-float(qpos_max), target)
+        moved = mujoco.MjData(model)
+        moved.qpos[qpos_index] = target
+        mujoco.mj_forward(model, moved)
+        body_id = int(model.jnt_bodyid[joint_id])
+        position_delta = np.asarray(moved.xpos[body_id] - data0.xpos[body_id], dtype=np.float64)
+        rest_rotation = np.asarray(data0.xmat[body_id], dtype=np.float64).reshape(3, 3)
+        moved_rotation = np.asarray(moved.xmat[body_id], dtype=np.float64).reshape(3, 3)
+        relative_rotation = rest_rotation.T @ moved_rotation
+        rotation_angle = float(np.arccos(np.clip((np.trace(relative_rotation) - 1.0) * 0.5, -1.0, 1.0)))
+        joint_type = "hinge" if int(model.jnt_type[joint_id]) == hinge_type else "slide"
+        motion_magnitude = rotation_angle if joint_type == "hinge" else float(np.linalg.norm(position_delta))
+        joint_name = _name(mujoco, model, mujoco.mjtObj.mjOBJ_JOINT, joint_id)
+        joint_motion_checks.append({
+            "joint_id": joint_id,
+            "joint_name": joint_name,
+            "joint_type": joint_type,
+            "body_name": _name(mujoco, model, mujoco.mjtObj.mjOBJ_BODY, body_id),
+            "qpos_index": qpos_index,
+            "qpos": target,
+            "range": [lower, upper],
+            "position_delta": position_delta.tolist(),
+            "rotation_angle_rad": rotation_angle,
+            "motion_magnitude": motion_magnitude,
+            "motion_ok": bool(abs(target) > 1e-8 and motion_magnitude > 1e-5),
+        })
+        joint_poses.append({"joint_name": joint_name, "qpos_index": qpos_index, "qpos": target})
+    for joint_id in slide_ids:
+        qpos_index = int(model.jnt_qposadr[joint_id])
+        lower, upper = [float(value) for value in model.jnt_range[joint_id]]
+        qpos = min(float(qpos_max), upper) if upper > 0.0 else max(-float(qpos_max), lower)
+        moved = mujoco.MjData(model)
+        moved.qpos[qpos_index] = qpos
+        mujoco.mj_forward(model, moved)
+        body_id = int(model.jnt_bodyid[joint_id])
+        delta = np.asarray(moved.xpos[body_id] - data0.xpos[body_id], dtype=np.float64)
+        slide_checks.append({
+            "joint_id": joint_id,
+            "joint_name": _name(mujoco, model, mujoco.mjtObj.mjOBJ_JOINT, joint_id),
+            "body_name": _name(mujoco, model, mujoco.mjtObj.mjOBJ_BODY, body_id),
+            "qpos_index": qpos_index,
+            "qpos": qpos,
+            "axis": jnt_axis[joint_id].tolist(),
+            "range": [lower, upper],
+            "delta": delta.tolist(),
+            "local_z_ok": bool(np.allclose(jnt_axis[joint_id], [0, 0, 1])),
+            "positive_range_ok": bool(lower >= -1e-9 and upper > lower),
+            "forward_negative_y_ok": bool(qpos > 0.0 and delta[1] < -0.5 * qpos),
+        })
 
     geom_names = [_name(mujoco, model, mujoco.mjtObj.mjOBJ_GEOM, idx) for idx in range(model.ngeom)]
     glass_geom_ids = [idx for idx, name in enumerate(geom_names) if name == "drawer_glass_visual"]
@@ -208,7 +290,7 @@ def _mujoco_checks(
             mujoco=mujoco,
             model=model,
             out_png=out_png,
-            qpos_max=qpos_max,
+            joint_poses=joint_poses,
             width=render_width,
             height=render_height,
         )
@@ -225,12 +307,12 @@ def _mujoco_checks(
         "nmesh": int(model.nmesh),
         "ntex": int(model.ntex),
         "jnt_axis": jnt_axis.tolist(),
+        "slide_joint_checks": slide_checks,
+        "joint_motion_checks": joint_motion_checks,
         "joint_names": [_name(mujoco, model, mujoco.mjtObj.mjOBJ_JOINT, idx) for idx in range(model.njnt)],
         "actuator_names": [_name(mujoco, model, mujoco.mjtObj.mjOBJ_ACTUATOR, idx) for idx in range(model.nu)],
         "geom_names": geom_names,
-        "drawer_body_name": "" if joint_body < 0 else _name(mujoco, model, mujoco.mjtObj.mjOBJ_BODY, joint_body),
-        "drawer_delta_qpos_max": drawer_delta,
-        "drawer_forward_negative_y_ok": drawer_forward_ok,
+        "joint_body_masses": [float(model.body_mass[int(model.jnt_bodyid[index])]) for index in range(model.njnt)],
         "has_drawer_glass": bool(glass_geom_ids),
         "glass_same_body_as_drawer": bool(glass_same_body),
         "render": render,
@@ -241,8 +323,14 @@ def _overall_ok(report: dict[str, Any], expect_nq: int, expect_nv: int, expect_n
     xml = report["xml"]
     mj = report.get("mujoco") or {}
     compile_report = report.get("compile") or {}
-    axis = np.asarray(mj.get("jnt_axis") or [], dtype=np.float64)
-    axis_ok = bool(axis.shape[0] == expect_njnt and (expect_njnt == 0 or np.allclose(axis[0], [0, 0, 1])))
+    slide_checks = mj.get("slide_joint_checks") or []
+    slides_ok = all(
+        item.get("local_z_ok") and item.get("positive_range_ok") and item.get("forward_negative_y_ok")
+        for item in slide_checks
+    )
+    masses_ok = all(float(value) > 0.0 for value in (mj.get("joint_body_masses") or []))
+    motion_checks = mj.get("joint_motion_checks")
+    motions_ok = True if motion_checks is None else all(bool(item.get("motion_ok")) for item in motion_checks)
     compile_ok = True if not compile_report.get("available") else bool(compile_report.get("ok"))
     has_glass = int(xml.get("glass_geom_count") or 0) > 0 or bool(mj.get("has_drawer_glass"))
     glass_ok = True if not has_glass else bool(mj.get("glass_same_body_as_drawer"))
@@ -252,12 +340,18 @@ def _overall_ok(report: dict[str, Any], expect_nq: int, expect_nv: int, expect_n
         and xml.get("shell_count") == 0
         and not xml.get("missing_assets")
         and xml.get("object_quat") == "0.707106781 0.707106781 0 0"
+        and xml.get("compiler_balanceinertia") == "true"
+        and xml.get("compiler_inertiagrouprange") == "3 5"
+        and xml.get("visual_group0_count", 0) >= 1
+        and xml.get("collision_group3_5_count", 0) >= xml.get("moving_body_count", 0)
+        and len(xml.get("inertia_ready_body_names") or []) == xml.get("moving_body_count", 0)
         and mj.get("nq") == expect_nq
         and mj.get("nv") == expect_nv
         and mj.get("nu") == expect_nu
         and mj.get("njnt") == expect_njnt
-        and axis_ok
-        and bool(mj.get("drawer_forward_negative_y_ok"))
+        and slides_ok
+        and masses_ok
+        and motions_ok
         and glass_ok
         and bool((mj.get("render") or {}).get("ok"))
     )

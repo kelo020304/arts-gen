@@ -852,6 +852,8 @@ class PromptablePartDataset(Dataset):
             "manifest_path": row.manifest_path,
             "category": row.category,
             "object_name": row.object_name,
+            "part_item_name": row.part_item_name,
+            "part_joint": row.part_joint,
         }
         out["m_boundary"] = boundary_band_mask(out["m_gt"], radius=1).to(dtype=torch.uint8)
         if self.include_whole_coords:
@@ -937,6 +939,8 @@ class PackedPromptablePartDataset(Dataset):
         sample.setdefault("manifest_path", row.manifest_path)
         sample.setdefault("category", row.category)
         sample.setdefault("object_name", row.object_name)
+        sample.setdefault("part_item_name", row.part_item_name)
+        sample.setdefault("part_joint", row.part_joint)
         sample["semantic_type_id"] = torch.tensor(
             self.semantic_vocab.get(str(sample["semantic_type"]), -1),
             dtype=torch.long,
@@ -1085,6 +1089,8 @@ def collate_promptable_parts(batch: list[dict[str, Any]]) -> dict[str, Any]:
         "manifest_path": [str(item.get("manifest_path", "")) for item in batch],
         "category": [str(item.get("category", "")) for item in batch],
         "object_name": [str(item.get("object_name", "")) for item in batch],
+        "part_item_name": [str(item.get("part_item_name", "")) for item in batch],
+        "part_joint": [str(item.get("part_joint", "")) for item in batch],
     }
     if all("whole_coords" in item for item in batch):
         out["whole_coords"] = [item["whole_coords"] for item in batch]

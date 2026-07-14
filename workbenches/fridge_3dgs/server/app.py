@@ -5,6 +5,7 @@ import base64
 import io
 import json
 import os
+import re
 import signal
 import shutil
 import subprocess
@@ -23,12 +24,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image, ImageOps
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 WORKBENCH_ROOT = Path(__file__).resolve().parents[1]
 STATIC_ROOT = WORKBENCH_ROOT / "static"
+KIN_SHARED_ROOT = REPO_ROOT / "post_process/utils/shared_libs"
 DATA_ROOT = Path(os.environ.get("ARTS_GEN_DATA_ROOT", "/robot/data-lab/jzh/art-gen"))
 WORK_ROOT = Path(
     os.environ.get(
@@ -36,7 +38,25 @@ WORK_ROOT = Path(
         str(DATA_ROOT / "workbench/fridge_3dgs"),
     )
 )
-SESSION_ID = os.environ.get("FRIDGE_3DGS_SESSION", "fridge_point_cloud")
+DEFAULT_SESSION_ID = os.environ.get("FRIDGE_3DGS_SESSION", "fridge_point_cloud")
+EE_EVAL_DIRNAME = "ee-eval"
+ACTIVE_RUN_FILE = ".active_run.json"
+RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,63})$")
+
+
+def _persisted_session_id() -> str:
+    marker = WORK_ROOT / EE_EVAL_DIRNAME / ACTIVE_RUN_FILE
+    try:
+        payload = json.loads(marker.read_text(encoding="utf-8"))
+        run_id = str(payload.get("run_id", ""))
+        if RUN_ID_PATTERN.fullmatch(run_id) and run_id not in {".", ".."}:
+            return run_id
+    except (FileNotFoundError, OSError, ValueError, TypeError, json.JSONDecodeError):
+        pass
+    return DEFAULT_SESSION_ID
+
+
+SESSION_ID = _persisted_session_id()
 POINT_CLOUD = Path(os.environ.get("FRIDGE_3DGS_POINT_CLOUD", str(REPO_ROOT / "data/point_cloud.ply")))
 SAM3_ROOT = Path(os.environ.get("SAM3_ROOT", str(DATA_ROOT / "local-deps/sam3")))
 DEFAULT_SAM3_PT = DATA_ROOT / "weights/sam3/sam3.pt"
@@ -44,7 +64,9 @@ DEFAULT_SAM3_SAFETENSORS = DATA_ROOT / "weights/sam3/sam3_1038lab_f055b060_sam3.
 SAM3_CKPT = Path(os.environ.get("SAM3_CKPT", str(DEFAULT_SAM3_PT if DEFAULT_SAM3_PT.is_file() else DEFAULT_SAM3_SAFETENSORS)))
 SAM3_PORT = int(os.environ.get("FRIDGE_3DGS_SAM3_PORT", "8787"))
 DEFAULT_SS_FLOW_CKPT = DATA_ROOT / "ckpt/tre-ss-flow/tre-ss-concat-0616-1/ckpts/denoiser_ema0.999_step0012500.pt"
-DEFAULT_PART_SEG_CKPT = DATA_ROOT / "ckpt/part-prompt-seg/part-prompt-seg-L-0709-1-joint/ckpts/step_100000.pt"
+PART_SEG_CKPT_ROOT = DATA_ROOT / "ckpt/part-prompt-seg"
+DEFAULT_PART_SEG_RUN = "part-prompt-seg-L-0709-1-joint"
+DEFAULT_PART_SEG_CKPT = PART_SEG_CKPT_ROOT / DEFAULT_PART_SEG_RUN / "ckpts/latest.pt"
 DEFAULT_DATASET_CONFIG = DATA_ROOT / "data/part_promptable_seg_manifests/v6/split_official_verse_realappliance_0511dd_v6.json"
 DATASET_CONFIG = Path(os.environ.get("FRIDGE_3DGS_DATA_CONFIG", str(DEFAULT_DATASET_CONFIG)))
 LEGACY_PART_SEG_CKPT = DATA_ROOT / "ckpts/part-prompt-seg/part_promptable_seg_full_S_0618-1/ckpts/step_100000.pt"
@@ -63,7 +85,7 @@ DINO_EXPECTED_TOKENS = 1374
 DINO_EXPECTED_CHANNELS = 1024
 
 
-app = FastAPI(title="Fridge Multiview Asset Extraction Workbench")
+app = FastAPI(title="Arts-Gen EE Eval Workbench")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -71,10 +93,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.mount("/static", StaticFiles(directory=STATIC_ROOT), name="static")
+app.mount("/kin-shared", StaticFiles(directory=KIN_SHARED_ROOT), name="kin-shared")
 
 SAM3_PROCESS: subprocess.Popen[str] | None = None
 JOBS: dict[str, subprocess.Popen[str]] = {}
 JOB_META: dict[str, dict[str, Any]] = {}
+KIN_JOBS: dict[str, subprocess.Popen[str]] = {}
+KIN_JOB_META: dict[str, dict[str, Any]] = {}
 SESSION_LOCK = threading.RLock()
 
 
@@ -105,6 +130,7 @@ class ImportViewsRequest(BaseModel):
 
 
 class DatasetLoadRequest(BaseModel):
+    dataset_id: str | None = None
     object_id: str
     angle_idx: int = 0
     view_count: int = Field(default=4, ge=1, le=4)
@@ -141,10 +167,13 @@ class Sam3PointRequest(BaseModel):
 
 
 class ReconstructRequest(BaseModel):
-    stage: str = "all"
-    quick_steps: bool = True
+    model_config = ConfigDict(extra="forbid")
+
+    stage: str = "dino_ss_flow"
+    force: bool = False
+    quick_steps: bool = False
     ss_flow_ckpt: str | None = None
-    part_seg_ckpt: str | None = None
+    part_seg_run_id: str | None = None
     ss_decoder_ckpt: str | None = None
     slat_flow_ckpt: str | None = None
     slat_mesh_decoder_ckpt: str | None = None
@@ -152,13 +181,50 @@ class ReconstructRequest(BaseModel):
     ss_steps: int = 20
     slat_steps: int = 25
 
+class KinAgentRequest(BaseModel):
+    max_iterations: int = Field(default=7, ge=1, le=9)
+    use_dataset_motion_states: bool = False
 
-def session_dir() -> Path:
-    path = WORK_ROOT / SESSION_ID
+
+class RunCreateRequest(BaseModel):
+    run_id: str
+    select: bool = True
+
+
+class RunSelectRequest(BaseModel):
+    run_id: str
+    create: bool = False
+
+
+def _ee_eval_root() -> Path:
+    return WORK_ROOT / EE_EVAL_DIRNAME
+
+
+def _validate_run_id(run_id: str) -> str:
+    normalized = str(run_id).strip()
+    if normalized in {".", ".."} or not RUN_ID_PATTERN.fullmatch(normalized):
+        raise HTTPException(
+            status_code=400,
+            detail="run_id must be 1-64 characters using only letters, digits, '.', '_' or '-', and start with a letter or digit",
+        )
+    return normalized
+
+
+def _ensure_session_layout(path: Path) -> Path:
     path.mkdir(parents=True, exist_ok=True)
-    for sub in ("rgb", "mask", "mask_preview", "camera", "dino_input", "dino_tokens", "sam3", "reconstruct", "model_input"):
+    for sub in ("rgb", "mask", "object_mask", "mask_preview", "camera", "dino_input", "dino_tokens", "sam3", "reconstruct", "model_input"):
         (path / sub).mkdir(parents=True, exist_ok=True)
     return path
+
+
+def session_dir() -> Path:
+    run_id = _validate_run_id(SESSION_ID)
+    target = _ee_eval_root() / run_id
+    legacy = WORK_ROOT / run_id
+    if not target.exists() and legacy.is_dir() and legacy != _ee_eval_root():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        os.replace(legacy, target)
+    return _ensure_session_layout(target)
 
 
 def _json(path: Path, payload: Any) -> None:
@@ -251,8 +317,10 @@ def _normalized_model_inputs(root: Path) -> dict[str, Any]:
     model_root = root / "model_input"
     rgb_root = model_root / "rgb"
     mask_root = model_root / "mask"
+    object_mask_root = model_root / "object_mask"
     rgb_root.mkdir(parents=True, exist_ok=True)
     mask_root.mkdir(parents=True, exist_ok=True)
+    object_mask_root.mkdir(parents=True, exist_ok=True)
     mapping = [physical_indices[slot % len(physical_indices)] for slot in range(4)]
     replacements: list[tuple[Path, Path]] = []
     with tempfile.TemporaryDirectory(prefix=".normalize-model-input-", dir=root) as staged_text:
@@ -260,12 +328,41 @@ def _normalized_model_inputs(root: Path) -> dict[str, Any]:
         for model_slot, physical_index in enumerate(mapping):
             staged_rgb = staged_root / f"view_{model_slot}.png"
             staged_mask = staged_root / f"mask_{model_slot}.npy"
+            staged_object_mask = staged_root / f"object_mask_{model_slot}.npy"
             shutil.copyfile(root / "rgb" / f"view_{physical_index}.png", staged_rgb)
             shutil.copyfile(root / "mask" / f"mask_{physical_index}.npy", staged_mask)
+            source_object_mask = root / "object_mask" / f"mask_{physical_index}.npy"
+            if source_object_mask.is_file():
+                shutil.copyfile(source_object_mask, staged_object_mask)
+            else:
+                part_mask = np.load(staged_mask)
+                np.save(staged_object_mask, (part_mask > 0).astype(np.uint8))
             replacements.extend([
                 (staged_rgb, rgb_root / f"view_{model_slot}.png"),
                 (staged_mask, mask_root / f"mask_{model_slot}.npy"),
+                (staged_object_mask, object_mask_root / f"mask_{model_slot}.npy"),
             ])
+        dataset = _read_json(root / "dataset.json", {}) or {}
+        token_cache_path = dataset.get("token_cache_path")
+        if not token_cache_path and dataset.get("source") == "dataset":
+            source, record = _find_dataset_record(
+                str(dataset.get("object_id")), int(dataset.get("angle_idx", 0)), str(dataset.get("dataset_id"))
+            )
+            resolved_cache = _dataset_token_cache(source, record)
+            token_cache_path = str(resolved_cache) if resolved_cache is not None else None
+        normalized_tokens: Path | None = None
+        if token_cache_path and Path(str(token_cache_path)).is_file():
+            with np.load(Path(str(token_cache_path)), allow_pickle=False) as token_payload:
+                all_tokens = np.asarray(token_payload["tokens"])
+            source_views = [int(value) for value in dataset.get("source_view_indices") or []]
+            selected_views = [source_views[index] for index in mapping]
+            selected_tokens = np.ascontiguousarray(all_tokens[np.asarray(selected_views, dtype=np.int64)])
+            if selected_tokens.shape != (4, DINO_EXPECTED_TOKENS, DINO_EXPECTED_CHANNELS):
+                raise HTTPException(status_code=400, detail=f"canonical token selection has invalid shape {selected_tokens.shape}")
+            staged_tokens = staged_root / "canonical_tokens.npz"
+            np.savez_compressed(staged_tokens, tokens=selected_tokens.astype(np.float32, copy=False))
+            normalized_tokens = model_root / "canonical_tokens.npz"
+            replacements.append((staged_tokens, normalized_tokens))
         payload = {
             "strategy": "cycle_physical_views_in_ascending_index_order",
             "physical_view_count": len(physical_indices),
@@ -274,6 +371,9 @@ def _normalized_model_inputs(root: Path) -> dict[str, Any]:
             "model_slot_to_physical_view": mapping,
             "images": [str(rgb_root / f"view_{idx}.png") for idx in range(4)],
             "masks": [str(mask_root / f"mask_{idx}.npy") for idx in range(4)],
+            "object_masks": [str(object_mask_root / f"mask_{idx}.npy") for idx in range(4)],
+            "cond_tokens": str(normalized_tokens) if normalized_tokens is not None else None,
+            "token_source": "canonical_dataset_cache" if normalized_tokens is not None else "dino_from_object_foreground",
             "created_unix": time.time(),
         }
         staged_meta = staged_root / "mapping.json"
@@ -344,6 +444,7 @@ def _view_derivative_paths(root: Path, view_indices: list[int]) -> list[Path]:
             [
                 root / "mask" / f"mask_{idx}.npy",
                 root / "mask" / f"mask_{idx}.png",
+                root / "object_mask" / f"mask_{idx}.npy",
                 root / "mask_preview" / f"mask_{idx}.png",
                 root / "dino_input" / f"view_{idx}.png",
             ]
@@ -356,6 +457,9 @@ def _view_derivative_paths(root: Path, view_indices: list[int]) -> list[Path]:
         root / "model_input" / "mapping.json",
         *list((root / "model_input").glob("rgb/*.png")),
         *list((root / "model_input").glob("mask/*.npy")),
+        *list((root / "model_input").glob("object_mask/*.npy")),
+        root / "model_input" / "canonical_tokens.npz",
+        *list((root / "reconstruct" / "pipeline").rglob("*")),
     ])
     return paths
 
@@ -368,6 +472,9 @@ def _mask_derivative_paths(root: Path, view_index: int) -> list[Path]:
         root / "model_input" / "mapping.json",
         *list((root / "model_input").glob("rgb/*.png")),
         *list((root / "model_input").glob("mask/*.npy")),
+        *list((root / "model_input").glob("object_mask/*.npy")),
+        root / "model_input" / "canonical_tokens.npz",
+        *list((root / "reconstruct" / "pipeline").rglob("*")),
     ]
 
 
@@ -406,9 +513,49 @@ def _transactional_replace(
 
 
 def _ensure_no_active_jobs() -> None:
-    running = [job_id for job_id, process in JOBS.items() if process.poll() is None]
+    running = [
+        job_id
+        for jobs in (JOBS, KIN_JOBS)
+        for job_id, process in jobs.items()
+        if process.poll() is None
+    ]
     if running:
         raise HTTPException(status_code=409, detail={"error": "reconstruct job is running", "job_ids": running})
+
+
+def _run_state(run_id: str, path: Path) -> dict[str, Any]:
+    dataset = _read_json(path / "dataset.json", None)
+    manifest = _read_json(path / "manifest.json", None)
+    latest_job = _read_json(path / "reconstruct" / "latest_job.json", None)
+    try:
+        modified_unix = path.stat().st_mtime
+    except OSError:
+        modified_unix = None
+    return {
+        "run_id": run_id,
+        "id": run_id,
+        "active": run_id == SESSION_ID,
+        "path": str(path),
+        "dataset": dataset,
+        "object_id": dataset.get("object_id") if isinstance(dataset, dict) else None,
+        "has_inputs": any((path / "rgb" / f"view_{index}.png").is_file() for index in range(4)),
+        "has_manifest": isinstance(manifest, dict),
+        "latest_job": latest_job,
+        "modified_unix": modified_unix,
+    }
+
+
+def _select_run(run_id: str) -> dict[str, Any]:
+    global SESSION_ID
+    run_id = _validate_run_id(run_id)
+    root = _ee_eval_root() / run_id
+    if not root.is_dir() or root.is_symlink():
+        raise HTTPException(status_code=404, detail=f"ee-eval run does not exist: {run_id}")
+    if run_id != SESSION_ID:
+        _ensure_no_active_jobs()
+        SESSION_ID = run_id
+        _json(_ee_eval_root() / ACTIVE_RUN_FILE, {"run_id": run_id, "selected_unix": time.time()})
+    return _run_state(run_id, _ensure_session_layout(root))
 
 
 def _labels_payload(labels: list[LabelSpec]) -> list[dict[str, Any]]:
@@ -429,19 +576,41 @@ def _part_info(labels: list[LabelSpec]) -> dict[str, Any]:
         name = str(item["name"]).strip() or f"part_{int(item['id']):02d}"
         slug = "".join(ch.lower() if ch.isalnum() else "_" for ch in name).strip("_") or f"part_{int(item['id']):02d}"
         low = name.lower()
-        joint = "revolute" if any(term in low for term in ("door", "hinge", "lid")) else "fixed"
+        if any(term in low for term in ("drawer", "slide", "tray", "pull_out")):
+            joint = "prismatic"
+        elif any(term in low for term in ("door", "hinge", "lid", "dial", "knob")):
+            joint = "revolute"
+        else:
+            joint = "unknown"
         parts[f"{slug}_{int(item['id']):02d}"] = {
             "label": int(item["id"]),
             "type": name,
             "joint": joint,
-            "workbench_source": "fridge_multiview_manual_or_sam3_mask",
+            "workbench_source": "dataset_mask_or_wild_sam3_points",
         }
     return {
         "format": "arts_gen_workbench_part_info_v1",
-        "object": "fridge_3dgs",
+        "object": "ee_eval_session",
         "parts": parts,
         "joint_note": "hinge/open-door viewer is intentionally interface-only in phase 1",
     }
+
+
+def _ensure_part_info(root: Path) -> Path:
+    path = root / "part_info.json"
+    if path.is_file():
+        return path
+    labels = _read_json(root / "labels.json", [])
+    if not isinstance(labels, list):
+        raise HTTPException(status_code=400, detail="labels.json must contain a list")
+    try:
+        label_specs = [LabelSpec(**item) for item in labels]
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"invalid labels.json: {exc}") from exc
+    if not _labels_payload(label_specs):
+        raise HTTPException(status_code=400, detail="cannot reconstruct without positive part labels")
+    _json(path, _part_info(label_specs))
+    return path
 
 
 def _colorize_mask(mask: np.ndarray, labels: list[LabelSpec]) -> Image.Image:
@@ -519,7 +688,9 @@ def _ssflow_input_state(root: Path) -> dict[str, Any]:
     if not physical_indices:
         ok = False
     for idx in physical_indices:
-        image_path, mask_path = images[idx], masks[idx]
+        image_path, mask_path = images[idx], root / "object_mask" / f"mask_{idx}.npy"
+        if not mask_path.is_file():
+            mask_path = masks[idx]
         entry: dict[str, Any] = {"view_index": idx, "name": f"view_{idx}"}
         if not image_path.is_file():
             ok = False
@@ -560,7 +731,7 @@ def _ssflow_input_state(root: Path) -> dict[str, Any]:
         "model_slot_to_physical_view": [
             physical_indices[idx % len(physical_indices)] for idx in range(4)
         ] if physical_indices else [],
-        "preprocess": "RGBA alpha from mask>0 -> foreground crop x1.2 -> 518 RGB premultiplied on black -> DINOv2 x_prenorm layer_norm",
+        "preprocess": "whole-object foreground (dataset RGBA alpha/raw mask; wild part-mask union fallback) -> crop x1.2 -> 518 RGB premultiplied on black -> DINOv2 x_prenorm layer_norm",
         "views": entries,
     }
 
@@ -617,17 +788,42 @@ def _validate_contract(root: Path, declared_label_ids: set[int] | None = None) -
 
 
 def _ckpt_config(req: ReconstructRequest, out_dir: Path) -> dict[str, Any]:
+    part_seg_ckpt = str(_resolve_part_seg_run_id(req.part_seg_run_id or DEFAULT_PART_SEG_RUN))
     return {
         "ss_flow_ckpt": req.ss_flow_ckpt or str(DEFAULT_SS_FLOW_CKPT),
-        "part_seg_ckpt": req.part_seg_ckpt or str(DEFAULT_PART_SEG_CKPT),
+        "part_seg_ckpt": part_seg_ckpt,
         "ss_decoder_ckpt": req.ss_decoder_ckpt or str(DEFAULT_SS_DECODER_CKPT),
         "slat_flow_ckpt": req.slat_flow_ckpt or str(DEFAULT_SLAT_FLOW_CKPT),
         "slat_mesh_decoder_ckpt": req.slat_mesh_decoder_ckpt or str(DEFAULT_SLAT_MESH_DECODER_CKPT),
         "slat_gaussian_decoder_ckpt": req.slat_gaussian_decoder_ckpt or str(DEFAULT_SLAT_GAUSSIAN_DECODER_CKPT),
         "ss_steps": 2 if req.quick_steps else int(req.ss_steps),
+        "ss_cfg_strength": 7.5,
+        "ss_fusion_mode": "concat",
+        "ss_seed": 20260713,
         "slat_steps": 2 if req.quick_steps else int(req.slat_steps),
         "output_dir": str(out_dir),
     }
+
+
+def _resolve_part_seg_run_id(run_id: str) -> Path:
+    value = str(run_id or "").strip()
+    relative = Path(value)
+    if not value or relative.is_absolute() or len(relative.parts) != 1 or value in {".", ".."}:
+        raise HTTPException(status_code=400, detail="invalid Part Prompt Seg training folder")
+    root = PART_SEG_CKPT_ROOT.resolve()
+    run_root = (root / relative).resolve()
+    if not run_root.is_relative_to(root) or not run_root.is_dir() or run_root.is_symlink():
+        raise HTTPException(status_code=404, detail=f"Part Prompt Seg training folder not found: {value}")
+    ckpt_root = run_root / "ckpts"
+    latest = ckpt_root / "latest.pt"
+    if latest.is_file():
+        resolved_latest = latest.resolve()
+        if resolved_latest.is_relative_to(ckpt_root.resolve()) and resolved_latest.is_file():
+            return latest
+    raise HTTPException(
+        status_code=404,
+        detail=f"Part Prompt Seg training folder has no valid ckpts/latest.pt: {value}",
+    )
 
 
 def _dataset_sources() -> list[dict[str, Any]]:
@@ -670,10 +866,16 @@ def _dataset_modules():
     return infer_runs, PartSSLatentFlowDataset
 
 
-def _find_dataset_record(object_id: str, angle_idx: int) -> tuple[dict[str, Any], dict[str, Any]]:
+def _find_dataset_record(
+    object_id: str,
+    angle_idx: int,
+    dataset_id: str | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
     wanted_object = str(object_id)
     wanted_angle = int(angle_idx)
     for source in _dataset_sources():
+        if dataset_id and str(source["dataset_id"]) != str(dataset_id):
+            continue
         manifest = source["manifest_path"]
         if not manifest.is_file():
             continue
@@ -700,6 +902,29 @@ def _dataset_view_paths(source: dict[str, Any], record: dict[str, Any]) -> tuple
         "image_paths": list(record.get("image_paths") or []),
     }
     return resolver._iter_rgb_paths(sample), resolver._iter_mask_paths(sample)
+
+
+def _dataset_token_cache(source: dict[str, Any], record: dict[str, Any]) -> Path | None:
+    data_root = Path(source["data_root"])
+    object_id = str(record.get("object_id") or record.get("obj_id"))
+    angle_idx = int(record.get("angle_idx", 0))
+    explicit = dict(record.get("paths") or {}).get("dinov2_tokens")
+    candidates = []
+    if explicit:
+        explicit_path = Path(str(explicit))
+        candidates.append(explicit_path if explicit_path.is_absolute() else data_root / explicit_path)
+    candidates.extend(
+        data_root / "reconstruction" / subdir / object_id / f"angle_{angle_idx}" / "tokens.npz"
+        for subdir in (
+            "dinov2_tokens_official_prenorm1374",
+            "dinov2_tokens",
+            "dinov2_tokens_prenorm",
+        )
+    )
+    for path in candidates:
+        if path.is_file():
+            return path.resolve()
+    return None
 
 
 def _remap_dataset_masks(record: dict[str, Any], masks: list[np.ndarray]) -> tuple[list[np.ndarray], list[dict[str, Any]]]:
@@ -817,6 +1042,8 @@ def config() -> dict[str, Any]:
         "work_root": str(WORK_ROOT),
         "session_id": SESSION_ID,
         "session_dir": str(root),
+        "active_run": SESSION_ID,
+        "run_root": str(root),
         "point_cloud": {"path": str(POINT_CLOUD), "exists": POINT_CLOUD.is_file(), "url": "/assets/point_cloud.ply"},
         "view_sources": {"3dgs_capture": POINT_CLOUD.is_file(), "direct_upload": True},
         "sam3": {
@@ -832,12 +1059,122 @@ def config() -> dict[str, Any]:
     }
 
 
+@app.get("/api/checkpoints/part-prompt-seg")
+def part_prompt_seg_checkpoints() -> dict[str, Any]:
+    root = PART_SEG_CKPT_ROOT.resolve()
+    runs: list[dict[str, Any]] = []
+    if root.is_dir():
+        for run_root in root.iterdir():
+            ckpt_root = run_root / "ckpts"
+            if not run_root.is_dir() or run_root.is_symlink() or not ckpt_root.is_dir():
+                continue
+            try:
+                checkpoint = _resolve_part_seg_run_id(run_root.name)
+            except HTTPException:
+                continue
+            stat = checkpoint.stat()
+            runs.append({
+                "id": run_root.name,
+                "run_name": run_root.name,
+                "path": str(run_root),
+                "checkpoint_path": str(checkpoint),
+                "checkpoint_filename": checkpoint.name,
+                "uses_latest": True,
+                "size_bytes": stat.st_size,
+                "mtime_ns": stat.st_mtime_ns,
+                "recommended": run_root.name == DEFAULT_PART_SEG_RUN,
+                "label": run_root.name,
+            })
+    runs.sort(key=lambda item: (not item["recommended"], -int(item["mtime_ns"]), item["run_name"]))
+    default_id = DEFAULT_PART_SEG_RUN if any(item["id"] == DEFAULT_PART_SEG_RUN for item in runs) else (runs[0]["id"] if runs else None)
+    selected_id = None
+    selected_config = _read_json(
+        session_dir() / "reconstruct" / "pipeline" / "part_prompt_seg" / "ckpt_config.json",
+        {},
+    )
+    selected_path_value = selected_config.get("part_seg_ckpt") if isinstance(selected_config, dict) else None
+    if selected_path_value:
+        selected_path = Path(str(selected_path_value)).expanduser().resolve()
+        if selected_path.is_relative_to(root):
+            relative = selected_path.relative_to(root)
+            if len(relative.parts) >= 3 and relative.parts[1] == "ckpts":
+                selected_id = relative.parts[0]
+    return {
+        "ok": True,
+        "root": str(root),
+        "default_id": default_id,
+        "selected_id": selected_id,
+        "default_path": str(_resolve_part_seg_run_id(default_id)) if default_id else None,
+        "runs": runs,
+    }
+
+
+@app.get("/api/ee-eval/runs")
+def ee_eval_runs() -> dict[str, Any]:
+    root = _ee_eval_root()
+    root.mkdir(parents=True, exist_ok=True)
+    runs = [
+        _run_state(path.name, path)
+        for path in sorted(root.iterdir(), key=lambda item: item.name)
+        if path.is_dir() and not path.is_symlink() and RUN_ID_PATTERN.fullmatch(path.name)
+    ]
+    return {
+        "ok": True,
+        "root": str(root),
+        "active_run_id": SESSION_ID,
+        "runs": runs,
+    }
+
+
+@app.get("/api/runs")
+def runs() -> dict[str, Any]:
+    payload = ee_eval_runs()
+    return {
+        "ok": True,
+        "root": payload["root"],
+        "active_run": payload["active_run_id"],
+        "runs": payload["runs"],
+    }
+
+
+@app.post("/api/ee-eval/runs")
+def ee_eval_run_create(req: RunCreateRequest) -> dict[str, Any]:
+    run_id = _validate_run_id(req.run_id)
+    root = _ee_eval_root() / run_id
+    with SESSION_LOCK:
+        created = not root.exists()
+        if root.exists() and (not root.is_dir() or root.is_symlink()):
+            raise HTTPException(status_code=409, detail=f"run path is not a regular directory: {run_id}")
+        _ensure_session_layout(root)
+        selected = _select_run(run_id) if req.select else _run_state(run_id, root)
+    return {"ok": True, "created": created, "run": selected, "active_run_id": SESSION_ID}
+
+
+@app.post("/api/ee-eval/runs/select")
+def ee_eval_run_select(req: RunSelectRequest) -> dict[str, Any]:
+    with SESSION_LOCK:
+        run_id = _validate_run_id(req.run_id)
+        root = _ee_eval_root() / run_id
+        if req.create and not root.exists():
+            _ensure_session_layout(root)
+        selected = _select_run(req.run_id)
+    return {"ok": True, "run": selected, "active_run_id": SESSION_ID}
+
+
+@app.post("/api/runs/select")
+def run_select(req: RunSelectRequest) -> dict[str, Any]:
+    payload = ee_eval_run_select(req)
+    return {"ok": True, "active_run": payload["active_run_id"], "run": payload["run"]}
+
+
 @app.get("/api/session")
 def session() -> dict[str, Any]:
     root = session_dir()
     with SESSION_LOCK:
         return {
             "session_dir": str(root),
+            "active_run": SESSION_ID,
+            "run_root": str(root),
             "manifest": _read_json(root / "manifest.json", None),
             "dataset": _read_json(root / "dataset.json", None),
             "labels": _read_json(root / "labels.json", []),
@@ -884,7 +1221,7 @@ def dataset_objects(limit: int = 5000) -> dict[str, Any]:
 
 @app.post("/api/dataset/load")
 def dataset_load(req: DatasetLoadRequest) -> dict[str, Any]:
-    source, record = _find_dataset_record(req.object_id, req.angle_idx)
+    source, record = _find_dataset_record(req.object_id, req.angle_idx, req.dataset_id)
     rgb_paths, mask_paths = _dataset_view_paths(source, record)
     available = min(len(rgb_paths), len(mask_paths))
     if available < req.view_count:
@@ -897,9 +1234,12 @@ def dataset_load(req: DatasetLoadRequest) -> dict[str, Any]:
 
     images: list[Image.Image] = []
     masks: list[np.ndarray] = []
+    object_masks: list[np.ndarray] = []
     for rgb_path, mask_path in zip(selected_rgb, selected_masks):
         with Image.open(rgb_path) as image:
-            rgb = ImageOps.exif_transpose(image).convert("RGB")
+            source_image = ImageOps.exif_transpose(image)
+            rgba = source_image.convert("RGBA")
+            rgb = source_image.convert("RGB")
         mask = np.asarray(np.load(mask_path))
         if mask.ndim != 2 or not np.issubdtype(mask.dtype, np.integer):
             raise HTTPException(status_code=400, detail=f"dataset mask must be [H,W] integer: {mask_path} {mask.shape} {mask.dtype}")
@@ -907,10 +1247,21 @@ def dataset_load(req: DatasetLoadRequest) -> dict[str, Any]:
             raise HTTPException(status_code=400, detail=f"dataset RGB/mask size mismatch: {rgb_path} {rgb.size}, {mask_path} {mask.shape}")
         images.append(rgb)
         masks.append(mask.astype(np.int32, copy=False))
+        alpha = np.asarray(rgba.getchannel("A"), dtype=np.uint8)
+        if int(alpha.min()) < 255:
+            object_mask = alpha > 0
+            object_mask_source = "source_rgba_alpha"
+        else:
+            object_mask = mask > 0
+            object_mask_source = "raw_mask_positive"
+        if not bool(object_mask.any()):
+            raise HTTPException(status_code=400, detail=f"empty whole-object foreground: {rgb_path}")
+        object_masks.append(object_mask.astype(np.uint8))
 
     masks, labels = _remap_dataset_masks(record, masks)
     label_specs = [LabelSpec(**item) for item in labels]
     root = session_dir()
+    token_cache = _dataset_token_cache(source, record)
     metadata = {
         "source": "dataset",
         "dataset_id": source["dataset_id"],
@@ -920,19 +1271,24 @@ def dataset_load(req: DatasetLoadRequest) -> dict[str, Any]:
         "angle_idx": int(req.angle_idx),
         "physical_view_count": int(req.view_count),
         "source_view_indices": [int(value) for value in (record.get("view_indices") or [])[: req.view_count]],
+        "object_mask_contract": "source RGBA alpha when non-opaque, otherwise raw dataset mask > 0",
+        "object_mask_source": object_mask_source,
+        "token_cache_path": str(token_cache) if token_cache is not None else None,
         "target_part_names": list(record.get("target_part_names") or []),
         "loaded_unix": time.time(),
     }
     with tempfile.TemporaryDirectory(prefix=".dataset-load-", dir=root) as staged_text:
         staged_root = Path(staged_text)
         replacements: list[tuple[Path, Path]] = []
-        for idx, (image, mask) in enumerate(zip(images, masks)):
+        for idx, (image, mask, object_mask) in enumerate(zip(images, masks, object_masks)):
             staged_image = staged_root / f"view_{idx}.png"
             staged_mask = staged_root / f"mask_{idx}.npy"
             staged_preview = staged_root / f"preview_{idx}.png"
+            staged_object_mask = staged_root / f"object_mask_{idx}.npy"
             staged_camera = staged_root / f"camera_{idx}.json"
             image.save(staged_image, format="PNG")
             np.save(staged_mask, mask)
+            np.save(staged_object_mask, object_mask)
             _colorize_mask(mask, label_specs).save(staged_preview)
             target_image = root / "rgb" / f"view_{idx}.png"
             _json(staged_camera, {
@@ -949,14 +1305,21 @@ def dataset_load(req: DatasetLoadRequest) -> dict[str, Any]:
             replacements.extend([
                 (staged_image, target_image),
                 (staged_mask, root / "mask" / f"mask_{idx}.npy"),
+                (staged_object_mask, root / "object_mask" / f"mask_{idx}.npy"),
                 (staged_preview, root / "mask_preview" / f"mask_{idx}.png"),
                 (staged_camera, root / "camera" / f"view_{idx}.json"),
             ])
         staged_labels = staged_root / "labels.json"
+        staged_part_info = staged_root / "part_info.json"
         staged_metadata = staged_root / "dataset.json"
         _json(staged_labels, labels)
+        _json(staged_part_info, _part_info(label_specs))
         _json(staged_metadata, metadata)
-        replacements.extend([(staged_labels, root / "labels.json"), (staged_metadata, root / "dataset.json")])
+        replacements.extend([
+            (staged_labels, root / "labels.json"),
+            (staged_part_info, root / "part_info.json"),
+            (staged_metadata, root / "dataset.json"),
+        ])
         with SESSION_LOCK:
             _ensure_no_active_jobs()
             existing = any((root / "rgb" / f"view_{idx}.png").is_file() for idx in range(4))
@@ -969,13 +1332,15 @@ def dataset_load(req: DatasetLoadRequest) -> dict[str, Any]:
                     *_view_derivative_paths(root, [0, 1, 2, 3]),
                     *[root / "rgb" / f"view_{idx}.png" for idx in range(req.view_count, 4)],
                     *[root / "mask" / f"mask_{idx}.npy" for idx in range(req.view_count, 4)],
+                    *[root / "object_mask" / f"mask_{idx}.npy" for idx in range(req.view_count, 4)],
                     *[root / "mask" / f"mask_{idx}.png" for idx in range(4)],
                     *[root / "mask_preview" / f"mask_{idx}.png" for idx in range(req.view_count, 4)],
                     *[root / "camera" / f"view_{idx}.json" for idx in range(req.view_count, 4)],
-                    root / "part_info.json",
                     root / "model_input" / "mapping.json",
                     *list((root / "model_input").glob("rgb/*.png")),
                     *list((root / "model_input").glob("mask/*.npy")),
+                    *list((root / "model_input").glob("object_mask/*.npy")),
+                    root / "model_input" / "canonical_tokens.npz",
                 ],
             )
     return {
@@ -1003,7 +1368,7 @@ def _ssflow_dino_check(root: Path) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail=contract)
     model_inputs = _normalized_model_inputs(root)
     images = [Path(path) for path in model_inputs["images"]]
-    masks = [Path(path) for path in model_inputs["masks"]]
+    masks = [Path(path) for path in model_inputs["object_masks"]]
     rgba_images = []
     for image_path, mask_path in zip(images, masks):
         with Image.open(image_path) as source_image:
@@ -1019,7 +1384,12 @@ def _ssflow_dino_check(root: Path) -> dict[str, Any]:
         import torch
         import inference
 
-        tokens = inference._images_to_tokens(rgba_images).detach().float().cpu()
+        cached_tokens = model_inputs.get("cond_tokens")
+        if cached_tokens:
+            with np.load(cached_tokens, allow_pickle=False) as payload:
+                tokens = torch.from_numpy(np.asarray(payload["tokens"], dtype=np.float32))
+        else:
+            tokens = inference._images_to_tokens(rgba_images).detach().float().cpu()
         shape = list(tokens.shape)
         finite = bool(torch.isfinite(tokens).all().item())
         if shape != [4, DINO_EXPECTED_TOKENS, DINO_EXPECTED_CHANNELS]:
@@ -1028,6 +1398,9 @@ def _ssflow_dino_check(root: Path) -> dict[str, Any]:
             raise ValueError("DINO tokens contain NaN/Inf")
         out_path = root / "dino_tokens" / "tokens.npz"
         np.savez(out_path, tokens=tokens.numpy().astype(np.float32, copy=False))
+        from scripts.inference.reconstruct_stages import _save_token_visualizations
+
+        visualization = _save_token_visualizations(tokens.numpy(), root / "dino_tokens")["token_visualization"]
         return {
             "ok": True,
             "tokens": str(out_path),
@@ -1036,6 +1409,20 @@ def _ssflow_dino_check(root: Path) -> dict[str, Any]:
             "finite": finite,
             "mean": float(tokens.mean().item()),
             "std": float(tokens.std().item()),
+            "visualization": {
+                **visualization,
+                "input_view_urls": [
+                    _output_url(root / "dino_input" / f"view_{index}.png") for index in range(4)
+                ],
+                "pca_url": _output_url(root / "dino_tokens" / "token_pca.png"),
+                "norm_url": _output_url(root / "dino_tokens" / "token_norm.png"),
+                "pca_view_urls": [
+                    _output_url(root / "dino_tokens" / f"token_pca_view_{index}.png") for index in range(4)
+                ],
+                "norm_view_urls": [
+                    _output_url(root / "dino_tokens" / f"token_norm_view_{index}.png") for index in range(4)
+                ],
+            },
             "preprocess": _ssflow_input_state(root)["preprocess"],
         }
     except HTTPException:
@@ -1290,11 +1677,13 @@ def _finalize(req: FinalizeRequest, root: Path) -> dict[str, Any]:
     images, masks = _view_paths(root)
     physical_indices = list(contract["physical_view_indices"])
     input_source = _input_source_state(root)
+    dataset_meta = _read_json(root / "dataset.json", None)
     uses_3dgs = any(item.get("source") == "3dgs_capture" for item in input_source["views"])
     manifest = {
-        "format": "fridge_3dgs_asset_extraction_workbench_v1",
+        "format": "arts_gen_ee_eval_workbench_v1",
         "created_unix": time.time(),
-        "object": "fridge",
+        "object": (dataset_meta or {}).get("object_id") or SESSION_ID,
+        "dataset": dataset_meta,
         "input_source": input_source,
         "source_3dgs": str(POINT_CLOUD) if uses_3dgs else None,
         "view_count": len(physical_indices),
@@ -1305,7 +1694,12 @@ def _finalize(req: FinalizeRequest, root: Path) -> dict[str, Any]:
         "labels": labels,
         "mask_contract": "[H,W] int32 .npy; 0=background; positive labels are stable cross-view part ids",
         "contract": contract,
-        "hinge_open_viewer": {"phase": "interface_only", "blocked": False},
+        "kin_agent_handoff": {
+            "ready": bool(contract.get("ok")),
+            "part_info": str(root / "part_info.json"),
+            "input_manifest": str(root / "manifest.json"),
+            "reconstruction_root": str(root / "reconstruct"),
+        },
     }
     with tempfile.TemporaryDirectory(prefix=".finalize-", dir=root) as staged_text:
         staged_root = Path(staged_text)
@@ -1452,42 +1846,300 @@ def reconstruct_start(req: ReconstructRequest) -> dict[str, Any]:
         return _reconstruct_start(req, root)
 
 
+def _pipeline_stage_status(root: Path, stage: str) -> dict[str, Any]:
+    stage_root = root / "reconstruct" / "pipeline" / stage
+    payload = _read_json(stage_root / "status.json", {"stage": stage, "state": "not_started", "progress": 0})
+    payload = dict(payload)
+    artifacts = payload.get("artifacts")
+    if isinstance(artifacts, dict):
+        payload["artifact_urls"] = {
+            key: (
+                [_output_url(stage_root / value) for value in values]
+                if isinstance(values, list)
+                else _output_url(stage_root / values)
+            )
+            for key, values in artifacts.items()
+        }
+    if stage == "dino_ss_flow":
+        pca_views = [stage_root / f"token_pca_view_{index}.png" for index in range(4)]
+        rgb_views = [root / "dino_input" / f"view_{index}.png" for index in range(4)]
+        if all(path.is_file() for path in pca_views):
+            payload.setdefault("artifact_urls", {})["pca_views"] = [_output_url(path) for path in pca_views]
+        if all(path.is_file() for path in rgb_views):
+            payload.setdefault("artifact_urls", {})["rgb_views"] = [_output_url(path) for path in rgb_views]
+    payload["files"] = [
+        {
+            "rel": str(path.relative_to(stage_root)),
+            "url": _output_url(path),
+            "size": path.stat().st_size,
+            "mtime_ns": path.stat().st_mtime_ns,
+        }
+        for path in sorted(stage_root.rglob("*"))
+        if path.is_file() and path.name not in {"run.log", "ckpt_config.json", "status.json"}
+    ] if stage_root.is_dir() else []
+    return payload
+
+
+@app.get("/api/reconstruct/pipeline")
+def reconstruct_pipeline() -> dict[str, Any]:
+    root = session_dir()
+    stages = ("dino_ss_flow", "ss_decode", "part_prompt_seg", "slat_decode")
+    active_jobs = [
+        dict(meta)
+        for job_id, meta in JOB_META.items()
+        if JOBS.get(job_id) is not None and JOBS[job_id].poll() is None
+    ]
+    return {
+        "ok": True,
+        "pipeline_root": str(root / "reconstruct" / "pipeline"),
+        "stages": {stage: _pipeline_stage_status(root, stage) for stage in stages},
+        "active_jobs": active_jobs,
+    }
+
+
+@app.get("/api/reconstruct/voxel/ss_decode")
+def reconstruct_ss_decode_voxel() -> dict[str, Any]:
+    root = session_dir()
+    status = _pipeline_stage_status(root, "ss_decode")
+    if status.get("state") not in {"complete", "cached"}:
+        raise HTTPException(status_code=409, detail="SS Decoder has not completed for the current inputs")
+    path = root / "reconstruct" / "pipeline" / "ss_decode" / "whole_coords.npy"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="SS Decoder voxel output is not available")
+    coords = np.load(path, allow_pickle=False)
+    if coords.ndim != 2 or coords.shape[1] != 3:
+        raise HTTPException(status_code=500, detail=f"invalid whole_coords shape {coords.shape}")
+    coords = np.asarray(coords, dtype=np.int32)
+    total = int(coords.shape[0])
+    max_display = 75000
+    stride = max(1, int(np.ceil(total / max_display)))
+    display = coords[::stride]
+    bounds = {
+        "min": coords.min(axis=0).tolist() if total else [0, 0, 0],
+        "max": coords.max(axis=0).tolist() if total else [0, 0, 0],
+    }
+    return {
+        "ok": True,
+        "resolution": 64,
+        "voxel_count": total,
+        "display_count": int(display.shape[0]),
+        "display_stride": stride,
+        "bounds": bounds,
+        "coords": display.tolist(),
+    }
+
+
+@app.get("/api/reconstruct/voxel/part_prompt_seg")
+def reconstruct_part_prompt_seg_voxel() -> dict[str, Any]:
+    root = session_dir()
+    status = _pipeline_stage_status(root, "part_prompt_seg")
+    if status.get("state") not in {"complete", "cached"}:
+        raise HTTPException(status_code=409, detail="Part Prompt Seg has not completed for the current inputs")
+
+    ss_path = root / "reconstruct" / "pipeline" / "ss_decode" / "whole_coords.npy"
+    stage_root = root / "reconstruct" / "pipeline" / "part_prompt_seg"
+    parts_path = stage_root / "part_coords.npz"
+    if not ss_path.is_file() or not parts_path.is_file():
+        raise HTTPException(status_code=404, detail="Part Prompt Seg voxel output is not available")
+
+    whole = np.asarray(np.load(ss_path, allow_pickle=False), dtype=np.int32)
+    if whole.ndim != 2 or whole.shape[1] != 3:
+        raise HTTPException(status_code=500, detail=f"invalid whole_coords shape {whole.shape}")
+    metadata = _read_json(stage_root / "metadata.json", {}) or {}
+    part_names = metadata.get("part_names") if isinstance(metadata.get("part_names"), dict) else {}
+    configured_labels = {
+        int(item["id"]): item
+        for item in (_read_json(root / "labels.json", []) or [])
+        if isinstance(item, dict) and str(item.get("id", "")).lstrip("-").isdigit()
+    }
+    palette = ["#146c94", "#b45f06", "#2a7f62", "#9a6fb0", "#ca9834", "#4f83b8"]
+
+    resolution = 64
+    whole_keys = (
+        whole[:, 0].astype(np.int64) * resolution * resolution
+        + whole[:, 1].astype(np.int64) * resolution
+        + whole[:, 2].astype(np.int64)
+    )
+    raw_parts: list[tuple[int, np.ndarray, np.ndarray]] = []
+    with np.load(parts_path, allow_pickle=False) as payload:
+        part_ids = [int(value) for value in metadata.get("part_ids", [])]
+        if not part_ids:
+            part_ids = sorted(int(key) for key in payload.files if int(key) >= 0)
+        for part_id in part_ids:
+            key = str(part_id)
+            coords = np.asarray(payload[key], dtype=np.int32).reshape(-1, 3) if key in payload else np.empty((0, 3), dtype=np.int32)
+            keys = np.empty((0,), dtype=np.int64)
+            if coords.size:
+                coords = np.unique(coords, axis=0)
+                keys = (
+                    coords[:, 0].astype(np.int64) * resolution * resolution
+                    + coords[:, 1].astype(np.int64) * resolution
+                    + coords[:, 2].astype(np.int64)
+                )
+                inside = np.isin(keys, whole_keys)
+                coords, keys = coords[inside], keys[inside]
+            raw_parts.append((part_id, coords, keys))
+
+    all_part_keys = np.concatenate([keys for _, _, keys in raw_parts]) if raw_parts else np.empty((0,), dtype=np.int64)
+    if all_part_keys.size:
+        unique_part_keys, key_counts = np.unique(all_part_keys, return_counts=True)
+        conflict_keys = unique_part_keys[key_counts > 1]
+    else:
+        conflict_keys = np.empty((0,), dtype=np.int64)
+    assigned_keys: list[np.ndarray] = []
+    layers: list[dict[str, Any]] = []
+    for index, (part_id, coords, keys) in enumerate(raw_parts):
+        if conflict_keys.size and keys.size:
+            keep = ~np.isin(keys, conflict_keys)
+            coords, keys = coords[keep], keys[keep]
+        if keys.size:
+            assigned_keys.append(keys)
+        configured = configured_labels.get(part_id, {})
+        layers.append({
+            "id": f"part-{part_id}",
+            "part_id": part_id,
+            "label": str(configured.get("name") or part_names.get(str(part_id)) or f"part_{part_id:02d}"),
+            "kind": "part",
+            "color": str(configured.get("color") or palette[index % len(palette)]),
+            "voxel_count": int(coords.shape[0]),
+            "visible": True,
+            "coords": coords.tolist(),
+        })
+
+    if conflict_keys.size:
+        conflict_coords = whole[np.isin(whole_keys, conflict_keys)]
+        assigned_keys.append(conflict_keys)
+        layers.append({
+            "id": "conflicts",
+            "part_id": -2,
+            "label": "label conflicts",
+            "kind": "conflict",
+            "color": "#d43f3a",
+            "voxel_count": int(conflict_coords.shape[0]),
+            "visible": True,
+            "coords": conflict_coords.tolist(),
+        })
+
+    claimed = np.unique(np.concatenate(assigned_keys)) if assigned_keys else np.empty((0,), dtype=np.int64)
+    body = whole[~np.isin(whole_keys, claimed)]
+    layers.insert(0, {
+        "id": "body",
+        "part_id": -1,
+        "label": "body residual",
+        "kind": "body",
+        "color": "#929995",
+        "voxel_count": int(body.shape[0]),
+        "visible": True,
+        "coords": body.tolist(),
+    })
+    total = int(sum(layer["voxel_count"] for layer in layers))
+    return {
+        "ok": True,
+        "resolution": resolution,
+        "voxel_count": total,
+        "whole_voxel_count": int(whole.shape[0]),
+        "overlap_voxel_count": int(conflict_keys.shape[0]),
+        "layers": layers,
+    }
+
+
+@app.get("/api/reconstruct/viewer-manifest")
+def reconstruct_viewer_manifest() -> dict[str, Any]:
+    root = session_dir()
+    stage_root = root / "reconstruct" / "pipeline" / "slat_decode"
+    summary = _read_json(stage_root / "summary.json", None)
+    if not isinstance(summary, dict):
+        raise HTTPException(status_code=404, detail="slat_decode summary is not available")
+
+    overall_assets = summary.get("overall_assets") or {}
+    overall_mesh = stage_root / "overall" / str(overall_assets.get("mesh", "overall.glb"))
+    overall_gaussian = stage_root / "overall" / str(overall_assets.get("gaussian", "overall.ply"))
+    palette = ["#42c6ab", "#df8b47", "#75a7e8", "#d477aa", "#b0d063", "#9a82dd"]
+    components = []
+    for index, part in enumerate(summary.get("parts") or []):
+        mesh_path = Path(str(part.get("mesh_path"))) if part.get("mesh_path") else None
+        gaussian_path = Path(str(part.get("gaussian_path"))) if part.get("gaussian_path") else None
+        components.append({
+            "id": str(part.get("part_id", index + 1)),
+            "label": str(part.get("label") or f"Part {index + 1}"),
+            "kind": str(part.get("kind") or "part"),
+            "mesh_url": _output_url(mesh_path) if mesh_path else None,
+            "gaussian_url": _output_url(gaussian_path) if gaussian_path else None,
+            "color": palette[index % len(palette)],
+            "visible": False,
+            "voxel_count": int(part.get("voxel_count", 0)),
+        })
+    dataset = _read_json(root / "dataset.json", {}) or {}
+    return {
+        "ok": True,
+        "viewer": {
+            "title": f"{dataset.get('object_id') or SESSION_ID} decoded components",
+            "overall": {
+                "id": "overall",
+                "label": "Complete",
+                "kind": "overall",
+                "mesh_url": _output_url(overall_mesh),
+                "gaussian_url": _output_url(overall_gaussian),
+                "visible": True,
+            },
+            "components": components,
+        },
+    }
+
+
 def _reconstruct_start(req: ReconstructRequest, root: Path) -> dict[str, Any]:
-    stage = str(req.stage or "all").strip() or "all"
-    allowed_stages = {"all", "ssflow_decoder", "partseg"}
+    stage = str(req.stage or "dino_ss_flow").strip() or "dino_ss_flow"
+    aliases = {"ssflow_decoder": "dino_ss_flow", "partseg": "part_prompt_seg", "decoder": "slat_decode"}
+    stage = aliases.get(stage, stage)
+    allowed_stages = {"dino_ss_flow", "ss_decode", "part_prompt_seg", "slat_decode"}
     if stage not in allowed_stages:
         raise HTTPException(status_code=400, detail=f"stage must be one of {sorted(allowed_stages)}")
     contract = _validate_contract(root)
     if not contract.get("ok"):
         raise HTTPException(status_code=400, detail=contract)
+    part_info_path = _ensure_part_info(root)
     model_inputs = _normalized_model_inputs(root)
-    out_dir = root / "reconstruct" / f"{stage}_{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}"
+    pipeline_root = root / "reconstruct" / "pipeline"
+    out_dir = pipeline_root / stage
     out_dir.mkdir(parents=True, exist_ok=True)
     cfg = _ckpt_config(req, out_dir)
     ckpt_status = _ckpt_status(cfg)
-    missing = {key: item for key, item in ckpt_status.items() if not item["exists"]}
+    required_ckpts = {
+        "dino_ss_flow": {"ss_flow_ckpt"},
+        "ss_decode": {"ss_decoder_ckpt"},
+        "part_prompt_seg": {"part_seg_ckpt", "ss_decoder_ckpt"},
+        "slat_decode": {"slat_flow_ckpt", "slat_mesh_decoder_ckpt", "slat_gaussian_decoder_ckpt"},
+    }[stage]
+    missing = {key: item for key, item in ckpt_status.items() if key in required_ckpts and not item["exists"]}
     if missing:
         raise HTTPException(status_code=400, detail={"error": "missing ckpt", "missing": missing, "ckpts": ckpt_status})
     cfg_path = out_dir / "ckpt_config.json"
     _json(cfg_path, cfg)
     images = [Path(path) for path in model_inputs["images"]]
     masks = [Path(path) for path in model_inputs["masks"]]
+    object_masks = [Path(path) for path in model_inputs["object_masks"]]
     cmd = [
         sys.executable,
-        str(REPO_ROOT / "scripts/inference/reconstruct.py"),
+        str(REPO_ROOT / "scripts/inference/reconstruct_stages.py"),
+        "--stage",
+        stage,
+        "--pipeline-root",
+        str(pipeline_root),
         "--images",
         *[str(path) for path in images],
         "--masks",
         *[str(path) for path in masks],
+        "--object-masks",
+        *[str(path) for path in object_masks],
         "--part-info",
-        str(root / "part_info.json"),
+        str(part_info_path),
         "--ckpt-config-json",
         str(cfg_path),
-        "--out-dir",
-        str(out_dir),
     ]
-    if req.quick_steps:
-        cmd.append("--quick-steps")
+    if model_inputs.get("cond_tokens"):
+        cmd.extend(["--cond-tokens", str(model_inputs["cond_tokens"])])
+    if req.force:
+        cmd.append("--force")
     log_path = out_dir / "run.log"
     handle = log_path.open("w", encoding="utf-8")
     handle.write(f"[cmd] {' '.join(cmd)}\n")
@@ -1496,7 +2148,12 @@ def _reconstruct_start(req: ReconstructRequest, root: Path) -> dict[str, Any]:
     env.setdefault("SPCONV_ALGO", "native")
     env.setdefault("ATTN_BACKEND", "sdpa")
     env.setdefault("SPARSE_ATTN_BACKEND", "sdpa")
+    bundled_utils3d = REPO_ROOT / "sam3d_cu118_deps" / "utils3d"
+    if bundled_utils3d.is_dir():
+        existing_pythonpath = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = str(bundled_utils3d) + (os.pathsep + existing_pythonpath if existing_pythonpath else "")
     proc = subprocess.Popen(cmd, stdout=handle, stderr=subprocess.STDOUT, text=True, cwd=str(REPO_ROOT), env=env)
+    handle.close()
     job_id = uuid.uuid4().hex[:12]
     JOBS[job_id] = proc
     JOB_META[job_id] = {
@@ -1506,6 +2163,9 @@ def _reconstruct_start(req: ReconstructRequest, root: Path) -> dict[str, Any]:
         "log": str(log_path),
         "cmd": cmd,
         "stage": stage,
+        "run_id": SESSION_ID,
+        "session_dir": str(root),
+        "pipeline_root": str(pipeline_root),
         "started_unix": time.time(),
         "quick_steps": bool(req.quick_steps),
         "model_inputs": model_inputs,
@@ -1527,6 +2187,8 @@ def reconstruct_status(job_id: str) -> dict[str, Any]:
     if log_path.is_file():
         tail = "\n".join(log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-120:])
     out_dir = Path(meta["out_dir"])
+    job_root = Path(str(meta.get("session_dir") or session_dir()))
+    stage_progress = _pipeline_stage_status(job_root, str(meta["stage"]))
     summary = _read_json(out_dir / "summary.json", None)
     files = []
     if out_dir.is_dir():
@@ -1538,7 +2200,222 @@ def reconstruct_status(job_id: str) -> dict[str, Any]:
                     "url": f"/outputs/{path.relative_to(WORK_ROOT)}",
                     "size": path.stat().st_size,
                 })
-    return {"ok": True, **meta, "running": return_code is None, "return_code": return_code, "log_tail": tail, "summary": summary, "files": files}
+    pipeline = {}
+    pipeline_root = Path(meta.get("pipeline_root", out_dir.parent))
+    for stage in ("dino_ss_flow", "ss_decode", "part_prompt_seg", "slat_decode"):
+        pipeline[stage] = _pipeline_stage_status(job_root, stage)
+    return {
+        "ok": True, **meta, "running": return_code is None, "return_code": return_code,
+        "progress": stage_progress, "pipeline": pipeline, "log_tail": tail, "summary": summary, "files": files,
+    }
+
+
+def _kin_agent_root(root: Path) -> Path:
+    return root / "kin_agent"
+
+
+def _kin_motion_observation_root(root: Path) -> Path | None:
+    metadata = _read_json(root / "dataset.json", {}) or {}
+    if str(metadata.get("source") or "").lower() != "dataset":
+        return None
+    dataset_id = str(metadata.get("dataset_id") or "").strip()
+    object_id = str(metadata.get("object_id") or "").strip()
+    if not dataset_id or not object_id:
+        return None
+    candidate = DATA_ROOT / "data" / dataset_id / "renders" / object_id
+    return candidate if candidate.is_dir() else None
+
+
+def _kin_result_payload(root: Path) -> dict[str, Any] | None:
+    kin_root = _kin_agent_root(root)
+    result_path = kin_root / "kinematic_result.json"
+    summary_path = root / "reconstruct" / "pipeline" / "slat_decode" / "summary.json"
+    slat_status = _pipeline_stage_status(root, "slat_decode")
+    if slat_status.get("state") not in {"complete", "cached"} or not summary_path.is_file():
+        return None
+    payload = _read_json(result_path, None)
+    if not isinstance(payload, dict):
+        return None
+    try:
+        result_summary = Path(str(payload.get("summary_path", ""))).expanduser().resolve()
+        if result_summary != summary_path.resolve() or result_path.stat().st_mtime_ns < summary_path.stat().st_mtime_ns:
+            return None
+    except OSError:
+        return None
+    input_files = payload.get("input_files")
+    if isinstance(input_files, list):
+        for item in input_files:
+            if not isinstance(item, dict):
+                return None
+            try:
+                path = Path(str(item["path"])).expanduser().resolve()
+                stat = path.stat()
+            except (KeyError, OSError):
+                return None
+            if stat.st_size != int(item.get("size", -1)) or stat.st_mtime_ns != int(item.get("mtime_ns", -1)):
+                return None
+    result = dict(payload)
+    body_path = Path(str(result.get("body_source_mesh", "")))
+    result["body_mesh_url"] = _output_url(body_path) if body_path.is_file() and body_path.is_relative_to(WORK_ROOT) else None
+    parts = []
+    for raw in result.get("parts") or []:
+        item = dict(raw)
+        source_path = Path(str(item.get("source_mesh", "")))
+        item["mesh_url"] = _output_url(source_path) if source_path.is_file() and source_path.is_relative_to(WORK_ROOT) else None
+        parts.append(item)
+    result["parts"] = parts
+    for key in ("xml_path", "usd_path", "collision_audit_path"):
+        path = Path(str(result.get(key, "")))
+        result[f"{key[:-5]}_url"] = _output_url(path) if path.is_file() and path.is_relative_to(WORK_ROOT) else None
+    validation = dict(result.get("validation") or {})
+    for key in ("report_path", "image_path"):
+        path = Path(str(validation.get(key, "")))
+        validation[f"{key[:-5]}_url"] = _output_url(path) if path.is_file() and path.is_relative_to(WORK_ROOT) else None
+    result["validation"] = validation
+    return result
+
+
+@app.get("/api/kin-agent/config")
+def kin_agent_config() -> dict[str, Any]:
+    root = session_dir()
+    summary_path = root / "reconstruct" / "pipeline" / "slat_decode" / "summary.json"
+    summary = _read_json(summary_path, None)
+    slat_status = _pipeline_stage_status(root, "slat_decode")
+    parts = []
+    if isinstance(summary, dict):
+        parts = [
+            {
+                "part_id": item.get("part_id"), "label": item.get("label"),
+                "kind": item.get("kind"), "mesh_path": item.get("mesh_path"),
+            }
+            for item in summary.get("parts") or []
+        ]
+    body_ready = any(item.get("kind") == "body" and Path(str(item.get("mesh_path", ""))).is_file() for item in parts)
+    moving_ready = any(item.get("kind") != "body" and Path(str(item.get("mesh_path", ""))).is_file() for item in parts)
+    motion_observation_root = _kin_motion_observation_root(root)
+    return {
+        "ok": True,
+        "ready": slat_status.get("state") in {"complete", "cached"} and summary_path.is_file() and body_ready and moving_ready,
+        "max_iterations": 9,
+        "default_iterations": 7,
+        "dataset_motion_states_available": motion_observation_root is not None,
+        "motion_observation_root": str(motion_observation_root) if motion_observation_root else None,
+        "summary_path": str(summary_path),
+        "parts": parts,
+        "status": _read_json(_kin_agent_root(root) / "status.json", {"state": "not_started", "progress": 0}),
+        "result": _kin_result_payload(root),
+    }
+
+
+@app.post("/api/kin-agent/start")
+def kin_agent_start(req: KinAgentRequest) -> dict[str, Any]:
+    root = session_dir()
+    with SESSION_LOCK:
+        _ensure_no_active_jobs()
+        summary_path = root / "reconstruct" / "pipeline" / "slat_decode" / "summary.json"
+        slat_status = _pipeline_stage_status(root, "slat_decode")
+        if slat_status.get("state") not in {"complete", "cached"} or not summary_path.is_file():
+            raise HTTPException(status_code=409, detail="Run Mesh + GS Decode before Kin Agent")
+        out_dir = _kin_agent_root(root)
+        dataset = _read_json(root / "dataset.json", {}) or {}
+        dataset_id = str(dataset.get("dataset_id") or "").strip()
+        motion_observation_root = (
+            _kin_motion_observation_root(root) if req.use_dataset_motion_states else None
+        )
+        static_observation_root = _kin_motion_observation_root(root)
+        motion_observation_value = str(motion_observation_root.resolve()) if motion_observation_root else ""
+        static_observation_value = str(static_observation_root.resolve()) if static_observation_root else ""
+        static_view_indices = [
+            int(value) for value in dataset.get("source_view_indices") or (0, 3, 8, 11)
+        ]
+        cached = _kin_result_payload(root)
+        if (
+            cached is not None
+            and cached.get("format") == "arts_gen_kin_agent_v17"
+            and (cached.get("collision_audit") or {}).get("version") == "decoded_collision_audit_v2"
+            and Path(str(cached.get("collision_audit_path") or "")).is_file()
+            and int(cached.get("max_iterations", -1)) == int(req.max_iterations)
+            and str(cached.get("dataset_id") or "") == dataset_id
+            and str(cached.get("motion_observation_root") or "") == motion_observation_value
+            and str(cached.get("static_observation_root") or "") == static_observation_value
+            and list(cached.get("static_view_indices") or [])
+            == static_view_indices
+        ):
+            return {
+                "ok": True, "cached": True, "job_id": None,
+                "run_id": SESSION_ID, "session_dir": str(root),
+                "out_dir": str(_kin_agent_root(root)), "max_iterations": int(req.max_iterations),
+                "result": cached,
+            }
+        if out_dir.exists():
+            shutil.rmtree(out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        cmd = [
+            sys.executable, "-m", "post_process.kinematic_solver.run_kin_agent_bundle",
+            "--summary-json", str(summary_path), "--out-dir", str(out_dir),
+            "--max-iterations", str(int(req.max_iterations)),
+        ]
+        if dataset_id:
+            cmd.extend(["--dataset-id", dataset_id])
+        if motion_observation_root is not None:
+            cmd.extend(["--motion-observation-root", str(motion_observation_root)])
+        if static_observation_root is not None:
+            cmd.extend(["--static-observation-root", str(static_observation_root)])
+            cmd.extend(["--static-view-indices", ",".join(str(value) for value in static_view_indices)])
+        log_path = out_dir / "run.log"
+        handle = log_path.open("w", encoding="utf-8")
+        handle.write(f"[cmd] {' '.join(cmd)}\n")
+        handle.flush()
+        proc = subprocess.Popen(
+            cmd, stdout=handle, stderr=subprocess.STDOUT, text=True,
+            cwd=str(REPO_ROOT), env=dict(os.environ),
+        )
+        handle.close()
+        job_id = uuid.uuid4().hex[:12]
+        KIN_JOBS[job_id] = proc
+        meta = {
+            "job_id": job_id, "pid": proc.pid, "run_id": SESSION_ID,
+            "session_dir": str(root), "out_dir": str(out_dir), "log": str(log_path),
+            "cmd": cmd, "max_iterations": int(req.max_iterations), "started_unix": time.time(),
+            "use_dataset_motion_states": bool(req.use_dataset_motion_states),
+        }
+        KIN_JOB_META[job_id] = meta
+        _json(root / "latest_kin_agent_job.json", meta)
+        return {"ok": True, **meta}
+
+
+@app.get("/api/kin-agent/status/{job_id}")
+def kin_agent_status(job_id: str) -> dict[str, Any]:
+    meta = KIN_JOB_META.get(job_id)
+    if not meta:
+        raise HTTPException(status_code=404, detail=job_id)
+    proc = KIN_JOBS[job_id]
+    return_code = proc.poll()
+    out_dir = Path(meta["out_dir"])
+    log_path = Path(meta["log"])
+    log_tail = ""
+    if log_path.is_file():
+        log_tail = "\n".join(log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-100:])
+    files = [
+        {
+            "rel": str(path.relative_to(out_dir)), "url": _output_url(path), "size": path.stat().st_size,
+        }
+        for path in sorted(out_dir.rglob("*"))
+        if path.is_file() and path.name != "run.log"
+    ]
+    return {
+        "ok": True, **meta, "running": return_code is None, "return_code": return_code,
+        "progress": _read_json(out_dir / "status.json", {"state": "starting", "progress": 1}),
+        "result": _kin_result_payload(Path(meta["session_dir"])), "log_tail": log_tail, "files": files,
+    }
+
+
+@app.get("/api/kin-agent/result")
+def kin_agent_result() -> dict[str, Any]:
+    payload = _kin_result_payload(session_dir())
+    if payload is None:
+        raise HTTPException(status_code=404, detail="Kin Agent result is not available")
+    return {"ok": True, **payload}
 
 
 @app.get("/health")

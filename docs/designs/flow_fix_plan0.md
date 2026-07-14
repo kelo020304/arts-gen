@@ -1,6 +1,6 @@
 # Dense Part Flow 修复实现计划
 
-> **给 agentic workers 的要求：** 实施本计划时必须使用 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans`。所有任务使用 checkbox (`- [ ]`) 跟踪。
+> **给 agentic workers 的要求：** 本计划是用户明确要求后保留的实施文档。直接按任务执行并验证；不依赖额外 workflow skill。所有任务使用 checkbox (`- [ ]`) 跟踪。
 
 **目标：** 将 Part Flow 从 sparse SS coords labeling 修正为 dense `64^3` surface-to-solid conditional Fisher flow，并移除 dense voxel global self-attention。
 
@@ -895,7 +895,7 @@ torch.Size([12, 6])
 
 - [ ] **Step 3: 实施后维护 code update 文档**
 
-代码实现和测试完成后，调用 `code-update-log` skill，更新：
+代码实现和测试完成后，直接更新：
 
 ```text
 code_update/code_update_flow.md

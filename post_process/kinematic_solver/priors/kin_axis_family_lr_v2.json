@@ -1,0 +1,16 @@
+{
+  "format": "arts_gen_kin_axis_family_lr_v2",
+  "training_contract": "realappliance knob samples from canonical split train_ids only; source axes are mapped through the inverse delivery-root rotation into decoded coordinates; model artifact contains vectorizer/scaler/coefficients and no per-object GT rows",
+  "training_samples": 62,
+  "training_unique_objects": 37,
+  "group_cv_folds": 5,
+  "group_cv_accuracy": 0.967741935483871,
+  "split_sha256": "a13cdd412be4fc1b873f85b130a97ab7f505b07626a3da1634200a17e2342a18",
+  "base_predictions_sha256": "90a6ce175e427ed710c3f78454945bc3bb85eb5aa314a0d098dfdc939c1f84b7",
+  "numeric_feature_count": 25,
+  "classes": [
+    0,
+    1,
+    2
+  ]
+}

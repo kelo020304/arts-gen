@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>EE Eval Workbench</title>
     <script>
-      window.__fridgeWorkbenchAssetVersion = "20260713-ee-eval-e2e-v1";
+      window.__fridgeWorkbenchAssetVersion = "20260713-kin-agent-v8";
       window.__fridgeWorkbenchRoot = (() => {
         const path = window.location.pathname;
         if (path.endsWith("/static/index.html")) return new URL("../", window.location.href).toString();
@@ -28,11 +28,12 @@
       </div>
       <nav class="stageTabs" aria-label="Stages">
         <button class="stageTab active" data-stage="views"><span>01</span>Inputs</button>
-        <button class="stageTab" data-stage="renders"><span>02</span>Views</button>
-        <button class="stageTab" data-stage="masks"><span>03</span>Masks</button>
-        <button class="stageTab" data-stage="ssflow"><span>04</span>Run</button>
-        <button class="stageTab" data-stage="partseg"><span>05</span>Results</button>
-        <button class="stageTab" data-stage="export"><span>06</span>Export</button>
+        <button class="stageTab" data-stage="masks"><span>02</span>Masks</button>
+        <button class="stageTab" data-stage="ssflow"><span>03</span>DINO + SS</button>
+        <button class="stageTab" data-stage="ssdecode"><span>04</span>SS Decode</button>
+        <button class="stageTab" data-stage="partseg"><span>05</span>Part Seg</button>
+        <button class="stageTab" data-stage="slatdecode"><span>06</span>Mesh + GS</button>
+        <button class="stageTab" data-stage="kinagent"><span>07</span>Kin Agent</button>
       </nav>
       <div class="statusLine">
         <span id="pointCloudBadge" class="badge">PLY</span>
@@ -43,6 +44,23 @@
 
     <main>
       <section id="stage-views" class="stage active">
+        <div class="runWorkspaceBar">
+          <div>
+            <div class="sectionTitle">EE-Eval run folder</div>
+            <div id="runWorkspaceSummary" class="muted">Loading active run</div>
+          </div>
+          <label>
+            <span>Existing run</span>
+            <select id="runWorkspaceSelect"></select>
+          </label>
+          <button id="openRunWorkspaceBtn">Open</button>
+          <label>
+            <span>New folder</span>
+            <input id="newRunWorkspaceName" type="text" maxlength="80" placeholder="e.g. ra-debug-0713" />
+          </label>
+          <button id="createRunWorkspaceBtn" class="primary">Create</button>
+        </div>
+
         <div class="inputSourceBar">
           <div>
             <div class="sectionTitle">View Source</div>
@@ -247,22 +265,51 @@
       <section id="stage-ssflow" class="stage">
         <div class="reconLayout">
           <aside class="sidePane">
-            <div class="sectionTitle">EE Eval Inputs</div>
+            <div class="sectionTitle">DINO + Sparse Structure Flow</div>
             <div id="ssInputContract" class="infoPanel"></div>
-            <div class="sectionTitle">SS Flow / Decoder Ckpts</div>
+            <div class="sectionTitle">SS Flow Checkpoint</div>
             <div id="ssCkptList" class="ckptList"></div>
             <label class="checkRow">
-              <input id="ssQuickSteps" type="checkbox" checked />
-              <span>Quick steps</span>
+              <input id="ssQuickSteps" type="checkbox" />
+              <span>Debug only: 2 steps</span>
             </label>
-            <button id="checkDinoBtn">Check DINO Tokens</button>
-            <button id="startSsFlowBtn" class="primary">Run End-to-End EE Eval</button>
+            <button id="checkDinoBtn">Token Preflight</button>
+            <button id="startSsFlowBtn" class="primary">Run DINO + SS Flow</button>
           </aside>
           <div class="reconMain">
             <div id="dinoCheckStatus" class="logBox small"></div>
-            <div id="dinoPreviewGrid" class="renderGrid compact"></div>
+            <div class="progressTrack"><span id="ssProgressBar"></span></div>
+            <div id="ssProgressText" class="stageProgressText">Not started</div>
+            <div class="sectionTitle">DINO input / patch-token PCA</div>
+            <div id="dinoTokenGrid" class="tokenVizGrid"></div>
             <div id="ssStatus" class="logBox"></div>
             <div id="ssOutputs" class="outputGrid"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="stage-ssdecode" class="stage">
+        <div class="reconLayout">
+          <aside class="sidePane">
+            <div class="sectionTitle">Sparse Structure Decoder</div>
+            <div class="muted">Consumes the cached SS latent and produces the whole-object voxel grid.</div>
+            <div class="sectionTitle">SS Decoder Checkpoint</div>
+            <div id="ssDecodeCkptList" class="ckptList"></div>
+            <button id="startSsDecodeBtn" class="primary">Run SS Decoder</button>
+          </aside>
+          <div class="reconMain">
+            <div class="progressTrack"><span id="ssDecodeProgressBar"></span></div>
+            <div id="ssDecodeProgressText" class="stageProgressText">Waiting for DINO + SS Flow</div>
+            <div id="ssDecodeStatus" class="logBox"></div>
+            <section id="ssVoxelPanel" class="ssVoxelPanel" hidden>
+              <div class="sectionTitle">Whole-object voxel occupancy · SS Decoder output</div>
+              <div class="ssVoxelCanvasWrap">
+                <canvas id="ssVoxelCanvas" aria-label="Interactive whole-object voxel visualization"></canvas>
+                <canvas id="ssVoxelOverlay" class="ssVoxelOverlay" aria-hidden="true"></canvas>
+                <div id="ssVoxelStats" class="ssVoxelStats">Loading voxel data</div>
+              </div>
+            </section>
+            <div id="ssDecodeOutputs" class="outputGrid"></div>
           </div>
         </div>
       </section>
@@ -272,22 +319,85 @@
           <aside class="sidePane">
             <div class="sectionTitle">Mask Labels</div>
             <div id="partMaskSummary" class="infoPanel"></div>
-            <div class="sectionTitle">Part Seg Ckpts</div>
-            <div id="partCkptList" class="ckptList"></div>
-            <label class="checkRow">
-              <input id="partQuickSteps" type="checkbox" checked />
-              <span>Quick steps</span>
+            <div class="sectionTitle">Part Seg Model</div>
+            <label class="checkpointSelectLabel">
+              <span>Training folder</span>
+              <select id="partSegCkptSelect"></select>
             </label>
-            <button id="startPartSegBtn" disabled>Run from Stage 04</button>
-            <div class="sectionTitle">Kin Agent Handoff</div>
-            <div class="hingeBox">
-              <button disabled>Build Kinematic Task</button>
-              <button disabled>Open Workbench</button>
-            </div>
+            <div id="partCkptList" class="ckptList"></div>
+            <button id="startPartSegBtn" class="primary">Run Part Prompt Seg</button>
           </aside>
           <div class="reconMain">
+            <div class="progressTrack"><span id="partProgressBar"></span></div>
+            <div id="partProgressText" class="stageProgressText">Waiting for SS Decoder</div>
             <div id="partStatus" class="logBox"></div>
+            <section id="partVoxelPanel" class="ssVoxelPanel" hidden>
+              <div class="sectionTitle">Whole-object labeled voxels · body residual + predicted parts</div>
+              <div class="partVoxelLayout">
+                <div class="ssVoxelCanvasWrap">
+                  <canvas id="partVoxelCanvas" class="voxelCanvas" aria-label="Interactive labeled part voxel visualization"></canvas>
+                  <canvas id="partVoxelOverlay" class="ssVoxelOverlay" aria-hidden="true"></canvas>
+                  <div id="partVoxelStats" class="ssVoxelStats">Loading labeled voxel data</div>
+                </div>
+                <div id="partVoxelLegend" class="partVoxelLegend" aria-label="Part voxel visibility"></div>
+              </div>
+            </section>
             <div id="partOutputs" class="outputGrid"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="stage-slatdecode" class="stage">
+        <div class="decodeLayout">
+          <aside class="sidePane">
+            <div class="sectionTitle">SLat Mesh + GS Decode</div>
+            <div class="muted">Decodes the complete object and every predicted part from one whole-object SLat.</div>
+            <div class="sectionTitle">Decoder Checkpoints</div>
+            <div id="slatCkptList" class="ckptList"></div>
+            <label class="checkRow">
+              <input id="slatQuickSteps" type="checkbox" />
+              <span>Debug only: 2 steps</span>
+            </label>
+            <button id="startSlatDecodeBtn" class="primary">Run Mesh + GS Decode</button>
+            <div class="sectionTitle">Kin Agent Handoff</div>
+            <div class="hingeBox">
+              <button id="openKinAgentBtn">Open Kin Agent</button>
+            </div>
+          </aside>
+          <div class="decodeMain">
+            <div class="progressTrack"><span id="slatProgressBar"></span></div>
+            <div id="slatProgressText" class="stageProgressText">Waiting for Part Prompt Seg</div>
+            <div id="slatStatus" class="logBox small"></div>
+            <iframe id="componentViewerFrame" class="componentViewerFrame" title="Decoded mesh and Gaussian components"></iframe>
+            <div id="slatOutputs" class="outputGrid"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="stage-kinagent" class="stage">
+        <div class="decodeLayout">
+          <aside class="sidePane">
+            <div class="sectionTitle">Kinematic Agent</div>
+            <div id="kinAgentInputSummary" class="infoPanel">Waiting for decoded body and parts</div>
+            <label class="checkpointSelectLabel">
+              <span>Maximum iterations</span>
+              <input id="kinAgentIterations" type="number" min="1" max="9" step="1" value="7" />
+            </label>
+            <label class="checkRow">
+              <input id="kinAgentMotionStates" type="checkbox" />
+              <span>Dataset motion states</span>
+            </label>
+            <button id="startKinAgentBtn" class="primary">Run Kin Agent</button>
+            <div class="sectionTitle">Combined Assets</div>
+            <div id="kinAgentDownloads" class="kinAgentDownloads muted">No XML or USD yet</div>
+          </aside>
+          <div class="decodeMain">
+            <div class="progressTrack"><span id="kinAgentProgressBar"></span></div>
+            <div id="kinAgentProgressText" class="stageProgressText">Waiting for Mesh + GS Decode</div>
+            <div id="kinAgentStatus" class="logBox small"></div>
+            <iframe id="kinAgentViewerFrame" class="componentViewerFrame" title="Kinematic motion preview"></iframe>
+            <div id="kinAgentValidation" class="outputGrid"></div>
+            <div id="kinAgentResults" class="kinAgentResults"></div>
           </div>
         </div>
       </section>

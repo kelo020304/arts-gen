@@ -1,0 +1,1301 @@
+{
+  "format": "arts_gen_kin_agent_benchmark_manifest_v2",
+  "selection_contract": "one decoded pose per object (angle 0 preferred); all exact label-matched moving drawer/door/knob/lid parts; no joint type/axis/origin/range fields",
+  "decoded_roots": {
+    "phyx-verse": "/robot/data-lab/jzh/art-gen/ee-eval/post_smooth_corrected_0702/before",
+    "realappliance": "/robot/data-lab/jzh/art-gen/ee-eval/0707-ra"
+  },
+  "audit": {
+    "phyx-verse": {
+      "decoded_unique_objects": 5,
+      "selected_samples": 9,
+      "selected_unique_objects": 5,
+      "unique_objects_by_category": {
+        "drawer": 3,
+        "door": 1,
+        "knob": 1,
+        "lid": 0
+      },
+      "samples_by_category": {
+        "drawer": 6,
+        "door": 2,
+        "knob": 1,
+        "lid": 0
+      },
+      "missing_part_info_objects": 0,
+      "non_target_parts_skipped": 42
+    },
+    "realappliance": {
+      "decoded_unique_objects": 98,
+      "selected_samples": 130,
+      "selected_unique_objects": 77,
+      "unique_objects_by_category": {
+        "drawer": 1,
+        "door": 22,
+        "knob": 48,
+        "lid": 31
+      },
+      "samples_by_category": {
+        "drawer": 1,
+        "door": 22,
+        "knob": 75,
+        "lid": 32
+      },
+      "missing_part_info_objects": 0,
+      "non_target_parts_skipped": 713
+    }
+  },
+  "samples": [
+    {
+      "sample_id": "phyx-verse:0786542d0f7549208f889113fc384a7f:left_door_0",
+      "dataset": "phyx-verse",
+      "object_id": "0786542d0f7549208f889113fc384a7f",
+      "angle": 0,
+      "label": "left_door_0",
+      "category": "door",
+      "decoded_part_file": "part_00_left_door_0.obj"
+    },
+    {
+      "sample_id": "phyx-verse:0786542d0f7549208f889113fc384a7f:right_door_0",
+      "dataset": "phyx-verse",
+      "object_id": "0786542d0f7549208f889113fc384a7f",
+      "angle": 0,
+      "label": "right_door_0",
+      "category": "door",
+      "decoded_part_file": "part_01_right_door_0.obj"
+    },
+    {
+      "sample_id": "phyx-verse:0a46621504c24197b5653608f474f73b:middle_drawer_0",
+      "dataset": "phyx-verse",
+      "object_id": "0a46621504c24197b5653608f474f73b",
+      "angle": 0,
+      "label": "middle_drawer_0",
+      "category": "drawer",
+      "decoded_part_file": "part_00_middle_drawer_0.obj"
+    },
+    {
+      "sample_id": "phyx-verse:0a46621504c24197b5653608f474f73b:bottom_drawer_0",
+      "dataset": "phyx-verse",
+      "object_id": "0a46621504c24197b5653608f474f73b",
+      "angle": 0,
+      "label": "bottom_drawer_0",
+      "category": "drawer",
+      "decoded_part_file": "part_01_bottom_drawer_0.obj"
+    },
+    {
+      "sample_id": "phyx-verse:0a46621504c24197b5653608f474f73b:top_drawer_0",
+      "dataset": "phyx-verse",
+      "object_id": "0a46621504c24197b5653608f474f73b",
+      "angle": 0,
+      "label": "top_drawer_0",
+      "category": "drawer",
+      "decoded_part_file": "part_02_top_drawer_0.obj"
+    },
+    {
+      "sample_id": "phyx-verse:0d8b0c9d303e4a19a3c2995144f2c8af:doorknob_0",
+      "dataset": "phyx-verse",
+      "object_id": "0d8b0c9d303e4a19a3c2995144f2c8af",
+      "angle": 0,
+      "label": "doorknob_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_doorknob_0.obj"
+    },
+    {
+      "sample_id": "phyx-verse:112204b2a12c4e25bbbdcc0d196b1ad5:upper_drawer_0",
+      "dataset": "phyx-verse",
+      "object_id": "112204b2a12c4e25bbbdcc0d196b1ad5",
+      "angle": 0,
+      "label": "upper_drawer_0",
+      "category": "drawer",
+      "decoded_part_file": "part_00_upper_drawer_0.obj"
+    },
+    {
+      "sample_id": "phyx-verse:112204b2a12c4e25bbbdcc0d196b1ad5:lower_drawer_0",
+      "dataset": "phyx-verse",
+      "object_id": "112204b2a12c4e25bbbdcc0d196b1ad5",
+      "angle": 0,
+      "label": "lower_drawer_0",
+      "category": "drawer",
+      "decoded_part_file": "part_01_lower_drawer_0.obj"
+    },
+    {
+      "sample_id": "phyx-verse:11a5b4c67a9746fbb8c590a8138d1f26:drawer_front_panel_0",
+      "dataset": "phyx-verse",
+      "object_id": "11a5b4c67a9746fbb8c590a8138d1f26",
+      "angle": 0,
+      "label": "drawer_front_panel_0",
+      "category": "drawer",
+      "decoded_part_file": "part_00_drawer_front_panel_0.obj"
+    },
+    {
+      "sample_id": "realappliance:001:定时旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "001",
+      "angle": 0,
+      "label": "定时旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_定时旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:001:温控旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "001",
+      "angle": 0,
+      "label": "温控旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_温控旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:002:上盖_0",
+      "dataset": "realappliance",
+      "object_id": "002",
+      "angle": 0,
+      "label": "上盖_0",
+      "category": "lid",
+      "decoded_part_file": "part_05_上盖_0.obj"
+    },
+    {
+      "sample_id": "realappliance:004:door_0",
+      "dataset": "realappliance",
+      "object_id": "004",
+      "angle": 0,
+      "label": "door_0",
+      "category": "door",
+      "decoded_part_file": "part_00_door_0.obj"
+    },
+    {
+      "sample_id": "realappliance:006:lid_0",
+      "dataset": "realappliance",
+      "object_id": "006",
+      "angle": 0,
+      "label": "lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_00_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:007:pitcher_lid_0",
+      "dataset": "realappliance",
+      "object_id": "007",
+      "angle": 0,
+      "label": "pitcher_lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_01_pitcher_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:008:rotary_dial_0",
+      "dataset": "realappliance",
+      "object_id": "008",
+      "angle": 0,
+      "label": "rotary_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_rotary_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:008:jar_lid_0",
+      "dataset": "realappliance",
+      "object_id": "008",
+      "angle": 0,
+      "label": "jar_lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_02_jar_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:009:lid_0",
+      "dataset": "realappliance",
+      "object_id": "009",
+      "angle": 0,
+      "label": "lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_01_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:010:玻璃盖_0",
+      "dataset": "realappliance",
+      "object_id": "010",
+      "angle": 0,
+      "label": "玻璃盖_0",
+      "category": "lid",
+      "decoded_part_file": "part_00_玻璃盖_0.obj"
+    },
+    {
+      "sample_id": "realappliance:011:蒸汽旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "011",
+      "angle": 0,
+      "label": "蒸汽旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_蒸汽旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:012:外盖_0",
+      "dataset": "realappliance",
+      "object_id": "012",
+      "angle": 0,
+      "label": "外盖_0",
+      "category": "lid",
+      "decoded_part_file": "part_00_外盖_0.obj"
+    },
+    {
+      "sample_id": "realappliance:014:温度调节旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "014",
+      "angle": 0,
+      "label": "温度调节旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_温度调节旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:014:盖子_0",
+      "dataset": "realappliance",
+      "object_id": "014",
+      "angle": 0,
+      "label": "盖子_0",
+      "category": "lid",
+      "decoded_part_file": "part_01_盖子_0.obj"
+    },
+    {
+      "sample_id": "realappliance:015:top_cover_0",
+      "dataset": "realappliance",
+      "object_id": "015",
+      "angle": 0,
+      "label": "top_cover_0",
+      "category": "lid",
+      "decoded_part_file": "part_00_top_cover_0.obj"
+    },
+    {
+      "sample_id": "realappliance:016:火力调节旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "016",
+      "angle": 0,
+      "label": "火力调节旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_火力调节旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:016:玻璃盖_0",
+      "dataset": "realappliance",
+      "object_id": "016",
+      "angle": 0,
+      "label": "玻璃盖_0",
+      "category": "lid",
+      "decoded_part_file": "part_01_玻璃盖_0.obj"
+    },
+    {
+      "sample_id": "realappliance:018:外盖_0",
+      "dataset": "realappliance",
+      "object_id": "018",
+      "angle": 0,
+      "label": "外盖_0",
+      "category": "lid",
+      "decoded_part_file": "part_00_外盖_0.obj"
+    },
+    {
+      "sample_id": "realappliance:020:time_entry_knob_0",
+      "dataset": "realappliance",
+      "object_id": "020",
+      "angle": 0,
+      "label": "time_entry_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_time_entry_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:020:door_0",
+      "dataset": "realappliance",
+      "object_id": "020",
+      "angle": 0,
+      "label": "door_0",
+      "category": "door",
+      "decoded_part_file": "part_01_door_0.obj"
+    },
+    {
+      "sample_id": "realappliance:021:外盖_0",
+      "dataset": "realappliance",
+      "object_id": "021",
+      "angle": 0,
+      "label": "外盖_0",
+      "category": "lid",
+      "decoded_part_file": "part_00_外盖_0.obj"
+    },
+    {
+      "sample_id": "realappliance:023:glass_lid_0",
+      "dataset": "realappliance",
+      "object_id": "023",
+      "angle": 0,
+      "label": "glass_lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_00_glass_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:024:微波炉门_0",
+      "dataset": "realappliance",
+      "object_id": "024",
+      "angle": 0,
+      "label": "微波炉门_0",
+      "category": "door",
+      "decoded_part_file": "part_01_微波炉门_0.obj"
+    },
+    {
+      "sample_id": "realappliance:025:front_cover_0",
+      "dataset": "realappliance",
+      "object_id": "025",
+      "angle": 0,
+      "label": "front_cover_0",
+      "category": "lid",
+      "decoded_part_file": "part_00_front_cover_0.obj"
+    },
+    {
+      "sample_id": "realappliance:026:咖啡粉量调节旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "026",
+      "angle": 0,
+      "label": "咖啡粉量调节旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_咖啡粉量调节旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:026:模式选择旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "026",
+      "angle": 0,
+      "label": "模式选择旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_06_模式选择旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:027:removable_top_cover_0",
+      "dataset": "realappliance",
+      "object_id": "027",
+      "angle": 0,
+      "label": "removable_top_cover_0",
+      "category": "lid",
+      "decoded_part_file": "part_00_removable_top_cover_0.obj"
+    },
+    {
+      "sample_id": "realappliance:029:timer_knob_0",
+      "dataset": "realappliance",
+      "object_id": "029",
+      "angle": 1,
+      "label": "timer_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_timer_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:029:power_function_knob_0",
+      "dataset": "realappliance",
+      "object_id": "029",
+      "angle": 1,
+      "label": "power_function_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_02_power_function_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:029:door_0",
+      "dataset": "realappliance",
+      "object_id": "029",
+      "angle": 1,
+      "label": "door_0",
+      "category": "door",
+      "decoded_part_file": "part_03_door_0.obj"
+    },
+    {
+      "sample_id": "realappliance:031:温控旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "031",
+      "angle": 0,
+      "label": "温控旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_温控旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:032:门_0",
+      "dataset": "realappliance",
+      "object_id": "032",
+      "angle": 1,
+      "label": "门_0",
+      "category": "door",
+      "decoded_part_file": "part_00_门_0.obj"
+    },
+    {
+      "sample_id": "realappliance:032:时间（分钟）旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "032",
+      "angle": 1,
+      "label": "时间（分钟）旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_02_时间_分钟_旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:032:火力级别旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "032",
+      "angle": 1,
+      "label": "火力级别旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_03_火力级别旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:033:时间旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "033",
+      "angle": 0,
+      "label": "时间旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_时间旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:034:【时间（分钟）】旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "034",
+      "angle": 0,
+      "label": "【时间（分钟）】旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_时间_分钟__旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:034:【火力级别】旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "034",
+      "angle": 0,
+      "label": "【火力级别】旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_火力级别_旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:034:门_0",
+      "dataset": "realappliance",
+      "object_id": "034",
+      "angle": 0,
+      "label": "门_0",
+      "category": "door",
+      "decoded_part_file": "part_02_门_0.obj"
+    },
+    {
+      "sample_id": "realappliance:035:模式旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "035",
+      "angle": 0,
+      "label": "模式旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_04_模式旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:037:browning_control_knob_0",
+      "dataset": "realappliance",
+      "object_id": "037",
+      "angle": 0,
+      "label": "browning_control_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_03_browning_control_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:038:door_0",
+      "dataset": "realappliance",
+      "object_id": "038",
+      "angle": 1,
+      "label": "door_0",
+      "category": "door",
+      "decoded_part_file": "part_00_door_0.obj"
+    },
+    {
+      "sample_id": "realappliance:039:door_0",
+      "dataset": "realappliance",
+      "object_id": "039",
+      "angle": 1,
+      "label": "door_0",
+      "category": "door",
+      "decoded_part_file": "part_00_door_0.obj"
+    },
+    {
+      "sample_id": "realappliance:040:top_lid_0",
+      "dataset": "realappliance",
+      "object_id": "040",
+      "angle": 0,
+      "label": "top_lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_00_top_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:041:speed_control_knob_0",
+      "dataset": "realappliance",
+      "object_id": "041",
+      "angle": 0,
+      "label": "speed_control_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_speed_control_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:042:shade_setting_knob_0",
+      "dataset": "realappliance",
+      "object_id": "042",
+      "angle": 0,
+      "label": "shade_setting_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_02_shade_setting_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:045:browning_control_dial_0",
+      "dataset": "realappliance",
+      "object_id": "045",
+      "angle": 0,
+      "label": "browning_control_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_browning_control_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:046:top_lid_0",
+      "dataset": "realappliance",
+      "object_id": "046",
+      "angle": 0,
+      "label": "top_lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_02_top_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:047:speed_control_knob_0",
+      "dataset": "realappliance",
+      "object_id": "047",
+      "angle": 0,
+      "label": "speed_control_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_02_speed_control_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:048:speed_control_knob_0",
+      "dataset": "realappliance",
+      "object_id": "048",
+      "angle": 0,
+      "label": "speed_control_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_speed_control_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:049:time_knob_0",
+      "dataset": "realappliance",
+      "object_id": "049",
+      "angle": 1,
+      "label": "time_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_time_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:049:power_knob_0",
+      "dataset": "realappliance",
+      "object_id": "049",
+      "angle": 1,
+      "label": "power_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_02_power_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:049:door_0",
+      "dataset": "realappliance",
+      "object_id": "049",
+      "angle": 1,
+      "label": "door_0",
+      "category": "door",
+      "decoded_part_file": "part_03_door_0.obj"
+    },
+    {
+      "sample_id": "realappliance:050:power_selector_knob_0",
+      "dataset": "realappliance",
+      "object_id": "050",
+      "angle": 3,
+      "label": "power_selector_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_power_selector_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:050:time_selector_knob_0",
+      "dataset": "realappliance",
+      "object_id": "050",
+      "angle": 3,
+      "label": "time_selector_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_02_time_selector_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:050:door_0",
+      "dataset": "realappliance",
+      "object_id": "050",
+      "angle": 3,
+      "label": "door_0",
+      "category": "door",
+      "decoded_part_file": "part_03_door_0.obj"
+    },
+    {
+      "sample_id": "realappliance:054:door_0",
+      "dataset": "realappliance",
+      "object_id": "054",
+      "angle": 0,
+      "label": "door_0",
+      "category": "door",
+      "decoded_part_file": "part_00_door_0.obj"
+    },
+    {
+      "sample_id": "realappliance:055:door_0",
+      "dataset": "realappliance",
+      "object_id": "055",
+      "angle": 1,
+      "label": "door_0",
+      "category": "door",
+      "decoded_part_file": "part_02_door_0.obj"
+    },
+    {
+      "sample_id": "realappliance:055:temperature_dial_0",
+      "dataset": "realappliance",
+      "object_id": "055",
+      "angle": 1,
+      "label": "temperature_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_03_temperature_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:055:function_dial_0",
+      "dataset": "realappliance",
+      "object_id": "055",
+      "angle": 1,
+      "label": "function_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_04_function_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:056:function_dial_0",
+      "dataset": "realappliance",
+      "object_id": "056",
+      "angle": 0,
+      "label": "function_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_function_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:056:door_0",
+      "dataset": "realappliance",
+      "object_id": "056",
+      "angle": 0,
+      "label": "door_0",
+      "category": "door",
+      "decoded_part_file": "part_01_door_0.obj"
+    },
+    {
+      "sample_id": "realappliance:057:tempereed_glass_doors_0",
+      "dataset": "realappliance",
+      "object_id": "057",
+      "angle": 0,
+      "label": "tempereed_glass_doors_0",
+      "category": "door",
+      "decoded_part_file": "part_00_tempereed_glass_doors_0.obj"
+    },
+    {
+      "sample_id": "realappliance:057:function_dial_0",
+      "dataset": "realappliance",
+      "object_id": "057",
+      "angle": 0,
+      "label": "function_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_02_function_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:057:upper_element_temperature_dial_0",
+      "dataset": "realappliance",
+      "object_id": "057",
+      "angle": 0,
+      "label": "upper_element_temperature_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_03_upper_element_temperature_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:057:lower_element_temperature_dial_0",
+      "dataset": "realappliance",
+      "object_id": "057",
+      "angle": 0,
+      "label": "lower_element_temperature_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_04_lower_element_temperature_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:057:timer_dial_0",
+      "dataset": "realappliance",
+      "object_id": "057",
+      "angle": 0,
+      "label": "timer_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_05_timer_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:058:on_oven_timer_dial_0",
+      "dataset": "realappliance",
+      "object_id": "058",
+      "angle": 0,
+      "label": "on_oven_timer_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_02_on_oven_timer_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:058:oven_temperature_dial_0",
+      "dataset": "realappliance",
+      "object_id": "058",
+      "angle": 0,
+      "label": "oven_temperature_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_03_oven_temperature_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:058:function_dial_0",
+      "dataset": "realappliance",
+      "object_id": "058",
+      "angle": 0,
+      "label": "function_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_04_function_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:058:on_toast_timer_dial_0",
+      "dataset": "realappliance",
+      "object_id": "058",
+      "angle": 0,
+      "label": "on_toast_timer_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_05_on_toast_timer_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:058:door_0",
+      "dataset": "realappliance",
+      "object_id": "058",
+      "angle": 0,
+      "label": "door_0",
+      "category": "door",
+      "decoded_part_file": "part_06_door_0.obj"
+    },
+    {
+      "sample_id": "realappliance:061:steam_hot_water_knob_0",
+      "dataset": "realappliance",
+      "object_id": "061",
+      "angle": 0,
+      "label": "steam_hot_water_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_steam_hot_water_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:062:timer_knob_0",
+      "dataset": "realappliance",
+      "object_id": "062",
+      "angle": 0,
+      "label": "timer_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_timer_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:063:temperature_knob_0",
+      "dataset": "realappliance",
+      "object_id": "063",
+      "angle": 0,
+      "label": "temperature_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_temperature_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:063:timer_knob_0",
+      "dataset": "realappliance",
+      "object_id": "063",
+      "angle": 0,
+      "label": "timer_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_timer_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:063:pull-out_drawer_pan_0",
+      "dataset": "realappliance",
+      "object_id": "063",
+      "angle": 0,
+      "label": "pull-out_drawer_pan_0",
+      "category": "drawer",
+      "decoded_part_file": "part_02_pull-out_drawer_pan_0.obj"
+    },
+    {
+      "sample_id": "realappliance:064:temperature_control_dial_0",
+      "dataset": "realappliance",
+      "object_id": "064",
+      "angle": 0,
+      "label": "temperature_control_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_temperature_control_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:064:time_control_dial_0",
+      "dataset": "realappliance",
+      "object_id": "064",
+      "angle": 0,
+      "label": "time_control_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_time_control_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:065:开关旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "065",
+      "angle": 0,
+      "label": "开关旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_开关旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:067:locker_knob_0",
+      "dataset": "realappliance",
+      "object_id": "067",
+      "angle": 0,
+      "label": "locker_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_locker_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:068:lid_0",
+      "dataset": "realappliance",
+      "object_id": "068",
+      "angle": 0,
+      "label": "lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_03_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:069:grind_amount_dial_0",
+      "dataset": "realappliance",
+      "object_id": "069",
+      "angle": 0,
+      "label": "grind_amount_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_grind_amount_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:069:steam_hot_water_dial_0",
+      "dataset": "realappliance",
+      "object_id": "069",
+      "angle": 0,
+      "label": "steam_hot_water_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_06_steam_hot_water_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:072:lid_0",
+      "dataset": "realappliance",
+      "object_id": "072",
+      "angle": 0,
+      "label": "lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_00_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:073:switch_knob_0",
+      "dataset": "realappliance",
+      "object_id": "073",
+      "angle": 0,
+      "label": "switch_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_switch_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:074:dual-opening_lid_0",
+      "dataset": "realappliance",
+      "object_id": "074",
+      "angle": 0,
+      "label": "dual-opening_lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_06_dual-opening_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:076:off_low_high_warm_knob_0",
+      "dataset": "realappliance",
+      "object_id": "076",
+      "angle": 0,
+      "label": "off_low_high_warm_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_off_low_high_warm_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:076:glass_lid_0",
+      "dataset": "realappliance",
+      "object_id": "076",
+      "angle": 0,
+      "label": "glass_lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_01_glass_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:077:温度旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "077",
+      "angle": 0,
+      "label": "温度旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_温度旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:077:时间旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "077",
+      "angle": 0,
+      "label": "时间旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_02_时间旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:078:door_0",
+      "dataset": "realappliance",
+      "object_id": "078",
+      "angle": 0,
+      "label": "door_0",
+      "category": "door",
+      "decoded_part_file": "part_00_door_0.obj"
+    },
+    {
+      "sample_id": "realappliance:080:lid_0",
+      "dataset": "realappliance",
+      "object_id": "080",
+      "angle": 0,
+      "label": "lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_00_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:080:temperature_control_knob_0",
+      "dataset": "realappliance",
+      "object_id": "080",
+      "angle": 0,
+      "label": "temperature_control_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_temperature_control_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:080:timer_control_knob_0",
+      "dataset": "realappliance",
+      "object_id": "080",
+      "angle": 0,
+      "label": "timer_control_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_02_timer_control_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:081:removable_vent_cover_0",
+      "dataset": "realappliance",
+      "object_id": "081",
+      "angle": 0,
+      "label": "removable_vent_cover_0",
+      "category": "lid",
+      "decoded_part_file": "part_01_removable_vent_cover_0.obj"
+    },
+    {
+      "sample_id": "realappliance:081:timer_dial_0",
+      "dataset": "realappliance",
+      "object_id": "081",
+      "angle": 0,
+      "label": "timer_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_03_timer_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:082:lid_0",
+      "dataset": "realappliance",
+      "object_id": "082",
+      "angle": 0,
+      "label": "lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_01_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:082:temperature_control_dial_0",
+      "dataset": "realappliance",
+      "object_id": "082",
+      "angle": 0,
+      "label": "temperature_control_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_02_temperature_control_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:083:旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "083",
+      "angle": 0,
+      "label": "旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:084:温控旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "084",
+      "angle": 0,
+      "label": "温控旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_温控旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:084:定时旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "084",
+      "angle": 0,
+      "label": "定时旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_02_定时旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:085:lid_0",
+      "dataset": "realappliance",
+      "object_id": "085",
+      "angle": 0,
+      "label": "lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_00_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:086:variable_speed_dial_0",
+      "dataset": "realappliance",
+      "object_id": "086",
+      "angle": 0,
+      "label": "variable_speed_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_03_variable_speed_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:086:lid_0",
+      "dataset": "realappliance",
+      "object_id": "086",
+      "angle": 0,
+      "label": "lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_04_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:087:knob_0",
+      "dataset": "realappliance",
+      "object_id": "087",
+      "angle": 0,
+      "label": "knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:087:lid_0",
+      "dataset": "realappliance",
+      "object_id": "087",
+      "angle": 0,
+      "label": "lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_03_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:088:door_0",
+      "dataset": "realappliance",
+      "object_id": "088",
+      "angle": 0,
+      "label": "door_0",
+      "category": "door",
+      "decoded_part_file": "part_00_door_0.obj"
+    },
+    {
+      "sample_id": "realappliance:089:lid_0",
+      "dataset": "realappliance",
+      "object_id": "089",
+      "angle": 0,
+      "label": "lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_09_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:090:door_0",
+      "dataset": "realappliance",
+      "object_id": "090",
+      "angle": 0,
+      "label": "door_0",
+      "category": "door",
+      "decoded_part_file": "part_00_door_0.obj"
+    },
+    {
+      "sample_id": "realappliance:090:function_dial_0",
+      "dataset": "realappliance",
+      "object_id": "090",
+      "angle": 0,
+      "label": "function_dial_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_function_dial_0.obj"
+    },
+    {
+      "sample_id": "realappliance:091:lid_0",
+      "dataset": "realappliance",
+      "object_id": "091",
+      "angle": 0,
+      "label": "lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_01_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:092:火力旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "092",
+      "angle": 1,
+      "label": "火力旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_火力旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:092:时间（分钟）旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "092",
+      "angle": 1,
+      "label": "时间（分钟）旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_时间_分钟_旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:092:门_0",
+      "dataset": "realappliance",
+      "object_id": "092",
+      "angle": 1,
+      "label": "门_0",
+      "category": "door",
+      "decoded_part_file": "part_02_门_0.obj"
+    },
+    {
+      "sample_id": "realappliance:093:上盖_0",
+      "dataset": "realappliance",
+      "object_id": "093",
+      "angle": 0,
+      "label": "上盖_0",
+      "category": "lid",
+      "decoded_part_file": "part_00_上盖_0.obj"
+    },
+    {
+      "sample_id": "realappliance:095:door_0",
+      "dataset": "realappliance",
+      "object_id": "095",
+      "angle": 0,
+      "label": "door_0",
+      "category": "door",
+      "decoded_part_file": "part_00_door_0.obj"
+    },
+    {
+      "sample_id": "realappliance:095:thermostat_knob_0",
+      "dataset": "realappliance",
+      "object_id": "095",
+      "angle": 0,
+      "label": "thermostat_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_thermostat_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:095:function_knob_0",
+      "dataset": "realappliance",
+      "object_id": "095",
+      "angle": 0,
+      "label": "function_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_02_function_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:095:timer_knob_0",
+      "dataset": "realappliance",
+      "object_id": "095",
+      "angle": 0,
+      "label": "timer_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_03_timer_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:097:heat_level_knob_0",
+      "dataset": "realappliance",
+      "object_id": "097",
+      "angle": 0,
+      "label": "heat_level_knob_0",
+      "category": "knob",
+      "decoded_part_file": "part_03_heat_level_knob_0.obj"
+    },
+    {
+      "sample_id": "realappliance:098:门_0",
+      "dataset": "realappliance",
+      "object_id": "098",
+      "angle": 1,
+      "label": "门_0",
+      "category": "door",
+      "decoded_part_file": "part_00_门_0.obj"
+    },
+    {
+      "sample_id": "realappliance:098:火力旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "098",
+      "angle": 1,
+      "label": "火力旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_02_火力旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:098:时间旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "098",
+      "angle": 1,
+      "label": "时间旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_03_时间旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:099:上管温度旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "099",
+      "angle": 0,
+      "label": "上管温度旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_00_上管温度旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:099:时间旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "099",
+      "angle": 0,
+      "label": "时间旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_01_时间旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:099:功能旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "099",
+      "angle": 0,
+      "label": "功能旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_02_功能旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:099:下管温度旋钮_0",
+      "dataset": "realappliance",
+      "object_id": "099",
+      "angle": 0,
+      "label": "下管温度旋钮_0",
+      "category": "knob",
+      "decoded_part_file": "part_03_下管温度旋钮_0.obj"
+    },
+    {
+      "sample_id": "realappliance:099:门_0",
+      "dataset": "realappliance",
+      "object_id": "099",
+      "angle": 0,
+      "label": "门_0",
+      "category": "door",
+      "decoded_part_file": "part_04_门_0.obj"
+    },
+    {
+      "sample_id": "realappliance:100:spin_dryer_lid_0",
+      "dataset": "realappliance",
+      "object_id": "100",
+      "angle": 1,
+      "label": "spin_dryer_lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_04_spin_dryer_lid_0.obj"
+    },
+    {
+      "sample_id": "realappliance:100:lid_0",
+      "dataset": "realappliance",
+      "object_id": "100",
+      "angle": 1,
+      "label": "lid_0",
+      "category": "lid",
+      "decoded_part_file": "part_05_lid_0.obj"
+    }
+  ]
+}
